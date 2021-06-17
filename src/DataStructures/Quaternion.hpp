@@ -5,7 +5,6 @@
 
 #include <array>
 #include <iostream>
-#include <cmath>
 
 template <typename T>
 class Quaternion {
@@ -24,6 +23,7 @@ class Quaternion {
   Quaternion<T> conj() const;
   T norm() const;
   T normsqr() const;
+  void normalize();
 
   template <typename R>
   T operator[](R i);
