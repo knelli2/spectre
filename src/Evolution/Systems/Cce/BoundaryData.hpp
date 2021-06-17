@@ -228,6 +228,7 @@ void worldtube_normal_and_derivatives(
 void null_vector_l_and_derivatives(
     gsl::not_null<tnsr::A<DataVector, 3>*> du_null_l,
     gsl::not_null<tnsr::A<DataVector, 3>*> null_l,
+    gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*> spec_norm,
     const tnsr::I<DataVector, 3>& dt_worldtube_normal,
     const Scalar<DataVector>& dt_lapse,
     const tnsr::aa<DataVector, 3>& dt_spacetime_metric,
@@ -547,7 +548,8 @@ using characteristic_worldtube_boundary_tags = db::wrap_tags_in<
     tmpl::list<Tags::BondiBeta, Tags::BondiU, Tags::Dr<Tags::BondiU>,
                Tags::BondiQ, Tags::BondiW, Tags::BondiJ, Tags::Dr<Tags::BondiJ>,
                Tags::BondiH, Tags::Du<Tags::BondiJ>, Tags::BondiR,
-               Tags::Du<Tags::BondiR>, Tags::DuRDividedByR>>;
+               Tags::Du<Tags::BondiR>, Tags::DuRDividedByR,
+               Tags::SpECNormalization>>;
 }  // namespace Tags
 
 namespace detail {
@@ -911,8 +913,12 @@ void create_bondi_boundary_data(
 
   auto& du_null_l = get<::Tags::dt<Tags::detail::NullL>>(computation_variables);
   auto& null_l = get<Tags::detail::NullL>(computation_variables);
+  auto& spec_norm = get<Tags::BoundaryValue<
+                    Tags::SpECNormalization>>(*bondi_boundary_data);
   null_vector_l_and_derivatives(make_not_null(&du_null_l),
-                                make_not_null(&null_l), dt_worldtube_normal,
+                                make_not_null(&null_l),
+                                make_not_null(&spec_norm),
+                                dt_worldtube_normal,
                                 dt_lapse, dt_spacetime_metric, dt_shift, lapse,
                                 spacetime_metric, shift, worldtube_normal);
 
@@ -1160,8 +1166,11 @@ void create_bondi_boundary_data(
 
   auto& du_null_l = get<::Tags::dt<Tags::detail::NullL>>(computation_variables);
   auto& null_l = get<Tags::detail::NullL>(computation_variables);
+  auto& spec_norm = get<Tags::BoundaryValue<
+                        Tags::SpECNormalization>>(*bondi_boundary_data);
   null_vector_l_and_derivatives(
-      make_not_null(&du_null_l), make_not_null(&null_l), dt_worldtube_normal,
+      make_not_null(&du_null_l), make_not_null(&null_l),
+      make_not_null(&spec_norm), dt_worldtube_normal,
       dt_cartesian_lapse, dt_spacetime_metric, dt_cartesian_shift,
       cartesian_lapse, spacetime_metric, cartesian_shift, worldtube_normal);
 

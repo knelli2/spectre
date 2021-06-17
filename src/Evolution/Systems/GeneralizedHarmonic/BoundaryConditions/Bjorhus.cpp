@@ -27,6 +27,9 @@
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 
+#include "NumericalAlgorithms/Spectral/SwshInterpolation.hpp"
+#include "Utilities/MakeString.hpp"
+
 namespace gh::BoundaryConditions {
 namespace {
 double min_characteristic_speed(const std::array<DataVector, 4>& char_speeds) {
@@ -124,7 +127,55 @@ std::optional<std::string> ConstraintPreservingBjorhus<Dim>::dg_time_derivative(
     // c.f. dg_interior_deriv_vars_tags
     const tnsr::iaa<DataVector, Dim, Frame::Inertial>& d_spacetime_metric,
     const tnsr::iaa<DataVector, Dim, Frame::Inertial>& d_pi,
-    const tnsr::ijaa<DataVector, Dim, Frame::Inertial>& d_phi) const {
+    const tnsr::ijaa<DataVector, Dim, Frame::Inertial>& d_phi,
+    const Scalar<SpinWeighted<ComplexDataVector, 0>>& tetrad_coeff_theta,
+    const Scalar<SpinWeighted<ComplexDataVector, 2>>& tetrad_coeff_phi,
+    const Scalar<SpinWeighted<ComplexDataVector, 2>>& psi0,
+    size_t l_max) const {
+  // FIXME upper or down index?
+  DataVector theta_coords(get_size(get<0>(coords)), 0.);
+  DataVector phi_coords(get_size(get<0>(coords)), 0.);
+  theta_coords =
+      atan2(sqrt(square(coords.get(0)) + square(coords.get(1))), coords.get(2));
+  phi_coords = atan2(coords.get(1), coords.get(0));
+  Spectral::Swsh::SwshInterpolator interpolator{theta_coords, phi_coords,
+                                                l_max};
+  SpinWeighted<ComplexDataVector, 2> psi0_inte;
+  SpinWeighted<ComplexDataVector, 0> theta_coeff_inte;
+  SpinWeighted<ComplexDataVector, 2> phi_coeff_inte;
+
+  interpolator.interpolate(make_not_null(&psi0_inte), get(psi0));
+  interpolator.interpolate(make_not_null(&theta_coeff_inte),
+                           get(tetrad_coeff_theta));
+  interpolator.interpolate(make_not_null(&phi_coeff_inte),
+                           get(tetrad_coeff_phi));
+  tnsr::a<ComplexDataVector, Dim, Frame::Inertial> m_vec;
+
+  (m_vec).get(0) = std::complex<double>(0.0, 0.0) * cos(phi_coords);
+
+  (m_vec).get(1) = std::complex<double>(1.0, 0.0) *
+                   (theta_coeff_inte.data() - phi_coeff_inte.data()) *
+                   cos(theta_coords) * cos(phi_coords);
+  (m_vec).get(1) -= std::complex<double>(0.0, 1.0) * sin(phi_coords) *
+                    (theta_coeff_inte.data() + phi_coeff_inte.data());
+
+  (m_vec).get(2) = std::complex<double>(1.0, 0.0) *
+                   (theta_coeff_inte.data() - phi_coeff_inte.data()) *
+                   cos(theta_coords) * sin(phi_coords);
+  (m_vec).get(2) += std::complex<double>(0.0, 1.0) * cos(phi_coords) *
+                    (theta_coeff_inte.data() + phi_coeff_inte.data());
+
+  (m_vec).get(3) =
+      (std::complex<double>(-1.0, 0.0) *
+       (theta_coeff_inte.data() - phi_coeff_inte.data()) * sin(theta_coords));
+  tnsr::aa<DataVector, Dim, Frame::Inertial> w_ccm;
+
+  for (size_t a = 0; a <= Dim; ++a) {
+    for (size_t b = 0; b < a + 1; ++b)
+      (w_ccm).get(a, b) =
+          2. * 2. * real(conj(psi0_inte.data()) * m_vec.get(a) * m_vec.get(b));
+  }
+
   TempBuffer<tmpl::list<::Tags::TempI<0, Dim, Frame::Inertial, DataVector>,
                         ::Tags::Tempiaa<1, Dim, Frame::Inertial, DataVector>,
                         ::Tags::TempII<0, Dim, Frame::Inertial, DataVector>,
@@ -331,7 +382,7 @@ std::optional<std::string> ConstraintPreservingBjorhus<Dim>::dg_time_derivative(
         inverse_spacetime_metric, three_index_constraint,
         char_projected_rhs_dt_v_psi, char_projected_rhs_dt_v_minus,
         constraint_char_zero_plus, constraint_char_zero_minus, phi, d_phi, d_pi,
-        char_speeds);
+        char_speeds, w_ccm);
   } else {
     ERROR(
         "Failed to set dtVMinus. Input option must be one of "

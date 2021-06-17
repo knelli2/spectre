@@ -5,6 +5,7 @@
 
 #include "DataStructures/SpinWeighted.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
+#include "Evolution/Systems/Cce/OptionTags.hpp"
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "NumericalAlgorithms/Spectral/SwshDerivatives.hpp"
 #include "NumericalAlgorithms/Spectral/SwshInterpolation.hpp"
@@ -19,8 +20,8 @@ namespace Cce {
 
 /// \cond
 namespace Tags {
-  struct LMax;
-} // namespace Tags
+struct LMax;
+}  // namespace Tags
 template <typename Tag>
 struct VolumeWeyl;
 /// \endcond
@@ -98,8 +99,7 @@ struct TransformBondiJToCauchyCoords {
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& volume_j,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& gauge_cauchy_d,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& omega_cauchy,
-      const Spectral::Swsh::SwshInterpolator& interpolator,
-      const size_t l_max);
+      const Spectral::Swsh::SwshInterpolator& interpolator, const size_t l_max);
 };
 
 /*!
@@ -130,7 +130,8 @@ struct TransformBondiJToCauchyCoords {
  */
 template <>
 struct VolumeWeyl<Tags::Psi0Match> {
-  using return_tags = tmpl::list<Tags::Psi0Match>;
+  using return_tags =
+      tmpl::list<Tags::Psi0Match, Tags::TetradCoeffTheta, Tags::TetradCoeffPhi>;
   using argument_tags =
       tmpl::list<Tags::BondiJCauchyView, Tags::Dy<Tags::BondiJCauchyView>,
                  Tags::Dy<Tags::Dy<Tags::BondiJCauchyView>>,
@@ -138,6 +139,10 @@ struct VolumeWeyl<Tags::Psi0Match> {
                  Tags::LMax>;
   static void apply(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> psi_0,
+      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*>
+          tetrad_coeff_theta,
+      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+          tetrad_coeff_phi,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& bondi_j_cauchy,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& dy_j_cauchy,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& dy_dy_j_cauchy,
@@ -171,20 +176,46 @@ struct VolumeWeyl<Tags::Psi0Match> {
 struct InnerBoundaryWeyl {
   using return_tags =
       tmpl::list<Tags::BoundaryValue<Tags::Psi0Match>,
-                 Tags::BoundaryValue<Tags::Dlambda<Tags::Psi0Match>>>;
+                 Tags::BoundaryValue<Tags::Dlambda<Tags::Psi0Match>>,
+                 Tags::BoundaryValue<Tags::TetradCoeffTheta>,
+                 Tags::BoundaryValue<Tags::TetradCoeffPhi>>;
   using argument_tags =
       tmpl::list<Tags::Psi0Match, Tags::Dy<Tags::Psi0Match>, Tags::OneMinusY,
                  Tags::BoundaryValue<Tags::BondiR>,
-                 Tags::BoundaryValue<Tags::BondiBeta>, Tags::LMax>;
+                 Tags::BoundaryValue<Tags::BondiBeta>,
+                 Tags::BoundaryValue<Tags::SpECNormalization>,
+                 Tags::TetradCoeffTheta, Tags::TetradCoeffPhi, Tags::LMax>;
   static void apply(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> psi_0_boundary,
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
           dlambda_psi_0_boundary,
+      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*>
+          tetrad_coeff_theta_bound,
+      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+          tetrad_coeff_phi_bound,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& psi_0,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& dy_psi_0,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& one_minus_y,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& bondi_r_cauchy,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& bondi_beta_cauchy,
+      const Scalar<SpinWeighted<ComplexDataVector, 0>>& spec_norm,
+      const Scalar<SpinWeighted<ComplexDataVector, 0>>& tetrad_coeff_theta,
+      const Scalar<SpinWeighted<ComplexDataVector, 2>>& tetrad_coeff_phi,
       const size_t l_max);
+};
+
+struct TetradCoefficients {
+  using return_tags = tmpl::list<Tags::TetradCoeffTheta, Tags::TetradCoeffPhi>;
+  using argument_tags = tmpl::list<InitializationTags::ExtractionRadius>;
+
+  static void apply(
+      const gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*>
+          tetrad_theta,
+      const gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+          tetrad_phi,
+      const double radius) {
+    get(*tetrad_theta).data() *= radius;
+    get(*tetrad_phi).data() *= radius;
+  }
 };
 }  // namespace Cce

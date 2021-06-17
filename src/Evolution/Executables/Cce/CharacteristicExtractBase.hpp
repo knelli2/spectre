@@ -87,11 +87,12 @@ struct CharacteristicExtractDefaults {
       Cce::bondi_hypersurface_step_tags,
       tmpl::bind<Cce::integrand_terms_to_compute_for_bondi_variable,
                  tmpl::_1>>>;
-  using ccm_matching_tags = tmpl::list<
-      Cce::Tags::BondiJCauchyView, Cce::Tags::Psi0Match,
-      Cce::Tags::Dy<Cce::Tags::Psi0Match>,
-      Cce::Tags::Psi0, Cce::Tags::Dy<Cce::Tags::BondiJCauchyView>,
-      Cce::Tags::Dy<Cce::Tags::Dy<Cce::Tags::BondiJCauchyView>>>;
+  using ccm_matching_tags =
+      tmpl::list<Cce::Tags::BondiJCauchyView, Cce::Tags::Psi0Match,
+                 Cce::Tags::Dy<Cce::Tags::Psi0Match>, Cce::Tags::Psi0,
+                 Cce::Tags::Dy<Cce::Tags::BondiJCauchyView>,
+                 Cce::Tags::TetradCoeffTheta, Cce::Tags::TetradCoeffPhi,
+                 Cce::Tags::Dy<Cce::Tags::Dy<Cce::Tags::BondiJCauchyView>>>;
 
   using cce_integration_independent_tags = tmpl::conditional_t<
       evolve_ccm,
@@ -122,5 +123,7 @@ struct CharacteristicExtractDefaults {
 
   using ccm_psi0 = tmpl::list<
       Cce::Tags::BoundaryValue<Cce::Tags::Psi0Match>,
+      Cce::Tags::BoundaryValue<Cce::Tags::TetradCoeffTheta>,
+      Cce::Tags::BoundaryValue<Cce::Tags::TetradCoeffPhi>,
       Cce::Tags::BoundaryValue<Cce::Tags::Dlambda<Cce::Tags::Psi0Match>>>;
 };

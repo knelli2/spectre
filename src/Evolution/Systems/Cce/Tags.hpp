@@ -31,6 +31,10 @@ struct BondiBeta : db::SimpleTag {
   using type = Scalar<SpinWeighted<ComplexDataVector, 0>>;
 };
 
+struct SpECNormalization : db::SimpleTag {
+  using type = Scalar<SpinWeighted<ComplexDataVector, 0>>;
+};
+
 /// Bondi parameter \f$J\f$
 struct BondiJ : db::SimpleTag {
   using type = Scalar<SpinWeighted<ComplexDataVector, 2>>;
@@ -112,6 +116,14 @@ struct BondiW : db::SimpleTag {
 
 /// Bondi parameter \f$\bar{J}\f$ in the Cauchy frame
 struct BondiJCauchyView : db::SimpleTag {
+  using type = Scalar<SpinWeighted<ComplexDataVector, 2>>;
+};
+
+struct TetradCoeffTheta : db::SimpleTag {
+  using type = Scalar<SpinWeighted<ComplexDataVector, 0>>;
+};
+
+struct TetradCoeffPhi : db::SimpleTag {
   using type = Scalar<SpinWeighted<ComplexDataVector, 2>>;
 };
 

@@ -22,6 +22,9 @@
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 
+#include "Parallel/Printf.hpp"
+#include "Utilities/MakeString.hpp"
+
 namespace gh::BoundaryConditions::Bjorhus {
 template <size_t VolumeDim, typename DataType>
 void constraint_preserving_bjorhus_corrections_dt_v_psi(
@@ -256,7 +259,8 @@ void add_physical_terms_to_dt_v_minus(
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& phi,
     const tnsr::ijaa<DataType, VolumeDim, Frame::Inertial>& d_phi,
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& d_pi,
-    const std::array<DataType, 4>& char_speeds) {
+    const std::array<DataType, 4>& char_speeds,
+    const tnsr::aa<DataVector, VolumeDim, Frame::Inertial>& w_ccm) {
   // hard-coded value from SpEC Bbh input file Mu = MuPhys = 0
   constexpr double mu_phys = 0.;
   constexpr bool adjust_phys_using_c4 = true;
@@ -461,14 +465,14 @@ void add_physical_terms_to_dt_v_minus(
                   (projection_Ab.get(c, a) * projection_Ab.get(d, b) -
                    0.5 * projection_ab.get(a, b) * projection_AB.get(c, d)) *
                   (char_projected_rhs_dt_v_minus.get(c, d) +
-                   char_speeds[3] * (U3m.get(c, d) -
+                   char_speeds[3] * (U3m.get(c, d) - w_ccm.get(c, d) -
                                      normal_dot_three_index_constraint_gamma2));
             } else {
               bc_dt_v_minus->get(a, b) +=
                   (projection_Ab.get(c, a) * projection_Ab.get(d, b) -
                    0.5 * projection_ab.get(a, b) * projection_AB.get(c, d)) *
                   (char_projected_rhs_dt_v_minus.get(c, d) +
-                   char_speeds[3] * (U3m.get(c, d) -
+                   char_speeds[3] * (U3m.get(c, d) - w_ccm.get(c, d) -
                                      normal_dot_three_index_constraint_gamma2 -
                                      mu_phys * U3p.get(c, d)));
             }
@@ -486,19 +490,30 @@ void add_physical_terms_to_dt_v_minus(
                   (projection_Ab.get(c, a) * projection_Ab.get(d, b) -
                    0.5 * projection_ab.get(a, b) * projection_AB.get(c, d)) *
                   (char_projected_rhs_dt_v_minus.get(c, d) +
-                   char_speeds[3] * (U3m.get(c, d)));
+                   char_speeds[3] * (U3m.get(c, d) - w_ccm.get(c, d)));
             } else {
               bc_dt_v_minus->get(a, b) +=
                   (projection_Ab.get(c, a) * projection_Ab.get(d, b) -
                    0.5 * projection_ab.get(a, b) * projection_AB.get(c, d)) *
                   (char_projected_rhs_dt_v_minus.get(c, d) +
-                   char_speeds[3] * (U3m.get(c, d) - mu_phys * U3p.get(c, d)));
+                   char_speeds[3] * (U3m.get(c, d) - w_ccm.get(c, d) -
+                                     mu_phys * U3p.get(c, d)));
             }
           }
         }
       }
     }
   }
+  // Parallel::printf(MakeString{} << "size of w_ccm " << w_ccm.get(1, 2).size()
+  //                              << "\n");
+  // Parallel::printf(MakeString{} << "size of U3m " << U3m.get(1, 2).size()
+  //                              << "\n");
+  // Parallel::printf("wccm1: %e U3m: %e U3p: %e v_minus %e\n",
+  //      char_speeds[3]*w_ccm.get(1,2)[20],char_speeds[3]*U3m.get(1,2)[20],
+  //      char_speeds[3]*U3p.get(1,2)[20],
+  //      char_projected_rhs_dt_v_minus.get(1,2)[20]);
+  // Parallel::printf("wccm1: %zu U3m: %zu U3p: %zu\n",
+  //      w_ccm.get(1,2).size(),U3m.get(1,2).size(),U3p.get(1,2).size());
 }
 }  // namespace detail
 
@@ -579,7 +594,8 @@ void constraint_preserving_physical_bjorhus_corrections_dt_v_minus(
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& phi,
     const tnsr::ijaa<DataType, VolumeDim, Frame::Inertial>& d_phi,
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& d_pi,
-    const std::array<DataType, 4>& char_speeds) {
+    const std::array<DataType, 4>& char_speeds,
+    const tnsr::aa<DataVector, VolumeDim, Frame::Inertial>& w_ccm) {
   destructive_resize_components(bc_dt_v_minus, get_size(get(gamma2)));
   for (size_t a = 0; a <= VolumeDim; ++a) {
     for (size_t b = a; b <= VolumeDim; ++b) {
@@ -596,7 +612,7 @@ void constraint_preserving_physical_bjorhus_corrections_dt_v_minus(
       unit_interface_normal_vector, spacetime_unit_normal_vector, projection_ab,
       projection_Ab, projection_AB, inverse_spatial_metric, extrinsic_curvature,
       spacetime_metric, inverse_spacetime_metric, three_index_constraint,
-      char_projected_rhs_dt_v_minus, phi, d_phi, d_pi, char_speeds);
+      char_projected_rhs_dt_v_minus, phi, d_phi, d_pi, char_speeds, w_ccm);
   detail::add_gauge_sommerfeld_terms_to_dt_v_minus(
       bc_dt_v_minus, gamma2, inertial_coords, incoming_null_one_form,
       outgoing_null_one_form, incoming_null_vector, outgoing_null_vector,
@@ -702,7 +718,8 @@ void constraint_preserving_physical_bjorhus_corrections_dt_v_minus(
       const tnsr::iaa<DTYPE(data), DIM(data), Frame::Inertial>& phi,          \
       const tnsr::ijaa<DTYPE(data), DIM(data), Frame::Inertial>& d_phi,       \
       const tnsr::iaa<DTYPE(data), DIM(data), Frame::Inertial>& d_pi,         \
-      const std::array<DTYPE(data), 4>& char_speeds);                         \
+      const std::array<DTYPE(data), 4>& char_speeds,                          \
+      const tnsr::aa<DTYPE(data), DIM(data), Frame::Inertial>& w_ccm);        \
   template void gh::BoundaryConditions::Bjorhus::                             \
       constraint_preserving_bjorhus_corrections_dt_v_minus(                   \
           const gsl::not_null<                                                \
@@ -783,7 +800,8 @@ void constraint_preserving_physical_bjorhus_corrections_dt_v_minus(
           const tnsr::iaa<DTYPE(data), DIM(data), Frame::Inertial>& phi,      \
           const tnsr::ijaa<DTYPE(data), DIM(data), Frame::Inertial>& d_phi,   \
           const tnsr::iaa<DTYPE(data), DIM(data), Frame::Inertial>& d_pi,     \
-          const std::array<DTYPE(data), 4>& char_speeds);
+          const std::array<DTYPE(data), 4>& char_speeds,                      \
+          const tnsr::aa<DTYPE(data), DIM(data), Frame::Inertial>& w_ccm);
 
 GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3), (DataVector))
 

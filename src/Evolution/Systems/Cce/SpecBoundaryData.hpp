@@ -337,8 +337,11 @@ void create_bondi_boundary_data_from_unnormalized_spec_modes(
 
   auto& du_null_l = get<::Tags::dt<Tags::detail::NullL>>(computation_variables);
   auto& null_l = get<Tags::detail::NullL>(computation_variables);
+  auto& spec_norm = get<Tags::BoundaryValue<
+                        Tags::SpECNormalization>>(*bondi_boundary_data);
   null_vector_l_and_derivatives(
-      make_not_null(&du_null_l), make_not_null(&null_l), dt_worldtube_normal,
+      make_not_null(&du_null_l), make_not_null(&null_l),
+      make_not_null(&spec_norm), dt_worldtube_normal,
       dt_cartesian_lapse, dt_spacetime_metric, dt_cartesian_shift,
       cartesian_lapse, spacetime_metric, cartesian_shift, worldtube_normal);
 

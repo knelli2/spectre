@@ -32,7 +32,7 @@ struct CalculatePsi0AndDerivAtInnerBoundary {
       tmpl::list<TransformBondiJToCauchyCoords,
                  PreSwshDerivatives<Tags::Dy<Tags::BondiJCauchyView>>,
                  PreSwshDerivatives<Tags::Dy<Tags::Dy<Tags::BondiJCauchyView>>>,
-                 VolumeWeyl<Tags::Psi0Match>,
+                 VolumeWeyl<Tags::Psi0Match>, TetradCoefficients,
                  PreSwshDerivatives<Tags::Dy<Tags::Psi0Match>>,
                  InnerBoundaryWeyl>;
 

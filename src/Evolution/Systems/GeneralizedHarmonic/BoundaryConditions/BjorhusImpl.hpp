@@ -229,7 +229,8 @@ void constraint_preserving_physical_bjorhus_corrections_dt_v_minus(
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& phi,
     const tnsr::ijaa<DataType, VolumeDim, Frame::Inertial>& d_phi,
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& d_pi,
-    const std::array<DataType, 4>& char_speeds);
+    const std::array<DataType, 4>& char_speeds,
+    const tnsr::aa<DataVector, VolumeDim, Frame::Inertial>& w_ccm);
 /// @}
 
 namespace detail {
@@ -292,7 +293,8 @@ void add_physical_terms_to_dt_v_minus(
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& phi,
     const tnsr::ijaa<DataType, VolumeDim, Frame::Inertial>& d_phi,
     const tnsr::iaa<DataType, VolumeDim, Frame::Inertial>& d_pi,
-    const std::array<DataType, 4>& char_speeds);
+    const std::array<DataType, 4>& char_speeds,
+    const tnsr::aa<DataVector, VolumeDim, Frame::Inertial>& w_ccm);
 }  // namespace detail
 }  // namespace Bjorhus
 }  // namespace gh::BoundaryConditions
