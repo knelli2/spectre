@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <pup.h>  // IWYU pragma: keep
+
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -18,12 +20,13 @@
  * \brief A class for storing quaternions
  *
  * \details We primarily use quaternions to handle rotations in 3D. This class
- * is based on blaze/math/quaternions.hpp, but adds several useful features for
+ * is based on boost/math/quaternions.hpp, but adds several useful features for
  * SpECTRE while omitting features that are unnecessary for our purposes.
  *
- * A quaternion is defined as \f$ q = (q_0, q_1, q_2, q_4) = (q_0, \vec{q}) \f$
+ * A quaternion is a four index object defined as \f$ q = (q_0, q_1, q_2, q_4) =
+ * (q_0, \vec{q}) \f$. It has a scalar part \f$ q_0 \f$ and a vector part \f$
+ * \vec{q} = (q_1, q_2, q_3).
  */
-
 template <typename T>
 class Quaternion {
  public:
@@ -58,6 +61,17 @@ class Quaternion {
                                static_cast<T>(short_array_copy[1]),
                                static_cast<T>(short_array_copy[2])}) {}
 
+  /// Charm++ serialization
+  // clang-tidy: runtime-references
+  void pup(PUP::er& p) noexcept {  // NOLINT
+    if (p.isUnpacking()) {
+      this->reset();
+    }
+    for (auto& element : data_) {
+      p | element;
+    }
+  }
+
   Quaternion<T> real() const noexcept {
     return Quaternion<T>(data_[0], static_cast<T>(0), static_cast<T>(0),
                          static_cast<T>(0));
@@ -81,6 +95,11 @@ class Quaternion {
     T norm = this->norm();
     for (auto it = data_.begin(); it != data_.end(); it++) {
       *it /= norm;
+    }
+  }
+  void reset() noexcept {
+    for (auto it = data_.begin(); it != data_.end(); it++) {
+      *it = static_cast<T>(0);
     }
   }
 
