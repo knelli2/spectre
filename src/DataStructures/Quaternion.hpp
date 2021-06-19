@@ -1,6 +1,9 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
+/// \file
+/// Defines class Quaternion
+
 #pragma once
 
 #include <array>
@@ -10,6 +13,17 @@
 
 #include "Utilities/Gsl.hpp"
 
+/*!
+ * \ingroup DataStructuresGroup
+ * \brief A class for storing quaternions
+ *
+ * \details We primarily use quaternions to handle rotations in 3D. This class
+ * is based on blaze/math/quaternions.hpp, but adds several useful features for
+ * SpECTRE while omitting features that are unnecessary for our purposes.
+ *
+ * A quaternion is defined as \f$ q = (q_0, q_1, q_2, q_4) = (q_0, \vec{q}) \f$
+ */
+
 template <typename T>
 class Quaternion {
  public:
@@ -18,6 +32,13 @@ class Quaternion {
                                static_cast<T>(0), static_cast<T>(0)}) {}
   Quaternion(const T& a, const T& b, const T& c, const T& d) noexcept
       : data_(std::array<T, 4>{a, b, c, d}) {}
+  Quaternion(const T& a)
+      : data_(std::array<T, 4>{a, static_cast<T>(0), static_cast<T>(0),
+                               static_cast<T>(0)}) {}
+  template <typename R>
+  Quaternion(const R& a)
+      : data_(std::array<T, 4>{static_cast<T>(a), static_cast<T>(0),
+                               static_cast<T>(0), static_cast<T>(0)}) {}
   Quaternion(const Quaternion<T>& quat_copy) noexcept
       : data_(quat_copy.array()) {}
   template <typename R>
@@ -57,9 +78,9 @@ class Quaternion {
   }
   Quaternion<T> inv() const noexcept { return conj() / normsqr(); }
   void unit() noexcept {
-    T norm = norm();
-    for (auto elem : data_) {
-      elem /= norm;
+    T norm = this->norm();
+    for (auto it = data_.begin(); it != data_.end(); it++) {
+      *it /= norm;
     }
   }
 
@@ -85,6 +106,18 @@ class Quaternion {
   }
   template <typename R>
   Quaternion<T>& operator=(const Quaternion<R>& rhs) {
+    data_[0] = static_cast<T>(rhs[0]);
+    data_[1] = static_cast<T>(rhs[1]);
+    data_[2] = static_cast<T>(rhs[2]);
+    data_[3] = static_cast<T>(rhs[3]);
+    return *this;
+  }
+  Quaternion<T>& operator=(const std::array<T, 4>& rhs) {
+    data_ = rhs;
+    return *this;
+  }
+  template <typename R>
+  Quaternion<T>& operator=(const std::array<R, 4>& rhs) {
     data_[0] = static_cast<T>(rhs[0]);
     data_[1] = static_cast<T>(rhs[1]);
     data_[2] = static_cast<T>(rhs[2]);
@@ -153,8 +186,8 @@ class Quaternion {
     return *this;
   }
   Quaternion<T>& operator*=(const T& rhs) {
-    for (auto elem : data_) {
-      elem *= rhs;
+    for (auto it = data_.begin(); it != data_.end(); it++) {
+      *it *= rhs;
     }
     return *this;
   }
@@ -168,8 +201,8 @@ class Quaternion {
     return *this;
   }
   Quaternion<T>& operator/=(T& rhs) {
-    for (auto elem : data_) {
-      elem /= rhs;
+    for (auto it = data_.begin(); it != data_.end(); it++) {
+      *it /= rhs;
     }
     return *this;
   }
@@ -193,7 +226,7 @@ Quaternion<T> operator+(const T& lhs, const Quaternion<T>& q) {
 }
 
 template <typename T>
-Quaternion<T>& operator+(const Quaternion<T>& q) {
+Quaternion<T> operator+(const Quaternion<T>& q) {
   return q;
 }
 

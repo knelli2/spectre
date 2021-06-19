@@ -40,6 +40,7 @@ spectre_target_headers(
   LeviCivitaIterator.hpp
   Matrix.hpp
   ModalVector.hpp
+  Quaternion.hpp
   SliceIterator.hpp
   SliceTensorToVariables.hpp
   SliceVariables.hpp

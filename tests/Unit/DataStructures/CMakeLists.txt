@@ -30,6 +30,7 @@ set(LIBRARY_SOURCES
   Test_ModalVectorInhomogeneousOperations.cpp
   Test_MoreComplexDiagonalModalOperatorMath.cpp
   Test_MoreDiagonalModalOperatorMath.cpp
+  Test_Quaternion.cpp
   Test_SliceIterator.cpp
   Test_SliceTensorToVariables.cpp
   Test_SliceVariables.cpp
