@@ -6,6 +6,7 @@ spectre_target_sources(
   PRIVATE
   CubicScale.cpp
   Rotation.cpp
+  Rotation3D.cpp
   RotationMatrixHelpers.cpp
   SphericalCompression.cpp
   Translation.cpp
@@ -19,6 +20,7 @@ spectre_target_headers(
   ProductMaps.hpp
   ProductMaps.tpp
   Rotation.hpp
+  Rotation3D.hhp
   RotationMatrixHelpers.hpp
   SphericalCompression.hpp
   Translation.hpp
