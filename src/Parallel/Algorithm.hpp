@@ -29,6 +29,7 @@
 #include "Parallel/CharmRegistration.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
+#include "Parallel/Local.hpp"
 #include "Parallel/NodeLock.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"
@@ -701,7 +702,7 @@ void AlgorithmImpl<ParallelComponent,
   }
   performing_action_ = true;
   Algorithm_detail::simple_action_visitor<Action, ParallelComponent>(
-      box_, *(global_cache_proxy_.ckLocalBranch()),
+      box_, *Parallel::local_branch(global_cache_proxy_),
       static_cast<const array_index&>(array_index_));
   performing_action_ = false;
   if constexpr (std::is_same_v<Parallel::NodeLock, decltype(node_lock_)>) {
@@ -731,7 +732,7 @@ void AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
   (void)Parallel::charmxx::RegisterThreadedAction<ParallelComponent,
                                                   Action>::registrar;
   Algorithm_detail::simple_action_visitor<Action, ParallelComponent>(
-      box_, *(global_cache_proxy_.ckLocalBranch()),
+      box_, *Parallel::local_branch(global_cache_proxy_),
       static_cast<const array_index&>(array_index_),
       make_not_null(&node_lock_));
 }
@@ -905,7 +906,7 @@ void AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
               using registration = typename decltype(registration_v)::type;
               registration::template perform_deregistration<ParallelComponent>(
                   boost::get<ThisVariant>(box),
-                  *(global_cache_proxy_.ckLocalBranch()), array_index_);
+                  *Parallel::local_branch(global_cache_proxy_), array_index_);
             });
       }
       if (p.isUnpacking()) {
@@ -914,7 +915,7 @@ void AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
               using registration = typename decltype(registration_v)::type;
               registration::template perform_registration<ParallelComponent>(
                   boost::get<ThisVariant>(box),
-                  *(global_cache_proxy_.ckLocalBranch()), array_index_);
+                  *Parallel::local_branch(global_cache_proxy_), array_index_);
             });
       }
       *already_visited = true;
@@ -1022,7 +1023,7 @@ void AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
     forward_tuple_to_action(std::tuple<Args...>&& args,
                             std::index_sequence<Is...> /*meta*/) {
   Algorithm_detail::simple_action_visitor<Action, ParallelComponent>(
-      box_, *(global_cache_proxy_.ckLocalBranch()),
+      box_, *Parallel::local_branch(global_cache_proxy_),
       static_cast<const array_index&>(array_index_),
       std::forward<Args>(std::get<Is>(args))...);
 }
@@ -1035,7 +1036,7 @@ void AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
         std::index_sequence<Is...> /*meta*/) {
   const gsl::not_null<Parallel::NodeLock*> node_lock{&node_lock_};
   Algorithm_detail::simple_action_visitor<Action, ParallelComponent>(
-      box_, *(global_cache_proxy_.ckLocalBranch()),
+      box_, *Parallel::local_branch(global_cache_proxy_),
       static_cast<const array_index&>(array_index_), node_lock,
       std::forward<Args>(std::get<Is>(args))...);
 }
@@ -1066,7 +1067,7 @@ bool AlgorithmImpl<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
                 "return AlgorithmExecution::Retry from apply().");
 
   auto action_return = ThisAction::apply(
-      my_box, inboxes_, *(global_cache_proxy_.ckLocalBranch()),
+      my_box, inboxes_, *Parallel::local_branch(global_cache_proxy_),
       std::as_const(array_index_), ActionList{},
       std::add_pointer_t<ParallelComponent>{});
 

@@ -28,6 +28,7 @@
 #include "Parallel/CharmPupable.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Local.hpp"
 #include "Parallel/Reduction.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/Tags.hpp"
@@ -187,10 +188,9 @@ class ObserveErrorNorms<ObservationValueTag, tmpl::list<Tensors...>,
     const size_t num_points = get_first_argument(tensors...).begin()->size();
 
     // Send data to reduction observer
-    auto& local_observer =
-        *Parallel::get_parallel_component<observers::Observer<Metavariables>>(
-             cache)
-             .ckLocalBranch();
+    auto& local_observer = *Parallel::local_branch(
+        Parallel::get_parallel_component<observers::Observer<Metavariables>>(
+            cache));
     const std::string subfile_path_with_suffix =
         subfile_path_ + section_observation_key.value();
     Parallel::simple_action<observers::Actions::ContributeReductionData>(
