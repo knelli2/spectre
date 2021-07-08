@@ -21,8 +21,14 @@ template <typename Proxy>
 auto* local(Proxy&& proxy) {
   // It only makes sense to call .ckLocal() on some kinds of proxies
   static_assert(is_chare_proxy<std::decay_t<Proxy>>::value or
-                is_array_element_proxy<std::decay_t<Proxy>>::value);
-  return proxy.ckLocal();
+                is_array_element_proxy<std::decay_t<Proxy>>::value or
+                is_array_proxy<std::decay_t<Proxy>>::value);
+  if constexpr (is_array_proxy<std::decay_t<Proxy>>::value) {
+    // The array case should be a single-element array serving as a singleton
+    return proxy[0].ckLocal();
+  } else {
+    return proxy.ckLocal();
+  }
 }
 
 /// Wrapper for calling Charm++'s `.ckLocalBranch()` on a proxy
