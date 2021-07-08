@@ -28,6 +28,7 @@
 #include "Parallel/CharmPupable.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Local.hpp"
 #include "Parallel/Reduction.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
@@ -405,10 +406,9 @@ operator()(const typename ObservationValueTag::type& observation_value,
                 norm_values_and_names["L2Norm"].second.end());
 
   // Send data to reduction observer
-  auto& local_observer =
-      *Parallel::get_parallel_component<observers::Observer<Metavariables>>(
-           cache)
-           .ckLocalBranch();
+  auto& local_observer = *Parallel::local_branch(
+      Parallel::get_parallel_component<observers::Observer<Metavariables>>(
+          cache));
   const std::string subfile_path_with_suffix =
       subfile_path_ + section_observation_key.value();
   Parallel::simple_action<observers::Actions::ContributeReductionData>(

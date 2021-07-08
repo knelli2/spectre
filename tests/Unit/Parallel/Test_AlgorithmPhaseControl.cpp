@@ -27,6 +27,7 @@
 #include "Parallel/InboxInserters.hpp"
 #include "Parallel/InitializationFunctions.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Local.hpp"
 #include "Parallel/Main.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/PhaseControl/ExecutePhaseChange.hpp"
@@ -139,7 +140,7 @@ struct ComponentAlpha {
       Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
       const tuples::tagged_tuple_from_typelist<initialization_tags>&
       /*initialization_items*/) {
-    auto& local_cache = *(global_cache.ckLocalBranch());
+    auto& local_cache = *Parallel::local_branch(global_cache);
     auto& array_proxy =
         Parallel::get_parallel_component<ComponentAlpha>(local_cache);
 
@@ -150,7 +151,7 @@ struct ComponentAlpha {
   static void execute_next_phase(
       const typename Metavariables::Phase next_phase,
       const Parallel::CProxy_GlobalCache<Metavariables>& global_cache) {
-    auto& local_cache = *(global_cache.ckLocalBranch());
+    auto& local_cache = *Parallel::local_branch(global_cache);
     if (next_phase == Metavariables::Phase::Finalize) {
       Parallel::simple_action<Actions::Finalize>(
           Parallel::get_parallel_component<ComponentAlpha>(local_cache));
@@ -195,7 +196,7 @@ struct ComponentBeta {
   static void execute_next_phase(
       const typename Metavariables::Phase next_phase,
       const Parallel::CProxy_GlobalCache<Metavariables>& global_cache) {
-    auto& local_cache = *(global_cache.ckLocalBranch());
+    auto& local_cache = *Parallel::local_branch(global_cache);
     if (next_phase == Metavariables::Phase::Finalize) {
       Parallel::simple_action<Actions::Finalize>(
           Parallel::get_parallel_component<ComponentBeta>(local_cache));
@@ -472,10 +473,9 @@ struct TestMetavariables {
           phase_change_decision_data,
       const Phase& current_phase,
       const Parallel::CProxy_GlobalCache<TestMetavariables>& cache_proxy) {
-    const auto next_phase =
-        PhaseControl::arbitrate_phase_change<phase_changes>(
-            phase_change_decision_data, current_phase,
-            *(cache_proxy.ckLocalBranch()));
+    const auto next_phase = PhaseControl::arbitrate_phase_change<phase_changes>(
+        phase_change_decision_data, current_phase,
+        *Parallel::local_branch(cache_proxy));
     if (next_phase.has_value()) {
       return next_phase.value();
     }
