@@ -148,10 +148,10 @@ add_algorithm_test(
 # Charm 7.0.0 has different output in the following test.
 if(CHARM_VERSION VERSION_GREATER 6.10.2)
   add_algorithm_test_with_balancing("AlgorithmParallelWithBalancing"
-    "AlgorithmParallel" "num_objs=14")
+    "AlgorithmParallel" "num_objs=15")
 else()
   add_algorithm_test_with_balancing("AlgorithmParallelWithBalancing"
-    "AlgorithmParallel" "Objects migrating: 14")
+    "AlgorithmParallel" "Objects migrating: 15")
 endif()
 
 add_algorithm_test(
