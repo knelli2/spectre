@@ -8,6 +8,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
+#include "Utilities/Gsl.hpp"
 
 SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
                   "[Unit][Domain]") {
@@ -57,8 +58,6 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
       expir_time += time_step;
       qfot.update(t, DataVector{3, 0.0}, expir_time);
     }
-    t = 0.0;
-    expir_time = 0.5;
 
     // Get the quaternion and 2 derivatives at a certain time.
     double check_time = 5.398;
@@ -67,8 +66,8 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
     const std::array<DataVector, 3> quat_func_and_2_derivs2 =
         qfot.func_and_2_derivs(check_time);
     for (size_t i = 0; i < 3; i++) {
-      CHECK_ITERABLE_APPROX(quat_func_and_2_derivs[i],
-                            quat_func_and_2_derivs2[i]);
+      CHECK_ITERABLE_APPROX(gsl::at(quat_func_and_2_derivs, i),
+                            gsl::at(quat_func_and_2_derivs2, i));
     }
 
     // Analytic solution for constant omega
@@ -101,7 +100,9 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
     double t = 0.0;
     double expir_time = 0.5;
     // phi(t) = fac1 * t^2 + fac2 * t + fac3
-    const double fac1 = 0.25, fac2 = 0.5, fac3 = 0.0;
+    const double fac1 = 0.25;
+    const double fac2 = 0.5;
+    const double fac3 = 0.0;
     // omega(t) = 2*fac1 * t + fac2
     // dtomega(t) = 2 * fac1 (constant)
     // dt2omega(t) = 0.0
@@ -125,8 +126,6 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
       expir_time += time_step;
       qfot.update(t, DataVector{{0.0, 0.0, 0.0}}, expir_time);
     }
-    t = 0.0;
-    expir_time = 0.5;
 
     // Get the quaternion and 2 derivatives at a certain time.
     double check_time = 5.398;
@@ -135,8 +134,8 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
     const std::array<DataVector, 3> quat_func_and_2_derivs2 =
         qfot.func_and_2_derivs(check_time);
     for (size_t i = 0; i < 3; i++) {
-      CHECK_ITERABLE_APPROX(quat_func_and_2_derivs[i],
-                            quat_func_and_2_derivs2[i]);
+      CHECK_ITERABLE_APPROX(gsl::at(quat_func_and_2_derivs, i),
+                            gsl::at(quat_func_and_2_derivs2, i));
     }
 
     // phi(t) = fac1 * t^2 + fac2 * t + fac3
@@ -173,7 +172,10 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
     double t = 0.0;
     double expir_time = 0.5;
     // phi(t) = fac1 * t^3 + fac2 * t^2 + fac3 * t + fac4;
-    const double fac1 = 0.2, fac2 = 0.3, fac3 = 0.4, fac4 = 0.0;
+    const double fac1 = 0.2;
+    const double fac2 = 0.3;
+    const double fac3 = 0.4;
+    const double fac4 = 0.0;
     // omega(t) = 3*fac1 * t^2 + 2*fac2 * t + fac3
     // dtomega(t) = 6*fac1 * t + 2* fac2
     // dt2omega(t) = 6 * fac1 (constant)
@@ -197,8 +199,6 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
       expir_time += time_step;
       qfot.update(t, DataVector{{0.0, 0.0, 6 * fac1}}, expir_time);
     }
-    t = 0.0;
-    expir_time = 0.5;
 
     // Get the quaternion and 2 derivatives at a certain time.
     double check_time = 5.398;
@@ -207,8 +207,8 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.QuaternionFunctionOfTime",
     const std::array<DataVector, 3> quat_func_and_2_derivs2 =
         qfot.func_and_2_derivs(check_time);
     for (size_t i = 0; i < 3; i++) {
-      CHECK_ITERABLE_APPROX(quat_func_and_2_derivs[i],
-                            quat_func_and_2_derivs2[i]);
+      CHECK_ITERABLE_APPROX(gsl::at(quat_func_and_2_derivs, i),
+                            gsl::at(quat_func_and_2_derivs2, i));
     }
 
     // phi(t) = fac1 * t^3 + fac2 * t^2 + fac3 * t + fac4;
