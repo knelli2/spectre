@@ -175,7 +175,6 @@ template <size_t MaxDeriv>
 std::array<DataVector, 2>
 QuaternionFunctionOfTime<MaxDeriv>::quat_func_and_deriv(
     double t) const noexcept {
-  ASSERT(MaxDeriv >= 1, "Asking for too many derivatives than templated.");
   boost::math::quaternion<double> quat = setup_func(t);
 
   // Get omega and however many derivatives we need
@@ -194,7 +193,6 @@ template <size_t MaxDeriv>
 std::array<DataVector, 3>
 QuaternionFunctionOfTime<MaxDeriv>::quat_func_and_2_derivs(
     double t) const noexcept {
-  ASSERT(MaxDeriv >= 2, "Asking for too many derivatives than templated.");
   boost::math::quaternion<double> quat = setup_func(t);
 
   // Get omega and however many derivatives we need
@@ -213,35 +211,6 @@ QuaternionFunctionOfTime<MaxDeriv>::quat_func_and_2_derivs(
   return std::array<DataVector, 3>{quaternion_to_datavector(quat),
                                    quaternion_to_datavector(dtquat),
                                    quaternion_to_datavector(dt2quat)};
-}
-
-template <size_t MaxDeriv>
-std::array<DataVector, 4>
-QuaternionFunctionOfTime<MaxDeriv>::quat_func_and_3_derivs(
-    double t) const noexcept {
-  ASSERT(MaxDeriv >= 3, "Asking for too many derivatives than templated.");
-  boost::math::quaternion<double> quat = setup_func(t);
-
-  // Get omega and however many derivatives we need
-  std::array<DataVector, 3> omega_func_and_2_derivs =
-      omega_f_of_t_.func_and_2_derivs(t);
-
-  boost::math::quaternion<double> omega =
-      datavector_to_quaternion(omega_func_and_2_derivs[0]);
-  boost::math::quaternion<double> dtomega =
-      datavector_to_quaternion(omega_func_and_2_derivs[1]);
-  boost::math::quaternion<double> dt2omega =
-      datavector_to_quaternion(omega_func_and_2_derivs[2]);
-
-  boost::math::quaternion<double> dtquat = 0.5 * quat * omega;
-  boost::math::quaternion<double> dt2quat =
-      0.5 * (dtquat * omega + quat * dtomega);
-  boost::math::quaternion<double> dt3quat =
-      0.5 * (dt2quat * omega + 2.0 * dtquat * dtomega + quat * dt2omega);
-
-  return std::array<DataVector, 4>{
-      quaternion_to_datavector(quat), quaternion_to_datavector(dtquat),
-      quaternion_to_datavector(dt2quat), quaternion_to_datavector(dt3quat)};
 }
 
 template <size_t MaxDeriv>

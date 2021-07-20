@@ -119,10 +119,6 @@ class QuaternionFunctionOfTime : public FunctionOfTime {
   /// time `t`.
   std::array<DataVector, 3> quat_func_and_2_derivs(double t) const noexcept;
 
-  /// Returns the quaternion and the first three derivatives at an arbitrary
-  /// time `t`.
-  std::array<DataVector, 4> quat_func_and_3_derivs(double t) const noexcept;
-
   /// Returns stored omega at an arbitrary time `t`.
   std::array<DataVector, 1> omega_func(double t) const noexcept {
     return omega_f_of_t_.func(t);
