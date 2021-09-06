@@ -118,6 +118,8 @@ template <typename ControlSystems>
 PUP::able::PUP_ID Event<ControlSystems>::my_PUP_ID = 0;  // NOLINT
 /// \endcond
 
+// This metafunction is tested in Test_EventTriggerMetafunctions.cpp
+
 /// \ingroup ControlSystemGroup
 /// The list of events needed for measurements for a list of control
 /// systems.

@@ -25,6 +25,7 @@ spectre_target_headers(
   RunCallbacks.hpp
   Tags.hpp
   TimescaleTuner.hpp
+  Trigger.hpp
   UpdateFunctionOfTime.hpp
   )
 
