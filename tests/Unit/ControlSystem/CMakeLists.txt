@@ -6,7 +6,6 @@ set(LIBRARY "Test_ControlSystem")
 set(LIBRARY_SOURCES
   Test_Averager.cpp
   Test_Controller.cpp
-  Test_Event.cpp
   Test_EventTriggerMetafunctions.cpp
   Test_Measurement.cpp
   Test_Metafunctions.cpp
@@ -16,6 +15,7 @@ set(LIBRARY_SOURCES
   Test_UpdateFunctionOfTime.cpp
   )
 
+add_subdirectory(Actions)
 add_subdirectory(Protocols)
 
 add_test_library(
