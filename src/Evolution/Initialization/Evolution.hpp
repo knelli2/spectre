@@ -158,7 +158,7 @@ struct TimeAndTimeStep {
         ::Tags::TimeStepId, ::Tags::Next<::Tags::TimeStepId>, ::Tags::Time,
         ::Tags::TimeStep, ::Tags::Next<::Tags::TimeStep>>>(
         make_not_null(&box), TimeStepId{}, time_id,
-        std::numeric_limits<double>::signaling_NaN(), initial_dt, initial_dt);
+        initial_time.value(), initial_dt, initial_dt);
     return std::make_tuple(std::move(box));
   }
 
