@@ -190,6 +190,16 @@ EventsAndTriggers:
         InterpolateToMesh: None
         CoordinatesFloatingPointType: Double
         FloatingPointTypes: [Double]
+  ? Slabs:
+      EvenlySpaced:
+        Interval: 1
+        Offset: 0
+  : - AhA
+  ? Slabs:
+      EvenlySpaced:
+        Interval: 1
+        Offset: 0
+  : - AhB
   ? TimeCompares:
       Comparison: GreaterThan
       Value: 3760.0
@@ -198,6 +208,38 @@ EventsAndTriggers:
 Observers:
   VolumeFileName: "GhBBHVolumeData"
   ReductionFileName: "GhBBHReductionData"
+
+ApparentHorizons:
+  AhA:
+    InitialGuess:
+      Lmax: 10
+      Radius: 2.2
+      Center: [-7.683, 0.0, 0.0]
+    FastFlow:
+      Flow: Fast
+      Alpha: 1.0
+      Beta: 0.5
+      AbsTol: 1e-12
+      TruncationTol: 1e-2
+      DivergenceTol: 1.2
+      DivergenceIter: 5
+      MaxIts: 100
+    Verbosity: Verbose
+  AhB:
+    InitialGuess:
+      Lmax: 10
+      Radius: 2.2
+      Center: [7.683, 0.0, 0.0]
+    FastFlow:
+      Flow: Fast
+      Alpha: 1.0
+      Beta: 0.5
+      AbsTol: 1e-12
+      TruncationTol: 1e-2
+      DivergenceTol: 1.2
+      DivergenceIter: 5
+      MaxIts: 100
+    Verbosity: Verbose
 
 # initial_data.h5 should contain numerical initial data
 # on the same grid as specified by the domain given above
