@@ -20,6 +20,8 @@
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/StdHelpers.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace Tags {
 struct Time;
@@ -73,7 +75,9 @@ bool functions_of_time_are_ready(
             continue;
           }
           const double expiration_time = f_of_t->time_bounds()[1];
-          if (time >= expiration_time) {
+          // Changed from >= to just > because a function of time is still valid
+          // at its expiration time.
+          if (time > expiration_time) {
             return std::unique_ptr<Parallel::Callback>(
                 new Parallel::PerformAlgorithmCallback(proxy));
           }
