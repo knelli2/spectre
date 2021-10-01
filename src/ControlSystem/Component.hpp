@@ -5,8 +5,7 @@
 
 #include <tuple>
 
-#include "ControlSystem/Initialization.hpp"
-//#include "ControlSystem/Observe.hpp"
+#include "ControlSystem/Actions/Initialization.hpp"
 #include "ControlSystem/Tags.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Evolution/Initialization/Evolution.hpp"
@@ -33,11 +32,6 @@ struct ControlComponent {
                  Initialization::Actions::InitializeControlSystem<
                      Metavariables, ControlSystem>,
                  Initialization::Actions::RemoveOptionsAndTerminatePhase>>>;
-  // Parallel::PhaseActions<
-  //    typename metavariables::Phase, metavariables::Phase::Register,
-  //    tmpl::list<observers::Actions::RegisterSingletonWithObserverWriter<
-  //                   ControlSystem::Registration>,
-  //               Parallel::Actions::TerminatePhase>>>;
 
   using initialization_tags = Parallel::get_initialization_tags<
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
@@ -51,3 +45,13 @@ struct ControlComponent {
         .start_phase(next_phase);
   }
 };
+
+namespace control_system {
+/// \ingroup ControlSystemGroup
+/// List of control componenets to be added to the component list of the
+/// metavars
+template <typename Metavariables, typename ControlSystems>
+using control_components = tmpl::transform<
+    ControlSystems,
+    tmpl::bind<ControlComponent, tmpl::pin<Metavariables>, tmpl::_1>>;
+} // namespace control_system

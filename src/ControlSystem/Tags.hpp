@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -29,6 +30,7 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/MakeWithValue.hpp"
 #include "Utilities/TMPL.hpp"
+#include "Utilities/TaggedTuple.hpp"
 
 namespace Tags {
 /// \cond
@@ -42,7 +44,75 @@ struct DomainCreator;
 }  // namespace domain::OptionTags
 /// \endcond
 
-namespace control_system::Tags {
+namespace control_system {
+namespace OptionHolder {
+template <size_t DerivOrder>
+struct ControlSystem;
+}  // namespace OptionHolder
+
+namespace OptionTags {
+/// \ingroup OptionGroupsGroup
+/// \ingroup ControlSystemGroup
+struct ControlSystemGroup {
+  static std::string name() noexcept { return "ControlSystems"; }
+  static constexpr Options::String help = {"Control system"};
+};
+
+/// \ingroup OptionTagsGroup
+/// \ingroup ControlSystemGroup
+template <typename ControlSystem>
+struct ControlSystemInputs {
+  static constexpr size_t deriv_order = ControlSystem::deriv_order;
+  using type = OptionHolder::ControlSystem<deriv_order>;
+  static constexpr Options::String help{"Options for a control system."};
+  static std::string name() noexcept { return ControlSystem::name(); }
+  using group = ControlSystemGroup;
+};
+}  // namespace OptionTags
+
+namespace Tags {
+// UsedForName is a control system struct (i.e. conforming to
+// control_system::Protocols::ControlSystem)
+template <typename ControlSystem>
+struct ControlSystemInputs : db::SimpleTag {
+  static constexpr size_t deriv_order = ControlSystem::deriv_order;
+  using type = OptionHolder::ControlSystem<deriv_order>;
+  using option_tags =
+      tmpl::list<OptionTags::ControlSystemInputs<ControlSystem>>;
+
+  static constexpr bool pass_metavariables = false;
+  static type create_from_options(const type& option) noexcept {
+    return option;
+  }
+};
+
+struct ControlSystemName : db::SimpleTag {
+  using type = std::string;
+};
+
+struct MeasureTranslationResult : db::SimpleTag {
+  // using type = ::domain::Tags::MeshVelocity<2>::type;
+  using type = std::vector<double>;
+};
+
+struct PrintOutput : db::SimpleTag {
+  using type = bool;
+};
+
+template <size_t DerivOrder>
+struct Averager : db::SimpleTag {
+  using type = ::Averager<DerivOrder>;
+};
+
+struct TimescaleTuner : db::SimpleTag {
+  using type = ::TimescaleTuner;
+};
+
+template <size_t DerivOrder>
+struct Controller : db::SimpleTag {
+  using type = ::Controller<DerivOrder>;
+};
+
 /// The measurement timescales associated with
 /// domain::Tags::FunctionsOfTime.  Each function of time associated
 /// with a control system has a corresponding set of timescales here,
@@ -57,7 +127,7 @@ struct MeasurementTimescales : db::SimpleTag {
   template <typename Metavariables>
   using option_tags =
       tmpl::list<domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
-                 OptionTags::InitialTimeStep>;
+                 ::OptionTags::InitialTimeStep>;
 
   template <typename Metavariables>
   static type create_from_options(
@@ -99,194 +169,76 @@ struct MeasurementTimescales : db::SimpleTag {
     return timescales;
   }
 };
+}  // namespace Tags
 
-struct ControlSystemName : db::SimpleTag {
-  using type = std::string;
-};
-}  // namespace control_system::Tags
-
-namespace control_system::OptionHolder {
-/// Options for control systems.
-template <typename DerivOrder>
+namespace OptionHolder {
+template <size_t DerivOrder>
 struct ControlSystem {
   struct Averager {
     using type = ::Averager<DerivOrder>;
-    static constexpr Options::String help = {"Averager"};
-    using group = OptionTags::ControlSystemGroup;
+    static constexpr Options::String help = {"Options for the averager."};
   };
 
   struct Controller {
     using type = ::Controller<DerivOrder>;
-    static constexpr Options::String help = {"Controller"};
-    using group = OptionTags::ControlSystemGroup;
+    static constexpr Options::String help = {"Options for the controller."};
   };
 
   struct TimescaleTuner {
     using type = ::TimescaleTuner;
-    static constexpr Options::String help = {"TimescaleTuner"};
-    using group = OptionTags::ControlSystemGroup;
+    static constexpr Options::String help = {
+        "Options for the timescale tuner."};
   };
 
   struct PrintOutput {
     using type = bool;
-    static constexpr Options::String help = {"PrintOutput"};
-    using group = OptionTags::ControlSystemGroup;
+    static constexpr Options::String help = {
+        "Whether to print control system output or not."};
   };
 
-  using options = tmpl::list<Averager<DerivOrder>, Controller<DerivOrder>,
-                             TimescaleTuner, PrintOuput>;
+  using options = tmpl::list<Averager, Controller,
+                             TimescaleTuner, PrintOutput>;
   static constexpr Options::String help = {"Options for a controlsystem."};
 
-  ControlSystem(Averager<DerivOrder> averager,
-                Controller<DerivOrder> controller, TimescaleTuner tuner,
-                bool PrintOutput) noexcept;
+  using db_tags = tmpl::list<control_system::Tags::Averager<DerivOrder>,
+                             control_system::Tags::Controller<DerivOrder>,
+                             control_system::Tags::TimescaleTuner,
+                             control_system::Tags::PrintOutput>;
+  using tuple_of_inputs = tuples::tagged_tuple_from_typelist<db_tags>;
+
+  ControlSystem(::Averager<DerivOrder> averager,
+                ::Controller<DerivOrder> controller, ::TimescaleTuner tuner,
+                bool print_output) noexcept {
+    tuples::get<control_system::Tags::Averager<DerivOrder>>(all_inputs_) =
+        std::move(averager);
+    tuples::get<control_system::Tags::Controller<DerivOrder>>(all_inputs_) =
+        std::move(controller);
+    tuples::get<control_system::Tags::TimescaleTuner>(all_inputs_) =
+        std::move(tuner);
+    tuples::get<control_system::Tags::PrintOutput>(all_inputs_) = print_output;
+  }
 
   ControlSystem() = default;
-  ControlSystem(const ApparentHorizon& /*rhs*/) = default;
-  ControlSystem& operator=(const ApparentHorizon& /*rhs*/) = delete;
-  ControlSystem(ApparentHorizon&& /*rhs*/) noexcept = default;
-  ControlSystem& operator=(ApparentHorizon&& /*rhs*/) noexcept = default;
+  ControlSystem(const ControlSystem& /*rhs*/) = default;
+  ControlSystem& operator=(const ControlSystem& /*rhs*/) = delete;
+  ControlSystem(ControlSystem&& /*rhs*/) noexcept = default;
+  ControlSystem& operator=(ControlSystem&& /*rhs*/) noexcept = default;
   ~ControlSystem() = default;
 
   // clang-tidy non-const reference pointer.
-  void pup(PUP::er& p) noexcept;  // NOLINT
+  void pup(PUP::er& p) noexcept { p | all_inputs_; };  // NOLINT
 
-  Averager<DerivOrder> averager_;
-  Controller<DerivOrder> controller_;
-  Timescaletuner tuner_;
-  bool print_output_;
+  tuple_of_inputs get_inputs() noexcept { return std::move(all_inputs_); }
+
+ private:
+  tuple_of_inputs all_inputs_{};
 };
 
-template <typename DerivOrder>
-bool operator==(const ControlSystem<DerivOrder>& lhs,
-                const ControlSystem<DerivOrder>& rhs) noexcept;
-template <typename DerivOrder>
-bool operator!=(const ControlSystem<DerivOrder>& lhs,
-                const ControlSystem<DerivOrder>& rhs) noexcept;
-
-}  // namespace OptionHolders
-
-namespace OptionTags {
-
-struct ControlSystemGroup {
-  static std::string name() noexcept { return "ControlSystem"; }
-  static constexpr Options::String help = {"Control system"};
-};
-}  // namespace OptionTags
-
-template <typename DerivOrder>
-struct ControlSystem {
-  using type = OptionHolders::ControlSystem<DerivOrder>;
-  static constexpr Options::String help{
-      "Options for interpolation onto apparent horizon."};
-  static std::string name() noexcept {
-    return Options::name<InterpolationTargetTag>();
-  }
-  using group = ControlSystemGroup;
-};
-
-namespace Tags {
-template <typename DerivOrder>
-struct ControlSystem : db::SimpleTag {
-  using type = OptionHolders::ControlSystem<DerivOrder>;
-  using option_tags =
-      tmpl::list<OptionTags::ControlSystem<InterpolationTargetTag, DerivOrder>>;
-
-  static constexpr bool pass_metavariables = false;
-  static type create_from_options(const type& option) noexcept {
-    return option;
-  }
-};
-}
-
-// This is alpha_m in Dan's paper
-// struct MeasurementTimeScaleOverExpirationDeltaT {
-//  using type = double;
-//  static constexpr Options::String help = {
-//      "How often to measure control error as a fraction of the expiration "
-//      "timescale of the function of time"};
-//  using group = OptionTags::ControlSystemGroup;
-//};
-//
-//// This is alpha_d in Dan's paper
-// struct ExpirationDeltaTOverDampingTimescale {
-//  using type = double;
-//  static constexpr Options::String help = {
-//      "How long function of time expiration should be as a fraction of the "
-//      "damping timescale"};
-//  using group = OptionTags::ControlSystemGroup;
-//};
-
-namespace Tags {
-
-// struct MeasurementTimeScaleOverExpirationDeltaT : db::SimpleTag {
-//  using type = double;
-//  using option_tags =
-//      tmpl::list<OptionTags::MeasurementTimeScaleOverExpirationDeltaT>;
-//  static constexpr bool pass_metavariables = false;
-//  static auto create_from_options(const double value) { return value; }
-//};
-//
-// struct ExpirationDeltaTOverDampingTimescale : db::SimpleTag {
-//  using type = double;
-//  using option_tags =
-//      tmpl::list<OptionTags::ExpirationDeltaTOverDampingTimescale>;
-//  static constexpr bool pass_metavariables = false;
-//  static auto create_from_options(const double value) { return value; }
-//};
-
-struct MeasureTranslationResult : db::SimpleTag {
-  // using type = ::domain::Tags::MeshVelocity<2>::type;
-  using type = std::vector<double>;
-};
-
-struct PrintOutput : db::SimpleTag {
-  using type = bool;
-  static constexpr bool pass_metavariables = false;
-  using option_tags = tmpl::list<OptionTags::PrintOutput>;
-
-  static auto create_from_options(const bool printoutput) noexcept {
-    return printoutput;
-  }
-};
-
-template <size_t DerivOrder>
-struct Averager : db::SimpleTag {
-  using type = ::Averager<DerivOrder>;
-
-  static constexpr bool pass_metavariables = false;
-  using option_tags = tmpl::list<OptionTags::Averager<DerivOrder>>;
-
-  static auto create_from_options(
-      const ::Averager<DerivOrder>& averager) noexcept {
-    return averager;
-  }
-};
-
-struct TimescaleTuner : db::SimpleTag {
-  using type = ::TimescaleTuner;
-
-  static constexpr bool pass_metavariables = false;
-  using option_tags = tmpl::list<OptionTags::TimescaleTuner>;
-
-  static auto create_from_options(
-      const ::TimescaleTuner& timescale_tuner) noexcept {
-    return timescale_tuner;
-  }
-};
-
-template <size_t DerivOrder>
-struct Controller : db::SimpleTag {
-  using type = ::Controller<DerivOrder>;
-
-  static constexpr bool pass_metavariables = false;
-
-  using option_tags = tmpl::list<OptionTags::Controller<DerivOrder>>;
-
-  static auto create_from_options(
-      const ::Controller<DerivOrder>& controller) noexcept {
-    return controller;
-  }
-};
-
-}  // namespace Tags
+// template <size_t DerivOrder>
+// bool operator==(const ControlSystem<DerivOrder>& lhs,
+//                const ControlSystem<DerivOrder>& rhs) noexcept;
+// template <size_t DerivOrder>
+// bool operator!=(const ControlSystem<DerivOrder>& lhs,
+//                const ControlSystem<DerivOrder>& rhs) noexcept;
+}  // namespace OptionHolder
+}  // namespace control_system

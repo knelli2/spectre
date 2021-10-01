@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ControlSystem/Actions/ReduceToRunCallbacks.hpp"
 #include "ControlSystem/Component.hpp"
 #include "ControlSystem/Protocols/Submeasurement.hpp"
 #include "ControlSystem/Tags.hpp"
@@ -38,29 +39,17 @@ struct Logical;
 }  // namespace Frame
 
 namespace control_system {
+namespace QueueTags {
+// tag goes in LinkedMessageQueue of all control systems that need this
+// submeasurement
+struct MeasureTranslation {
+  using type = std::vector<double>;
+};
+}  // namespace QueueTags
 
 struct SubTrackTranslation : tt::ConformsTo<protocols::Submeasurement> {
   template <typename ControlSystem>
   using interpolation_target_tag = void;
-
-  // Needed for reduction operation because there isn't one defined for tensors
-  // struct MaxOfVelocity {
-  //  std::optional<tnsr::I<DataVector, 2, ::Frame::Inertial>> operator()(
-  //      const std::optional<tnsr::I<DataVector, 2, ::Frame::Inertial>>& a,
-  //      const std::optional<tnsr::I<DataVector, 2, ::Frame::Inertial>>& b) {
-  //    tnsr::I<DataVector, 2, ::Frame::Inertial> result{};
-  //    get<0>(result) = max(get<0>(a.value()), get<0>(b.value()));
-  //    get<1>(result) = max(get<1>(a.value()), get<1>(b.value()));
-  //    return result;
-  //  }
-  //};
-
-  // My attempt without knowing anything
-  // using ReductionData = Parallel::ReductionData<
-  //    Parallel::ReductionDatum<LinkedMessageId<double>, funcl::AssertEqual<>>,
-  //    Parallel::ReductionDatum<
-  //        std::optional<tnsr::I<DataVector, 2, ::Frame::Inertial>>,
-  //        MaxOfVelocity>>;
 
   struct VectorAppend {
     std::vector<DataVector> operator()(const std::vector<DataVector>& a,
@@ -107,13 +96,6 @@ struct SubTrackTranslation : tt::ConformsTo<protocols::Submeasurement> {
       const ArrayIndex& array_index, const ParallelComponent* /*meta*/,
       ControlSystems /*meta*/) {
     // Do reduction here. RunCallbacks is put in the actual reduction
-    // Make box in reduction.
-    // const auto box;
-    // control_sytem::RunCallbacks<SubTrackTranslation, ControlSystems>::apply(
-    //    box, cache, measurement_id);
-    // std::ostringstream os;
-    // os << "Inside submeasurement. Contributing to reduction.\n";
-    // Parallel::printf(os.str());
     // Just need a dummy component to do this reduction which doesn't have to be
     // a reduction.
     const auto& control_component_proxy = Parallel::get_parallel_component<
@@ -121,10 +103,6 @@ struct SubTrackTranslation : tt::ConformsTo<protocols::Submeasurement> {
     const auto& component_proxy =
         Parallel::get_parallel_component<ParallelComponent>(cache);
     const auto& self_proxy = component_proxy[array_index];
-    // Parallel::contribute_to_reduction<
-    //    Actions::ReduceToRunCallbacks<ControlSystems>>(
-    //    ReductionData(measurement_id, data_from_element), self_proxy,
-    //    control_component_proxy);
 
     const DataVector det_jacobian = 1.0 / get(det_inv_jacobian);
     // const double local_volume = definite_integral(det_jacobian, mesh);
@@ -140,11 +118,6 @@ struct SubTrackTranslation : tt::ConformsTo<protocols::Submeasurement> {
     }
 
     std::vector<DataVector> vec_coords{coords.get(0)};
-
-    //std::ostringstream os;
-    //os << "Coords[0].size(): " << coords.get(0).size() << "\n";
-    //os << "Coords[0]: " << coords.get(0) << "\n";
-    //Parallel::printf(os.str());
 
     Parallel::contribute_to_reduction<
         Actions::ReduceToRunCallbacks<ControlSystems>>(

@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <vector>
 
-#include "ControlSystem/Actions.hpp"
 #include "ControlSystem/Actions/InitializeMeasurements.hpp"
 #include "ControlSystem/Component.hpp"
 #include "ControlSystem/Event.hpp"
@@ -136,17 +135,20 @@ struct EvolutionMetavars {
   using observe_fields = typename system::variables_tag::tags_list;
   using analytic_solution_fields = observe_fields;
 
-  using control_systems = tmpl::list<control_system::ControlTranslation>;
-  using control_components = tmpl::list<
-      ControlComponent<EvolutionMetavars, control_system::ControlTranslation>>;
-  using control_triggers = tmpl::list<control_system::Trigger<control_systems>>;
+  using control_systems = tmpl::list<control_system::Translation<1>>;
+  using control_components =
+      control_system::control_components<EvolutionMetavars, control_systems>;
+  using control_system_events =
+      control_system::control_system_events<control_systems>;
+  using control_system_triggers =
+      control_system::control_system_triggers<control_systems>;
 
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
         tmpl::pair<DenseTrigger,
                    tmpl::append<DenseTriggers::standard_dense_triggers,
-                                control_triggers>>,
+                                control_system_triggers>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<
             Event,
@@ -158,8 +160,7 @@ struct EvolutionMetavars {
                 dg::Events::ObserveVolumeIntegrals<
                     volume_dim, Tags::Time,
                     tmpl::list<ScalarWave::Tags::EnergyDensity<volume_dim>>>,
-                Events::time_events<system>,
-                control_system::Event<control_systems>>>>,
+                Events::time_events<system>, control_system_events>>>,
         tmpl::pair<MathFunction<1, Frame::Inertial>,
                    MathFunctions::all_math_functions<1, Frame::Inertial>>,
         tmpl::pair<
