@@ -22,6 +22,8 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace Parallel {
 template <typename Metavariables>
@@ -98,8 +100,7 @@ class Trigger : public DenseTrigger {
   template <typename Metavariables, typename ArrayIndex, typename Component>
   static bool is_ready(Parallel::GlobalCache<Metavariables>& cache,
                        const ArrayIndex& array_index,
-                       const Component* component,
-                       const double time) noexcept {
+                       const Component* component, const double time) noexcept {
     return tmpl::as_pack<ControlSystems>([&array_index, &cache, &component,
                                           &time](
                                              auto... control_systems) noexcept {
