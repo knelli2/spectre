@@ -8,13 +8,20 @@
 #include "ControlSystem/Metafunctions.hpp"
 #include "ControlSystem/Protocols/Measurement.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/DataBoxTag.hpp"
+#include "DataStructures/DataBox/Prefixes.hpp"
+#include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/LinkedMessageQueue.hpp"
 #include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/Tags.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/CharmPupable.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
+
+#include <ostream>
+#include "Parallel/Printf.hpp"
 
 /// \cond
 namespace Parallel {
@@ -53,8 +60,7 @@ class Event : public ::Event {
   static_assert(tmpl::all<ControlSystems,
                           std::is_same<metafunctions::measurement<tmpl::_1>,
                                        tmpl::pin<measurement>>>::value);
-  static_assert(
-      tt::assert_conforms_to<measurement, protocols::Measurement>);
+  static_assert(tt::assert_conforms_to<measurement, protocols::Measurement>);
 
   template <typename ControlSystem>
   using process_measurement_for_control_system =
@@ -76,7 +82,10 @@ class Event : public ::Event {
   static constexpr bool factory_creatable = false;
   Event() = default;
 
-  using argument_tags = tmpl::list<Tags::DataBox>;
+  // using options = tmpl::list<>;
+  // static constexpr Options::String help = {"Control system event."};
+
+  using argument_tags = tmpl::list<::Tags::DataBox>;
 
   template <typename DbTags, typename Metavariables, typename ArrayIndex,
             typename Component>
@@ -87,6 +96,13 @@ class Event : public ::Event {
     const LinkedMessageId<double> measurement_id{
         db::get<::Tags::Time>(box),
         db::get<::evolution::Tags::PreviousTriggerTime>(box)};
+    // constexpr size_t Dim = 1;
+    // const auto& det_inv_jacobian = db::get<
+    //    ::domain::Tags::DetInvJacobian<Frame::Logical, Frame::Inertial>>(box);
+    // const auto& psi = db::get<::ScalarWave::Psi>(box);
+    // const auto& mesh = db::get<::domain::Tags::Mesh<Dim>>(box);
+    // const auto& coords =
+    //    db::get<::domain::Tags::Coordinates<Dim, Frame::Inertial>>(box);
     tmpl::for_each<typename measurement::submeasurements>(
         [&array_index, &box, &cache, &component,
          &measurement_id](auto submeasurement) noexcept {
