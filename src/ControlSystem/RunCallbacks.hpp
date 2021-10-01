@@ -12,6 +12,8 @@
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace Parallel {
 template <typename Metavariables>
@@ -49,9 +51,11 @@ struct RunCallbacks {
   static void apply(const db::DataBox<DbTags>& box,
                     Parallel::GlobalCache<Metavariables>& cache,
                     const LinkedMessageId<double>& measurement_id) noexcept {
+    //Parallel::printf("Inside RunCallBacks\n");
     tmpl::for_each<ControlSystems>(
         [&box, &cache, &measurement_id](auto control_system_v) noexcept {
           using ControlSystem = tmpl::type_from<decltype(control_system_v)>;
+          //Parallel::printf("  for_each control system inside RunCallBacks\n");
           db::apply<typename ControlSystem::process_measurement::
                         template argument_tags<Submeasurement>>(
               [&cache, &measurement_id](const auto&... args) noexcept {
