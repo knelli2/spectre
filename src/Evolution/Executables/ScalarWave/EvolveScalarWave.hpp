@@ -7,11 +7,18 @@
 #include <cstdint>
 #include <vector>
 
+#include "ControlSystem/Actions.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/KyleExample/ControlTranslation.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "Domain/Creators/Factory1D.hpp"
 #include "Domain/Creators/Factory2D.hpp"
 #include "Domain/Creators/Factory3D.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/Actions/RunEventsAndDenseTriggers.hpp"
@@ -129,10 +136,17 @@ struct EvolutionMetavars {
   using observe_fields = typename system::variables_tag::tags_list;
   using analytic_solution_fields = observe_fields;
 
+  using control_systems = tmpl::list<control_system::ControlTranslation>;
+  using control_components = tmpl::list<
+      ControlComponent<EvolutionMetavars, control_system::ControlTranslation>>;
+  using control_triggers = tmpl::list<control_system::Trigger<control_systems>>;
+
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger,
+                   tmpl::append<DenseTriggers::standard_dense_triggers,
+                                control_triggers>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<
             Event,
@@ -144,7 +158,8 @@ struct EvolutionMetavars {
                 dg::Events::ObserveVolumeIntegrals<
                     volume_dim, Tags::Time,
                     tmpl::list<ScalarWave::Tags::EnergyDensity<volume_dim>>>,
-                Events::time_events<system>>>>,
+                Events::time_events<system>,
+                control_system::Event<control_systems>>>>,
         tmpl::pair<MathFunction<1, Frame::Inertial>,
                    MathFunctions::all_math_functions<1, Frame::Inertial>>,
         tmpl::pair<
@@ -180,6 +195,7 @@ struct EvolutionMetavars {
   static constexpr bool use_filtering = (2 == volume_dim);
 
   using step_actions = tmpl::flatten<tmpl::list<
+      domain::Actions::CheckFunctionsOfTimeAreReady,
       evolution::dg::Actions::ComputeTimeDerivative<EvolutionMetavars>,
       tmpl::conditional_t<
           local_time_stepping,
@@ -237,23 +253,24 @@ struct EvolutionMetavars {
   using dg_registration_list =
       tmpl::list<observers::Actions::RegisterEventsWithObservers>;
 
-  using initialization_actions =
-      tmpl::list<Actions::SetupDataBox,
-                 Initialization::Actions::TimeAndTimeStep<EvolutionMetavars>,
-                 evolution::dg::Initialization::Domain<volume_dim>,
-                 Initialization::Actions::NonconservativeSystem<system>,
-                 evolution::Initialization::Actions::SetVariables<
-                     domain::Tags::Coordinates<Dim, Frame::Logical>>,
-                 Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
-                 ScalarWave::Actions::InitializeConstraints<volume_dim>,
-                 Initialization::Actions::AddComputeTags<tmpl::push_back<
-                     StepChoosers::step_chooser_compute_tags<EvolutionMetavars>,
-                     evolution::Tags::AnalyticCompute<Dim, initial_data_tag,
-                                                      analytic_solution_fields>,
-                     ScalarWave::Tags::EnergyDensityCompute<volume_dim>>>,
-                 ::evolution::dg::Initialization::Mortars<volume_dim, system>,
-                 evolution::Actions::InitializeRunEventsAndDenseTriggers,
-                 Initialization::Actions::RemoveOptionsAndTerminatePhase>;
+  using initialization_actions = tmpl::list<
+      Actions::SetupDataBox,
+      Initialization::Actions::TimeAndTimeStep<EvolutionMetavars>,
+      evolution::dg::Initialization::Domain<volume_dim>,
+      Initialization::Actions::NonconservativeSystem<system>,
+      evolution::Initialization::Actions::SetVariables<
+          domain::Tags::Coordinates<Dim, Frame::Logical>>,
+      control_system::Actions::InitializeMeasurements<control_systems>,
+      Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
+      ScalarWave::Actions::InitializeConstraints<volume_dim>,
+      Initialization::Actions::AddComputeTags<tmpl::push_back<
+          StepChoosers::step_chooser_compute_tags<EvolutionMetavars>,
+          evolution::Tags::AnalyticCompute<Dim, initial_data_tag,
+                                           analytic_solution_fields>,
+          ScalarWave::Tags::EnergyDensityCompute<volume_dim>>>,
+      ::evolution::dg::Initialization::Mortars<volume_dim, system>,
+      evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using dg_element_array = DgElementArray<
       EvolutionMetavars,
@@ -284,9 +301,10 @@ struct EvolutionMetavars {
   };
 
   using component_list =
-      tmpl::list<observers::Observer<EvolutionMetavars>,
-                 observers::ObserverWriter<EvolutionMetavars>,
-                 dg_element_array>;
+      tmpl::append<tmpl::list<observers::Observer<EvolutionMetavars>,
+                              observers::ObserverWriter<EvolutionMetavars>,
+                              dg_element_array>,
+                   control_components>;
 
   static constexpr Options::String help{
       "Evolve a Scalar Wave in Dim spatial dimension.\n\n"
