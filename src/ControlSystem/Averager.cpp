@@ -6,8 +6,12 @@
 #include <ostream>
 
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/MakeArray.hpp"
+#include "Utilities/StdArrayHelpers.hpp"
+
+#include "Parallel/Printf.hpp"
 
 template <size_t DerivOrder>
 Averager<DerivOrder>::Averager(const double avg_timescale_frac,
@@ -51,6 +55,11 @@ Averager<DerivOrder>& Averager<DerivOrder>::operator=(Averager&& rhs) noexcept {
 template <size_t DerivOrder>
 const std::optional<std::array<DataVector, DerivOrder + 1>>&
 Averager<DerivOrder>::operator()(const double time) const noexcept {
+  std::ostringstream os;
+  // os << "Inside averager operator.\n";
+  // os << "  times_.size() = " << times_.size() << "\n"
+  //   << "  times_[0] = " << times_[0] << "\n";
+  // Parallel::printf(os.str());
   if (times_.size() > DerivOrder and time == times_[0]) {
     return averaged_values_;
   }
@@ -85,6 +94,11 @@ void Averager<DerivOrder>::update(const double time, const DataVector& raw_q,
     tau_k_ = 0.0;
   }
 
+  // Check if we need to update
+  if (time == times_[0]) {
+    return;
+  }
+
   // Ensure that the number of timescales matches the number of components
   if (UNLIKELY(timescales.size() != raw_q.size())) {
     ERROR("The number of supplied timescales ("
@@ -97,8 +111,9 @@ void Averager<DerivOrder>::update(const double time, const DataVector& raw_q,
 
   // Do not allow updates at or before last update time
   if (UNLIKELY(not times_.empty() and time <= last_time_updated())) {
-    ERROR("The specified time t=" << time << " is at or before the last time "
-                                             "updated, t_update="
+    ERROR("The specified time t=" << time
+                                  << " is at or before the last time "
+                                     "updated, t_update="
                                   << last_time_updated() << ".");
   }
 
@@ -158,35 +173,74 @@ double Averager<DerivOrder>::average_time(const double time) const noexcept {
 }
 
 template <size_t DerivOrder>
-std::array<DataVector, DerivOrder + 1> Averager<DerivOrder>::get_derivs() const
-    noexcept {
-  static_assert(DerivOrder == 2,
-                "Finite differencing currently only implemented for DerivOrder "
-                "= 2. If a different DerivOrder is desired, please add stencil "
-                "coefficients for that order.");
-
+std::array<DataVector, DerivOrder + 1> Averager<DerivOrder>::get_derivs()
+    const noexcept {
   // initialize the finite difference coefs
-  std::array<std::array<double, 3>, 3> coefs{};
+  std::array<std::array<double, DerivOrder + 1>, DerivOrder + 1> coefs{};
 
-  const double delta_t1 = times_[0] - times_[1];
-  const double delta_t2 = times_[1] - times_[2];
-  const double delta_t = delta_t1 + delta_t2;
-  const double denom = 1.0 / delta_t;
-  const double dts = delta_t1 * delta_t2;
+  if constexpr (DerivOrder == 0) {
+    // set coefs for function value
+    coefs[0] = {{1.0}};
+  } else if constexpr (DerivOrder == 1) {
+    const double delta_t = times_[0] - times_[1];
 
-  // set coefs for function value
-  coefs[0] = {{1.0, 0.0, 0.0}};
-  // first deriv coefs
-  coefs[1] = {{(2.0 + delta_t2 / delta_t1) * denom, -delta_t / dts,
-               delta_t1 / delta_t2 * denom}};
-  // second deriv coefs
-  coefs[2] = {{2.0 / delta_t1 * denom, -2.0 / dts, 2.0 / delta_t2 * denom}};
+    // set coefs for function value
+    coefs[0] = {{1.0, 0.0}};
+    // first deriv coefs
+    coefs[1] = {{-1.0 / delta_t, -1.0 / delta_t}};
+  } else if constexpr (DerivOrder == 2) {
+    const double delta_t1 = times_[0] - times_[1];
+    const double delta_t2 = times_[1] - times_[2];
+    const double delta_t = delta_t1 + delta_t2;
+    const double denom = 1.0 / delta_t;
+    const double dts = delta_t1 * delta_t2;
 
-  std::array<DataVector, 3> result =
-      make_array<3>(DataVector(raw_qs_[0].size(), 0.0));
+    // set coefs for function value
+    coefs[0] = {{1.0, 0.0, 0.0}};
+    // first deriv coefs
+    coefs[1] = {{(2.0 + delta_t2 / delta_t1) * denom, -delta_t / dts,
+                 delta_t1 / delta_t2 * denom}};
+    // second deriv coefs
+    coefs[2] = {{2.0 / delta_t1 * denom, -2.0 / dts, 2.0 / delta_t2 * denom}};
+  } else if constexpr (DerivOrder == 3) {
+    const double delta_t1 = times_[1] - times_[0];
+    const double delta_t2 = times_[2] - times_[0];
+    const double delta_t3 = times_[3] - times_[0];
+    const double dt1_minus_dt2 = times_[1] - times_[2];
+    const double dt1_minus_dt3 = times_[1] - times_[3];
+    const double dt2_minus_dt3 = times_[2] - times_[3];
+
+    // set coefs for function value
+    coefs[0] = {{1.0, 0.0, 0.0, 0.0}};
+    // first deriv coefs
+    coefs[1] = {
+        {delta_t2 * delta_t3 / (delta_t1 * dt1_minus_dt2 * dt1_minus_dt3),
+         -delta_t1 * delta_t3 / (delta_t2 * dt1_minus_dt2 * dt2_minus_dt3),
+         delta_t1 * delta_t2 / (delta_t3 * dt1_minus_dt3 * dt2_minus_dt3),
+         -1.0 / delta_t1 - 1.0 / delta_t2 - 1.0 / delta_t3}};
+    // second deriv coefs
+    coefs[2] = {{-2.0 * (delta_t2 + delta_t3) /
+                     (delta_t1 * dt1_minus_dt2 * dt1_minus_dt3),
+                 2.0 * (delta_t1 + delta_t3) /
+                     (delta_t2 * dt1_minus_dt2 * dt2_minus_dt3),
+                 -2.0 * (delta_t1 + delta_t2) /
+                     (delta_t3 * dt1_minus_dt3 * dt2_minus_dt3),
+                 2.0 * (delta_t1 + delta_t2 + delta_t3) /
+                     (delta_t1 * delta_t2 * delta_t3)}};
+    // third deriv coefs
+    coefs[3] = {{6.0 / (delta_t1 * dt1_minus_dt2 * dt1_minus_dt3),
+                 -6.0 / (delta_t2 * dt1_minus_dt2 * dt2_minus_dt3),
+                 6.0 / (delta_t3 * dt1_minus_dt3 * dt2_minus_dt3),
+                 -6.0 / (delta_t1 * delta_t2 * delta_t3)}};
+  } else {
+    ERROR("Cannot compute derivatives for a deriv order greater than 3.");
+  }
+
   // compute derivatives
-  for (size_t i = 0; i < 3; i++) {
-    for (size_t j = 0; j < 3; j++) {
+  std::array<DataVector, DerivOrder + 1> result =
+      make_array<DerivOrder + 1>(DataVector(raw_qs_[0].size(), 0.0));
+  for (size_t i = 0; i < DerivOrder + 1; i++) {
+    for (size_t j = 0; j < DerivOrder + 1; j++) {
       gsl::at(result, i) += raw_qs_[j] * gsl::at(gsl::at(coefs, i), j);
     }
   }
@@ -205,6 +259,27 @@ void Averager<DerivOrder>::pup(PUP::er& p) noexcept {
 }
 
 template <size_t DerivOrder>
+std::string Averager<DerivOrder>::get_output() const noexcept {
+  std::ostringstream os;
+  os << "avg_tscale_frac_ = " << avg_tscale_frac_ << "\n"
+     << "average_0th_deriv_of_q_ = " << average_0th_deriv_of_q_ << "\n";
+  if (averaged_values_.has_value()) {
+    os << "Size of averaged_values_ = " << averaged_values_.value().size()
+       << "\n";
+  }
+  os << "Size of times_ = " << times_.size() << "\n"
+     << "times_ = (";
+  for (size_t i = 0; i < times_.size() - 1; i++) {
+    os << times_[i] << ", ";
+  }
+  os << times_[times_.size() - 1] << ")\n";
+  os << "Size of raw_qs_ = " << raw_qs_.size() << "\n"
+     << "weight_k_ = " << weight_k_ << "\n"
+     << "tau_k_ = " << tau_k_;
+  return os.str();
+}
+
+template <size_t DerivOrder>
 bool operator==(const Averager<DerivOrder>& avg1,
                 const Averager<DerivOrder>& avg2) {
   return (avg1.avg_tscale_frac_ == avg2.avg_tscale_frac_) and
@@ -220,7 +295,17 @@ bool operator!=(const Averager<DerivOrder>& avg1,
   return not(avg1 == avg2);
 }
 
-// explicit instantiations
-template class Averager<2>;
-template bool operator==(const Averager<2>& avg1, const Averager<2>& avg2);
-template bool operator!=(const Averager<2>& avg1, const Averager<2>& avg2);
+// explicit instantiations for deriv order (0,1,2,3)
+#define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
+
+#define INSTANTIATE(_, data)                            \
+  template class Averager<DIM(data)>;                   \
+  template bool operator==(const Averager<DIM(data)>&,  \
+                           const Averager<DIM(data)>&); \
+  template bool operator!=(const Averager<DIM(data)>&,  \
+                           const Averager<DIM(data)>&);
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (0, 1, 2, 3))
+
+#undef INSTANIATE
+#undef DIM

@@ -10,6 +10,8 @@
 #include <pup.h>
 #include <pup_stl.h>
 
+#include <ostream>
+
 #include "DataStructures/DataVector.hpp"
 #include "Options/Options.hpp"
 #include "Parallel/PupStlCpp17.hpp"
@@ -36,6 +38,10 @@
 /// generalize the differencing stencil at this time).
 template <size_t DerivOrder>
 class Averager {
+  static_assert(
+      DerivOrder <= 3,
+      "Averager only instantiated for deriv order less than or equal to 3.");
+
  public:
   struct AverageTimescaleFraction {
     using type = double;
@@ -115,6 +121,8 @@ class Averager {
   };
 
   void pup(PUP::er& p) noexcept;
+
+  std::string get_output() const noexcept;
 
  private:
   /// Returns the function and numerical derivatives up to the
