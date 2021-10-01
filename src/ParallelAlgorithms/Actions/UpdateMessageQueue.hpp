@@ -10,6 +10,9 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Gsl.hpp"
 
+#include <ostream>
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace Parallel {
 template <typename Metavariables>
@@ -41,10 +44,18 @@ struct UpdateMessageQueue {
       typename QueueTag::type message) noexcept {
     if constexpr (db::tag_is_retrievable_v<LinkedMessageQueueTag,
                                            db::DataBox<DbTags>>) {
+      // Parallel::printf("Inside UpdateMessageQueue. Deciding if queue is
+      // ready.\n");
       auto& queue =
           db::get_mutable_reference<LinkedMessageQueueTag>(make_not_null(&box));
+      // std::ostringstream os;
+      // os << "  Message at id " << id_and_previous.id << " and prev id "
+      //   << id_and_previous.previous.value_or(-9.0) << ":\n";
+      // os << "    " << message << "\n";
+      // Parallel::printf(os.str());
       queue.template insert<QueueTag>(id_and_previous, std::move(message));
       while (auto id = queue.next_ready_id()) {
+        // Parallel::printf("Queue is ready. Applying processor.\n");
         Processor::apply(make_not_null(&box), cache, array_index, *id,
                          queue.extract());
       }
