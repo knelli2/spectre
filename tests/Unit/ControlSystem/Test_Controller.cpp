@@ -49,15 +49,14 @@ void test_controller() {
                {-square(freq) * std::sin(freq * t)}}},
           t + dt);
 
-  Controller<deriv_order> control_signal;
+  Controller<deriv_order> control_signal{0.5};
   const double t_offset = 0.0;
 
   while (t < final_time) {
-    std::array<DataVector, deriv_order + 1> target_func{
+    std::array<DataVector, deriv_order> target_func{
         {{std::sin(freq * t)},
-         {freq * std::cos(freq * t)},
-         {-square(freq) * std::sin(freq * t)}}};
-    const auto lambda = f_of_t->func_and_2_derivs(t);
+         {freq * std::cos(freq * t)}}};
+    const auto lambda = f_of_t->func_and_deriv(t);
     // check that the error is within the specified tolerance, which is
     // maintained by the TimescaleTuner adjusting the damping time
     CHECK(fabs(target_func[0][0] - lambda[0][0]) <
@@ -69,8 +68,8 @@ void test_controller() {
     const auto q_and_derivs = target_func - lambda;
 
     // get the control signal for updating the FunctionOfTime
-    const DataVector U = control_signal(tst.current_timescale(), q_and_derivs,
-                                        t_offset, t_offset);
+    const DataVector U = control_signal(t, tst.current_timescale(),
+                                        q_and_derivs, t_offset, t_offset);
 
     t += dt;
     f_of_t->update(t, {U}, t + dt);
@@ -103,7 +102,7 @@ void test_timeoffsets() {
 
   // some vars for a rough averaging procedure
   const double alpha = 0.1;
-  std::array<DataVector, deriv_order + 1> avg_qs{{{0.0}, {0.0}, {0.0}}};
+  std::array<DataVector, deriv_order> avg_qs{{{0.0}, {0.0}}};
   double avg_time = 0.0;
 
   // properly initialize the function of time to match our target function
@@ -117,14 +116,13 @@ void test_timeoffsets() {
                {-square(freq) * std::sin(freq * t)}}},
           t + dt);
 
-  Controller<deriv_order> control_signal;
+  Controller<deriv_order> control_signal{0.5};
 
   while (t < final_time) {
-    std::array<DataVector, deriv_order + 1> target_func{
+    std::array<DataVector, deriv_order> target_func{
         {{std::sin(freq * t)},
-         {freq * std::cos(freq * t)},
-         {-square(freq) * std::sin(freq * t)}}};
-    const auto lambda = f_of_t->func_and_2_derivs(t);
+         {freq * std::cos(freq * t)}}};
+    const auto lambda = f_of_t->func_and_deriv(t);
     // check that the error is within the specified tolerance, which is
     // maintained by the TimescaleTuner adjusting the damping time
     CHECK(fabs(target_func[0][0] - lambda[0][0]) <
@@ -143,7 +141,6 @@ void test_timeoffsets() {
       avg_time = alpha * t + (1.0 - alpha) * avg_time;
       avg_qs[0] = alpha * q_and_derivs[0] + (1.0 - alpha) * avg_qs[0];
       avg_qs[1] = alpha * q_and_derivs[1] + (1.0 - alpha) * avg_qs[1];
-      avg_qs[2] = alpha * q_and_derivs[2] + (1.0 - alpha) * avg_qs[2];
     }
 
     // get the time offset due to averaging
@@ -151,7 +148,7 @@ void test_timeoffsets() {
 
     // get the control signal for updating the FunctionOfTime
     const DataVector U =
-        control_signal(tst.current_timescale(), avg_qs, t_offset, t_offset);
+        control_signal(t, tst.current_timescale(), avg_qs, t_offset, t_offset);
 
     t += dt;
     f_of_t->update(t, {U}, t + dt);
@@ -184,7 +181,7 @@ void test_timeoffsets_noaverageq() {
 
   // some vars for a rough averaging procedure
   const double alpha = 0.1;
-  std::array<DataVector, deriv_order + 1> avg_qs{{{0.0}, {0.0}, {0.0}}};
+  std::array<DataVector, deriv_order> avg_qs{{{0.0}, {0.0}}};
   double avg_time = 0.0;
 
   // properly initialize the function of time to match our target function
@@ -198,14 +195,13 @@ void test_timeoffsets_noaverageq() {
                {-square(freq) * std::sin(freq * t)}}},
           t + dt);
 
-  Controller<deriv_order> control_signal;
+  Controller<deriv_order> control_signal{0.5};
 
   while (t < final_time) {
-    std::array<DataVector, deriv_order + 1> target_func{
+    std::array<DataVector, deriv_order> target_func{
         {{std::sin(freq * t)},
-         {freq * std::cos(freq * t)},
-         {-square(freq) * std::sin(freq * t)}}};
-    const auto lambda = f_of_t->func_and_2_derivs(t);
+         {freq * std::cos(freq * t)}}};
+    const auto lambda = f_of_t->func_and_deriv(t);
     // check that the error is within the specified tolerance, which is
     // maintained by the TimescaleTuner adjusting the damping time
     CHECK(fabs(target_func[0][0] - lambda[0][0]) <
@@ -224,7 +220,6 @@ void test_timeoffsets_noaverageq() {
       avg_time = alpha * t + (1.0 - alpha) * avg_time;
       avg_qs[0] = q_and_derivs[0];
       avg_qs[1] = alpha * q_and_derivs[1] + (1.0 - alpha) * avg_qs[1];
-      avg_qs[2] = alpha * q_and_derivs[2] + (1.0 - alpha) * avg_qs[2];
     }
 
     // since q is not averaged, there is no time offset
@@ -233,8 +228,8 @@ void test_timeoffsets_noaverageq() {
     const double t_offset = t - avg_time;
 
     // get the control signal for updating the FunctionOfTime
-    const DataVector U =
-        control_signal(tst.current_timescale(), avg_qs, q_t_offset, t_offset);
+    const DataVector U = control_signal(t, tst.current_timescale(), avg_qs,
+                                        q_t_offset, t_offset);
 
     t += dt;
     f_of_t->update(t, {U}, t + dt);
