@@ -64,9 +64,9 @@ class Controller {
   ~Controller() = default;
 
   DataVector operator()(
-      const DataVector& timescales,
+      const double time, const DataVector& timescales,
       const std::array<DataVector, DerivOrder + 1>& q_and_derivs,
-      double q_time_offset, double deriv_time_offset) const;
+      double q_time_offset, double deriv_time_offset);
 
   /// Takes the current minimum of all timescales and uses that to set the time
   /// between updates
@@ -74,10 +74,19 @@ class Controller {
     time_between_updates_ = update_fraction_ * current_min_timescale;
   }
 
+  bool is_ready(const double time) {
+    return time >= last_update_time_ + time_between_updates_;
+  }
+
+  double next_expiration_time(const double current_expiration_time) {
+    return current_expiration_time + time_between_updates_;
+  }
+
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& p) {
     p | update_fraction_;
     p | time_between_updates_;
+    p | last_update_time_;
   }
 
   template <size_t LocalDerivOrder>
@@ -91,6 +100,7 @@ class Controller {
   // If this time_between_triggers_ isn't set, the default should just be that
   // the functions of time are never updated (i.e. infinity)
   double time_between_updates_{std::numeric_limits<double>::infinity()};
+  double last_update_time_{0.0};
 };
 
 template <size_t DerivOrder>

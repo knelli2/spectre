@@ -8,9 +8,11 @@
 
 template <size_t DerivOrder>
 DataVector Controller<DerivOrder>::operator()(
-    const DataVector& timescales,
+    const double time, const DataVector& timescales,
     const std::array<DataVector, DerivOrder + 1>& q_and_derivs,
-    const double q_time_offset, const double deriv_time_offset) const {
+    const double q_time_offset, const double deriv_time_offset) {
+  last_update_time_ = time;
+  assign_time_between_updates(min(timescales));
   // helper lambda for computing the binomial coefficients
   const auto binomial = [](size_t N, size_t k) {
     return falling_factorial(N, k) / factorial(k);
@@ -87,6 +89,7 @@ bool operator!=(const Controller<DerivOrder>& lhs,
 }
 
 // explicit instantiations
+template class Controller<1>;
 template class Controller<2>;
 template bool operator==(const Controller<2>&, const Controller<2>&);
 template bool operator!=(const Controller<2>&, const Controller<2>&);
