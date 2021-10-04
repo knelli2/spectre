@@ -698,6 +698,14 @@ class BinaryCompactObject : public DomainCreator<3> {
   std::vector<std::array<size_t, 3>> initial_refinement_levels() const
       noexcept override;
 
+  double x_coord_object_A() const noexcept {
+    return object_A_.x_coord;
+  }
+
+  double x_coord_object_B() const noexcept {
+    return object_B_.x_coord;
+  }
+
   auto functions_of_time() const noexcept -> std::unordered_map<
       std::string,
       std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;

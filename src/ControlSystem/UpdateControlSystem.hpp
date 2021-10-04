@@ -18,8 +18,8 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
-#include "Parallel/Printf.hpp"
 #include <ostream>
+#include "Parallel/Printf.hpp"
 
 namespace domain::Tags {
 struct FunctionsOfTime;
@@ -34,17 +34,15 @@ struct UpdateControlSystem {
                     Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& /*array_index*/, const double time,
                     tuples::TaggedTuple<TupleTags...> data) noexcept {
-    if constexpr (db::tag_is_retrievable_v<
-                      control_system::Tags::Averager<DerivOrder>,
-                      db::DataBox<DbTags>> and
-                  db::tag_is_retrievable_v<
-                      control_system::Tags::Controller<DerivOrder>,
-                      db::DataBox<DbTags>> and
-                  db::tag_is_retrievable_v<control_system::Tags::TimescaleTuner,
-                                           db::DataBox<DbTags>> and
-                  db::tag_is_retrievable_v<
-                      ::control_system::Tags::ControlSystemName,
-                      db::DataBox<DbTags>>) {
+    if constexpr (
+        db::tag_is_retrievable_v<control_system::Tags::Averager<DerivOrder>,
+                                 db::DataBox<DbTags>> and
+        db::tag_is_retrievable_v<control_system::Tags::Controller<DerivOrder>,
+                                 db::DataBox<DbTags>> and
+        db::tag_is_retrievable_v<control_system::Tags::TimescaleTuner,
+                                 db::DataBox<DbTags>> and
+        db::tag_is_retrievable_v<::control_system::Tags::ControlSystemName,
+                                 db::DataBox<DbTags>>) {
       // Parallel::printf("Hi from the good place\n");
       std::ostringstream os;
       os << "Time: " << time << "\n";
@@ -56,11 +54,13 @@ struct UpdateControlSystem {
       const auto& function_of_time =
           functions_of_time.at(function_of_time_name);
 
-      const DataVector Q = ControlError::template apply<DerivOrder>(data);
+      const DataVector Q = ControlError::template apply<DerivOrder>(
+          box, cache, time, function_of_time_name data);
       os << "Control error: " << Q << "\n";
 
-      auto& averager = db::get_mutable_reference<
-          control_system::Tags::Averager<DerivOrder>>(box);
+      auto& averager =
+          db::get_mutable_reference<control_system::Tags::Averager<DerivOrder>>(
+              box);
       auto& controller =
           db::get<control_system::Tags::Controller<DerivOrder>>(*box);
       auto& tuner =
@@ -106,8 +106,7 @@ struct UpdateControlSystem {
       os << "    curr_expr_time: " << current_expiration_time << "\n";
       os << "    control_signal: " << control_signal << "\n";
       os << "    new_expir_time: " << new_expiration_time << "\n";
-      Parallel::mutate<::domain::Tags::FunctionsOfTime,
-                       ::control_system::UpdateFunctionOfTime>(
+      Parallel::mutate<::domain::Tags::FunctionsOfTime, UpdateFunctionOfTime>(
           cache, function_of_time_name, current_expiration_time, control_signal,
           new_expiration_time);
 

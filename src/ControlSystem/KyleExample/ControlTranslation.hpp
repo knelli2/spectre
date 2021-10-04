@@ -24,6 +24,28 @@
 #include "Parallel/Printf.hpp"
 
 namespace control_system {
+
+namespace TupleTags {
+// use this namespace for tags of the tagged tuple that will be sent to the
+// UpdateControlSystem. That way we can get things like other functions of time
+// from the cache which we need for control errors. Then in each control
+// system, we can specify which other functions of time we'll need and pass
+// that along via the tagged tuple.
+
+// If I want to do it this way, I'll have to make changes to the
+// UpdateLinkedMessageQueue action because currently it just returns a tagged
+// tuple straight from LinkeMesageQueue.extract().
+
+// Possibly another way???
+
+// Goal is to allow arbitrary number of funtion of time names to be passed to
+// the control error because some errors need multiple functions of time.
+// However, this can't be based on which control systems are added because you
+// can have functions of time without a control system. We need a way to pass
+// function of time names.
+
+}  // namespace TupleTags
+
 template <size_t Dim>
 struct Translation : tt::ConformsTo<protocols::ControlSystem> {
   static constexpr size_t deriv_order = Dim + 1;
@@ -59,7 +81,7 @@ struct Translation : tt::ConformsTo<protocols::ControlSystem> {
           // REPLACEFUNCTORHERE actually updates control system/funtions of time
           // print mesh velocity
           QueueTags::MeasureTranslation, MeasurementQueue,
-          UpdateControlSystem<deriv_order, ControlErrors::Translation>>>(
+          UpdateControlSystem<deriv_order, ControlErrors::Translation1D>>>(
           control_sys_proxy, measurement_id, measurement_result);
     }
   };
