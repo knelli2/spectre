@@ -14,11 +14,11 @@ struct LabelB;
 struct LabelC;
 
 using SystemA0 = control_system::TestHelpers::System<
-    LabelA, control_system::TestHelpers::Measurement<LabelA>>;
+    2, LabelA, control_system::TestHelpers::Measurement<LabelA>>;
 using SystemA1 = control_system::TestHelpers::System<
-    LabelB, control_system::TestHelpers::Measurement<LabelA>>;
+    2, LabelB, control_system::TestHelpers::Measurement<LabelA>>;
 using SystemB0 = control_system::TestHelpers::System<
-    LabelC, control_system::TestHelpers::Measurement<LabelB>>;
+    2, LabelC, control_system::TestHelpers::Measurement<LabelB>>;
 
 using result = control_system::control_system_events<
     tmpl::list<SystemA0, SystemB0, SystemA1>>;
