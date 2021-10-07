@@ -216,7 +216,7 @@ SPECTRE_TEST_CASE("Unit.ControlSystem.Averager.BadUpdateTwice",
   Averager<2> averager(0.5, false);
 
   averager.update(0.5, {0.0}, {0.1});
-  averager.update(0.5, {0.0}, {0.1});
+  averager.update(0.4, {0.0}, {0.1});
 }
 
 // [[OutputRegex, at or before the last time]]

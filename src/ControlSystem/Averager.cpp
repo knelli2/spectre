@@ -32,7 +32,8 @@ Averager<DerivOrder>::Averager(Averager&& rhs)
       times_(std::move(rhs.times_)),
       raw_qs_(std::move(rhs.raw_qs_)),
       weight_k_(std::move(rhs.weight_k_)),
-      tau_k_(std::move(rhs.tau_k_)) {}
+      tau_k_(std::move(rhs.tau_k_)),
+      time_between_measurements_(std::move(rhs.time_between_measurements_)) {}
 
 template <size_t DerivOrder>
 Averager<DerivOrder>& Averager<DerivOrder>::operator=(Averager&& rhs) {
@@ -45,6 +46,7 @@ Averager<DerivOrder>& Averager<DerivOrder>::operator=(Averager&& rhs) {
     raw_qs_ = std::move(rhs.raw_qs_);
     weight_k_ = std::move(rhs.weight_k_);
     tau_k_ = std::move(rhs.tau_k_);
+    time_between_measurements_ = std::move(rhs.time_between_measurements_);
   }
   return *this;
 }
@@ -86,6 +88,11 @@ void Averager<DerivOrder>::update(const double time, const DataVector& raw_q,
     tau_k_ = 0.0;
   }
 
+  // Check if we actually need to update
+  if (times_.size() != 0 and time == times_[0]) {
+    return;
+  }
+
   // Ensure that the number of timescales matches the number of components
   if (UNLIKELY(timescales.size() != raw_q.size())) {
     ERROR("The number of supplied timescales ("
@@ -98,8 +105,9 @@ void Averager<DerivOrder>::update(const double time, const DataVector& raw_q,
 
   // Do not allow updates at or before last update time
   if (UNLIKELY(not times_.empty() and time <= last_time_updated())) {
-    ERROR("The specified time t=" << time << " is at or before the last time "
-                                             "updated, t_update="
+    ERROR("The specified time t=" << time
+                                  << " is at or before the last time "
+                                     "updated, t_update="
                                   << last_time_updated() << ".");
   }
 
@@ -166,7 +174,10 @@ std::array<DataVector, DerivOrder + 1> Averager<DerivOrder>::get_derivs()
 
   // These coeffiecients are the weights of the Lagrange interpolation
   // polynomial and its derivatives evaluated at `time_[0]`
-  if constexpr (DerivOrder == 1) {
+  if constexpr (DerivOrder == 0) {
+    // set coefs for function value
+    coefs[0] = {{1.0}};
+  } else if constexpr (DerivOrder == 1) {
     const double one_over_delta_t = 1.0 / (times_[0] - times_[1]);
 
     // set coefs for function value
@@ -242,6 +253,7 @@ void Averager<DerivOrder>::pup(PUP::er& p) {
   p | raw_qs_;
   p | weight_k_;
   p | tau_k_;
+  p | time_between_measurements_;
 }
 
 template <size_t DerivOrder>
@@ -251,7 +263,8 @@ bool operator==(const Averager<DerivOrder>& avg1,
          (avg1.average_0th_deriv_of_q_ == avg2.average_0th_deriv_of_q_) and
          (avg1.averaged_values_ == avg2.averaged_values_) and
          (avg1.times_ == avg2.times_) and (avg1.raw_qs_ == avg2.raw_qs_) and
-         (avg1.weight_k_ == avg2.weight_k_) and (avg1.tau_k_ == avg2.tau_k_);
+         (avg1.weight_k_ == avg2.weight_k_) and (avg1.tau_k_ == avg2.tau_k_) and
+         (avg1.time_between_measurements_ == avg2.time_between_measurements_);
 }
 
 template <size_t DerivOrder>
@@ -270,7 +283,7 @@ bool operator!=(const Averager<DerivOrder>& avg1,
   template bool operator!=(const Averager<DIM(data)>&,  \
                            const Averager<DIM(data)>&);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (0, 1, 2, 3))
 
 #undef INSTANTIATE
 #undef DIM
