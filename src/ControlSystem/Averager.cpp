@@ -86,6 +86,11 @@ void Averager<DerivOrder>::update(const double time, const DataVector& raw_q,
     tau_k_ = 0.0;
   }
 
+  // Check if we actually need to update
+  if (time == times_[0]) {
+    return;
+  }
+
   // Ensure that the number of timescales matches the number of components
   if (UNLIKELY(timescales.size() != raw_q.size())) {
     ERROR("The number of supplied timescales ("
