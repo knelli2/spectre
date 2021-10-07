@@ -4,4 +4,6 @@
 set(LIBRARY_SOURCES
   ${LIBRARY_SOURCES}
   Systems/Test_Expansion.cpp
+  Systems/Test_Rotation.cpp
+  Systems/Test_Rotation2D.cpp
   PARENT_SCOPE)
