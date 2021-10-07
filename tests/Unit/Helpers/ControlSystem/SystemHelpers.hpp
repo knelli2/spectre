@@ -6,11 +6,14 @@
 #include "ControlSystem/Component.hpp"
 #include "ControlSystem/ControlErrors/Expansion.hpp"
 #include "ControlSystem/ControlErrors/Rotation.hpp"
+#include "ControlSystem/ControlErrors/Translation.hpp"
 #include "ControlSystem/DataVectorHelpers.hpp"
 #include "ControlSystem/Systems/Expansion.hpp"
 #include "ControlSystem/Systems/Rotation.hpp"
+#include "ControlSystem/Systems/Translation.hpp"
 #include "ControlSystem/Tags.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
+#include "ControlSystem/UpdateControlSystem.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Domain/Tags.hpp"
@@ -77,6 +80,37 @@ struct MockRotationSystem : control_system::Rotation<DerivOrder> {
               control_system::QueueTags::Center<Horizon>, MeasurementQueue,
               control_system::UpdateControlSystem<
                   deriv_order, control_system::ControlErrors::Rotation>>>(
+          runner, 0, measurement_id, center);
+    }
+  };
+};
+
+template <size_t DerivOrder>
+struct MockTranslationSystem : control_system::Translation<DerivOrder> {
+  struct MeasurementQueue : db::SimpleTag {
+    using type = LinkedMessageQueue<
+        double,
+        tmpl::list<control_system::QueueTags::Center<ah::HorizonLabel::AhA>,
+                   control_system::QueueTags::Center<ah::HorizonLabel::AhB>>>;
+  };
+
+  static constexpr size_t deriv_order = DerivOrder;
+
+  struct process_measurement {
+    template <typename Component, ah::HorizonLabel Horizon,
+              typename Metavariables>
+    static void apply(
+        gsl::not_null<ActionTesting::MockRuntimeSystem<Metavariables>*> runner,
+        const std::array<double, 3>& center_array,
+        const LinkedMessageId<double>& measurement_id) {
+      const DataVector center = array_to_datavector(center_array);
+
+      ActionTesting::simple_action<
+          Component,
+          ::Actions::UpdateMessageQueue<
+              control_system::QueueTags::Center<Horizon>, MeasurementQueue,
+              control_system::UpdateControlSystem<
+                  deriv_order, control_system::ControlErrors::Translation>>>(
           runner, 0, measurement_id, center);
     }
   };
