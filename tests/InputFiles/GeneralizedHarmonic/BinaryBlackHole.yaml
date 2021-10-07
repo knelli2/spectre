@@ -201,7 +201,7 @@ Observers:
   ReductionFileName: "GhBinaryBlackHoleReductionData"
 
 ApparentHorizons:
-  AhA:
+  AhA: &AhA
     InitialGuess:
       Lmax: 10
       Radius: 2.2
@@ -216,13 +216,15 @@ ApparentHorizons:
       DivergenceIter: 5
       MaxIts: 100
     Verbosity: Verbose
-  AhB:
+  AhB: &AhB
     InitialGuess:
       Lmax: 10
       Radius: 2.2
       Center: [*XCoordB, 0.0, 0.0]
     FastFlow: *DefaultFastFlow
     Verbosity: Verbose
+  ControlSystem::BothHorizons::AhA: *AhA
+  ControlSystem::BothHorizons::AhB: *AhB
 
 # initial_data.h5 should contain numerical initial data
 # on the same grid as specified by the domain given above

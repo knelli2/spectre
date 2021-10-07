@@ -10,6 +10,11 @@
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.tpp"
 #include "ApparentHorizons/ComputeItems.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/ApparentHorizons/Measurements.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Creators/Factory1D.hpp"
@@ -241,7 +246,39 @@ struct EvolutionMetavars {
         intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB, AhB>;
   };
 
-  using interpolation_target_tags = tmpl::list<AhA,AhB>;
+  struct ControlTest
+      : tt::ConformsTo<control_system::protocols::ControlSystem> {
+    static std::string name() { return "ControlTest"; }
+
+    using simple_tags = tmpl::list<>;
+
+    using measurement = control_system::ah::BothHorizons;
+
+    struct process_measurement {
+      template <typename Submeasurement>
+      using argument_tags =
+          tmpl::list<StrahlkorperTags::Strahlkorper<::Frame::Grid>>;
+
+      template <typename Metavariables,
+                control_system::ah::HorizonLabel Horizon>
+      static void apply(
+          typename measurement::template FindHorizon<Horizon> /*meta*/,
+          const Strahlkorper<::Frame::Grid>& strahlkorper,
+          Parallel::GlobalCache<Metavariables>& /*cache*/,
+          const LinkedMessageId<double>& measurement_id) {
+        const auto center = strahlkorper.physical_center();
+        Parallel::printf("%s: %.5g %.16g %.16g %.16g\n",
+                         control_system::ah::name(Horizon), measurement_id.id,
+                         center[0], center[1], center[2]);
+      }
+    };
+  };
+
+  using control_systems = tmpl::list<ControlTest>;
+
+  using interpolation_target_tags = tmpl::push_back<
+      control_system::metafunctions::interpolation_target_tags<control_systems>,
+      AhA, AhB>;
   using interpolator_source_vars =
       tmpl::list<gr::Tags::SpacetimeMetric<volume_dim, ::Frame::Inertial>,
                  GeneralizedHarmonic::Tags::Pi<volume_dim, ::Frame::Inertial>,
@@ -259,7 +296,10 @@ struct EvolutionMetavars {
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger,
+                   tmpl::append<DenseTriggers::standard_dense_triggers,
+                                control_system::control_system_triggers<
+                                    control_systems>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<
             Event,
@@ -271,7 +311,8 @@ struct EvolutionMetavars {
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields, tmpl::list<>,
                                                tmpl::list<>>,
-                Events::time_events<system>>>>,
+                Events::time_events<system>,
+                control_system::control_system_events<control_systems>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
                    tmpl::list<GeneralizedHarmonic::BoundaryConditions::
@@ -432,6 +473,7 @@ struct EvolutionMetavars {
           StepChoosers::step_chooser_compute_tags<EvolutionMetavars>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using gh_dg_element_array = DgElementArray<
@@ -479,9 +521,10 @@ struct EvolutionMetavars {
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
       importers::ElementDataReader<EvolutionMetavars>,
-      intrp::Interpolator<EvolutionMetavars>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhA>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhB>, gh_dg_element_array>>;
+      intrp::Interpolator<EvolutionMetavars>, gh_dg_element_array,
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "
