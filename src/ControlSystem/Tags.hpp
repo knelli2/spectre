@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "ApparentHorizons/ObjectLabel.hpp"
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/Controller.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
@@ -20,7 +21,18 @@ namespace control_system {
 /// \cond
 template <typename ControlSystem>
 struct OptionHolder;
+
+namespace ah {
+enum class HorizonLabel;
+}
 /// \endcond
+
+namespace QueueTags {
+template <::ah::ObjectLabel WhichHorizon>
+struct Center {
+  using type = DataVector;
+};
+}  // namespace QueueTags
 
 /// \ingroup ControlSystemGroup
 /// All option tags related to the control system
