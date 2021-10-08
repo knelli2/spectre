@@ -241,3 +241,17 @@ struct OptionHolder {
   ::TimescaleTuner tuner{};
 };
 }  // namespace control_system
+
+namespace Tags {
+template <typename ControlSystemWithName>
+struct ControlSystem : db::SimpleTag {
+  using type = std::string;
+  using option_tags = tmpl::list<>;
+
+  static constexpr bool pass_metavariables = false;
+  static std::string create_from_options() {
+    return ControlSystemWithName::name();
+  }
+};
+
+}  // namespace Tags

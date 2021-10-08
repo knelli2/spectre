@@ -7,6 +7,7 @@
 
 #include "ControlSystem/Actions/Initialization.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/Tags.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
 #include "Parallel/Actions/TerminatePhase.hpp"
@@ -43,6 +44,9 @@ struct ControlComponent {
 
   using initialization_tags = Parallel::get_initialization_tags<
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
+
+  using const_global_cache_tags =
+      tmpl::list<Tags::ControlSystem<ControlSystem>>;
 
   static void execute_next_phase(
       const typename Metavariables::Phase next_phase,
