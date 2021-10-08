@@ -20,7 +20,18 @@ namespace control_system {
 /// \cond
 template <typename ControlSystem>
 struct OptionHolder;
+
+namespace ah {
+enum class HorizonLabel;
+}
 /// \endcond
+
+namespace QueueTags {
+template <ah::HorizonLabel WhichHorizon>
+struct Center {
+  using type = DataVector;
+};
+}  // namespace QueueTags
 
 /// \ingroup ControlSystemGroup
 /// All option tags related to the control system
