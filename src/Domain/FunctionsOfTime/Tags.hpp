@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "ControlSystem/Tags.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/OptionTags.hpp"
@@ -37,7 +38,9 @@ struct OptionList {
       tmpl::list<domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
                  domain::FunctionsOfTime::OptionTags::FunctionOfTimeFile,
                  domain::FunctionsOfTime::OptionTags::FunctionOfTimeNameMap>,
-      tmpl::list<domain::OptionTags::DomainCreator<Metavariables::volume_dim>>>;
+      tmpl::flatten<tmpl::list<
+          domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
+          control_system::option_holders<Metavariables::control_systems>>>>;
 };
 
 template <typename Metavariables>
@@ -140,11 +143,24 @@ struct FunctionsOfTime : db::SimpleTag {
     }
   }
 
-  template <typename Metavariables>
+  template <typename Metavariables, typename... OptionHolders>
   static type create_from_options(
       const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
-          domain_creator) {
-    return domain_creator->functions_of_time();
+          domain_creator,
+      const OptionHolders&&... option_holders) {
+    std::unordered_map<std::string, double> initial_expiration_times{};
+    [[maube_unused]] const auto lambda =
+        [&initial_expiration_times](const auto& option_holder) {
+          const auto controller = option_holder.controller;
+          const std::string name = option_holder.name;
+          const auto tuner = option_holder.tuner;
+
+          const double update_fraction = controller.get_update_fraction();
+          const double curr_timescale = min(tuner.current_timescale());
+          initial_expiration_times[name] = update_fraction * curr_timescale;
+        };
+    EXPAND_PACK_LEFT_TO_RIGHT(lambda(option_holders)...);
+    return domain_creator->functions_of_time(initial_expiration_times);
   }
 };
 }  // namespace domain::Tags

@@ -130,8 +130,9 @@ auto Composition<TimeDependenceCompTag0, TimeDependenceCompTags...>::block_maps(
 }
 
 template <typename TimeDependenceCompTag0, typename... TimeDependenceCompTags>
-auto Composition<TimeDependenceCompTag0,
-                 TimeDependenceCompTags...>::functions_of_time() const
+auto Composition<TimeDependenceCompTag0, TimeDependenceCompTags...>::
+    functions_of_time(const std::unordered_map<std::string, double>&
+                      /*initial_expiration_times*/) const
     -> std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
   return clone_unique_ptrs(functions_of_time_);

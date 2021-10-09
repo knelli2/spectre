@@ -30,20 +30,17 @@ namespace creators::time_dependence {
 
 SphericalCompression::SphericalCompression(
     const double initial_time,
-    const std::optional<double> initial_expiration_delta_t,
     const double min_radius, const double max_radius,
     const std::array<double, 3> center, const double initial_value,
     const double initial_velocity, const double initial_acceleration,
-    std::string function_of_time_name, const Options::Context& context)
+    const Options::Context& context)
     : initial_time_(initial_time),
-      initial_expiration_delta_t_(initial_expiration_delta_t),
       min_radius_(min_radius),
       max_radius_(max_radius),
       center_(center),
       initial_value_(initial_value),
       initial_velocity_(initial_velocity),
-      initial_acceleration_(initial_acceleration),
-      function_of_time_name_(std::move(function_of_time_name)) {
+      initial_acceleration_(initial_acceleration)) {
   if (min_radius >= max_radius) {
     PARSE_ERROR(context,
                 "Tried to create a SphericalCompression TimeDependence, but "
@@ -55,9 +52,8 @@ SphericalCompression::SphericalCompression(
 
 std::unique_ptr<TimeDependence<3>> SphericalCompression::get_clone() const {
   return std::make_unique<SphericalCompression>(
-      initial_time_, initial_expiration_delta_t_, min_radius_, max_radius_,
-      center_, initial_value_, initial_velocity_, initial_acceleration_,
-      function_of_time_name_);
+      initial_time_, min_radius_, max_radius_, center_, initial_value_,
+      initial_velocity_, initial_acceleration_);
 }
 
 std::vector<
@@ -77,7 +73,9 @@ SphericalCompression::block_maps(const size_t number_of_blocks) const {
 
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-SphericalCompression::functions_of_time() const {
+SphericalCompression::functions_of_time(
+    const std::unordered_map<std::string, double>&
+    /*initial_expiration_times*/) const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
@@ -88,9 +86,7 @@ SphericalCompression::functions_of_time() const {
                                      {initial_velocity_},
                                      {initial_acceleration_},
                                      {0.0}}},
-          initial_expiration_delta_t_
-              ? initial_time_ + *initial_expiration_delta_t_
-              : std::numeric_limits<double>::max());
+          std::numeric_limits<double>::infinity());
   return result;
 }
 

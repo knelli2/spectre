@@ -30,20 +30,14 @@ namespace creators::time_dependence {
 template <size_t MeshDim>
 UniformTranslation<MeshDim>::UniformTranslation(
     const double initial_time,
-    const std::optional<double> initial_expiration_delta_t,
-    const std::array<double, MeshDim>& velocity,
-    std::string function_of_time_name)
+    const std::array<double, MeshDim>& velocity)
     : initial_time_(initial_time),
-      initial_expiration_delta_t_(initial_expiration_delta_t),
-      velocity_(velocity),
-      function_of_time_name_(std::move(function_of_time_name)) {}
+      velocity_(velocity)) {}
 
 template <size_t MeshDim>
 std::unique_ptr<TimeDependence<MeshDim>>
 UniformTranslation<MeshDim>::get_clone() const {
-  return std::make_unique<UniformTranslation>(
-      initial_time_, initial_expiration_delta_t_, velocity_,
-      function_of_time_name_);
+  return std::make_unique<UniformTranslation>(initial_time_, velocity_);
 }
 
 template <size_t MeshDim>
@@ -64,14 +58,12 @@ UniformTranslation<MeshDim>::block_maps(const size_t number_of_blocks) const {
 template <size_t MeshDim>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-UniformTranslation<MeshDim>::functions_of_time() const {
+UniformTranslation<MeshDim>::functions_of_time(
+    const std::unordered_map<std::string, double>& /*initial_expiration_times*/)
+    const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
-
-  const double initial_expiration_time =
-      initial_expiration_delta_t_ ? initial_time_ + *initial_expiration_delta_t_
-                                  : std::numeric_limits<double>::max();
 
   // We use a `PiecewisePolynomial` with 2 derivs since some transformations
   // between different frames for moving meshes can require Hessians.
@@ -83,7 +75,7 @@ UniformTranslation<MeshDim>::functions_of_time() const {
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
           initial_time_,
           std::array<DataVector, 3>{{{MeshDim, 0.0}, velocity, {MeshDim, 0.0}}},
-          initial_expiration_time);
+          std::numeric_limits<double>::infinity());
   return result;
 }
 
@@ -93,11 +85,6 @@ auto UniformTranslation<MeshDim>::map_for_composition() const
   return MapForComposition{
       domain::CoordinateMaps::TimeDependent::Translation<MeshDim>{
           function_of_time_name_}};
-}
-
-template <size_t MeshDim>
-std::string UniformTranslation<MeshDim>::default_function_name() {
-  return "Translation";
 }
 
 template <size_t Dim>

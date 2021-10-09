@@ -109,9 +109,11 @@ class Composition final
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, mesh_dim>>> override;
 
-  auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
+  auto functions_of_time(const std::unordered_map<std::string, double>&
+                             initial_expiration_times) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
 
  private:
   CoordMap coord_map_;

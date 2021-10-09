@@ -27,7 +27,7 @@
 
 namespace control_system {
 /// \cond
-template <size_t DerivOrder>
+template <typename ControlSystem>
 struct OptionHolder;
 /// \endcond
 
@@ -50,8 +50,7 @@ struct ControlSystemGroup {
 /// control systems will have a unique name.
 template <typename ControlSystem>
 struct ControlSystemInputs {
-  static constexpr size_t deriv_order = ControlSystem::deriv_order;
-  using type = control_system::OptionHolder<deriv_order>;
+  using type = control_system::OptionHolder<ControlSystem>;
   static constexpr Options::String help{"Options for a control system."};
   static std::string name() { return ControlSystem::name(); }
   using group = ControlSystemGroup;
@@ -77,8 +76,7 @@ struct ControlSystemName : db::SimpleTag {
 /// DataBox.
 template <typename ControlSystem>
 struct ControlSystemInputs : db::SimpleTag {
-  static constexpr size_t deriv_order = ControlSystem::deriv_order;
-  using type = control_system::OptionHolder<deriv_order>;
+  using type = control_system::OptionHolder<ControlSystem>;
   using option_tags =
       tmpl::list<OptionTags::ControlSystemInputs<ControlSystem>>;
 
@@ -175,15 +173,17 @@ struct MeasurementTimescales : db::SimpleTag {
 /// This struct collects all the options for a given control system during
 /// option parsing. Then during initialization, the options can be retreived as
 /// a TaggedTuple and assigned to their corresponding DataBox tags.
-template <size_t DerivOrder>
+template <typename ControlSystem>
 struct OptionHolder {
+ private:
+  constexpr size_t deriv_order_ = ControlSystem::deriv_order;
   struct Averager {
-    using type = ::Averager<DerivOrder>;
+    using type = ::Averager<deriv_order_>;
     static constexpr Options::String help = {"Options for the averager."};
   };
 
   struct Controller {
-    using type = ::Controller<DerivOrder>;
+    using type = ::Controller<deriv_order_>;
     static constexpr Options::String help = {"Options for the controller."};
   };
 
@@ -196,8 +196,8 @@ struct OptionHolder {
   using options = tmpl::list<Averager, Controller, TimescaleTuner>;
   static constexpr Options::String help = {"Options for a control system."};
 
-  OptionHolder(::Averager<DerivOrder> input_averager,
-               ::Controller<DerivOrder> input_controller,
+  OptionHolder(::Averager<deriv_order_> input_averager,
+               ::Controller<deriv_order_> input_controller,
                ::TimescaleTuner input_tuner)
       : averager(std::move(input_averager)),
         controller(std::move(input_controller)),
@@ -215,12 +215,19 @@ struct OptionHolder {
     p | averager;
     p | controller;
     p | tuner;
+    p | name;
   };
 
   // These members are specifically made pubic for easy access during
   // initialization
-  ::Averager<DerivOrder> averager{};
-  ::Controller<DerivOrder> controller{};
+  ::Averager<deriv_order_> averager{};
+  ::Controller<deriv_order_> controller{};
   ::TimescaleTuner tuner{};
+  std::string name{ControlSystem::name()};
 };
+
+template <typename ControlSystems>
+using option_holders =
+    tmpl::transform<ControlSystems, tmpl::bind<OptionHolder, tmpl::_1>>;
+
 }  // namespace control_system

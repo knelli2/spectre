@@ -93,9 +93,11 @@ struct TimeDependence {
       domain::CoordinateMapBase<Frame::Grid, Frame::Inertial, MeshDim>>> = 0;
 
   /// Returns the functions of time for the domain.
-  virtual auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
+  virtual auto functions_of_time(const std::unordered_map<std::string, double>&
+                                     initial_expiration_times) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
 
   /// Returns `true` if the instance is `None`, meaning no time dependence.
   bool is_none() const {
@@ -106,7 +108,7 @@ struct TimeDependence {
 template <size_t MeshDim>
 TimeDependence<MeshDim>::~TimeDependence() = default;
 }  // namespace time_dependence
-}  // namespace creators::namespace domain
+}  // namespace domain::creators
 
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"

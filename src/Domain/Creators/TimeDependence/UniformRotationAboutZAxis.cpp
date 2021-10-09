@@ -32,19 +32,15 @@ namespace creators::time_dependence {
 template <size_t MeshDim>
 UniformRotationAboutZAxis<MeshDim>::UniformRotationAboutZAxis(
     const double initial_time,
-    const std::optional<double> initial_expiration_delta_t,
-    const double angular_velocity, std::string function_of_time_name)
+    const double angular_velocity)
     : initial_time_(initial_time),
-      initial_expiration_delta_t_(initial_expiration_delta_t),
-      angular_velocity_(angular_velocity),
-      function_of_time_name_(std::move(function_of_time_name)) {}
+      angular_velocity_(angular_velocity)) {}
 
 template <size_t MeshDim>
 std::unique_ptr<TimeDependence<MeshDim>>
 UniformRotationAboutZAxis<MeshDim>::get_clone() const {
-  return std::make_unique<UniformRotationAboutZAxis>(
-      initial_time_, initial_expiration_delta_t_, angular_velocity_,
-      function_of_time_name_);
+  return std::make_unique<UniformRotationAboutZAxis>(initial_time_,
+                                                     angular_velocity_);
 }
 
 template <size_t MeshDim>
@@ -66,7 +62,9 @@ UniformRotationAboutZAxis<MeshDim>::block_maps(
 template <size_t MeshDim>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-UniformRotationAboutZAxis<MeshDim>::functions_of_time() const {
+UniformRotationAboutZAxis<MeshDim>::functions_of_time(
+    const std::unordered_map<std::string, double>&
+    /*initial_expiration_times*/) const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
@@ -76,9 +74,7 @@ UniformRotationAboutZAxis<MeshDim>::functions_of_time() const {
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,
           std::array<DataVector, 4>{{{0.0}, {angular_velocity_}, {0.0}, {0.0}}},
-          initial_expiration_delta_t_
-              ? initial_time_ + *initial_expiration_delta_t_
-              : std::numeric_limits<double>::max());
+          std::numeric_limits<double>::infinity());
   return result;
 }
 
