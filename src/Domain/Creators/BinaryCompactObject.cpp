@@ -640,7 +640,7 @@ Domain<3> BinaryCompactObject::create_domain() const {
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 BinaryCompactObject::functions_of_time(
-    const std::unordered_map<std::string, double>& initial_expiration_times)
+    const std::vector<std::pair<std::string, double>>& initial_expiration_times)
     const {
   // Void it for now until we have control systems in place
   (void)(initial_expiration_times);

@@ -87,11 +87,23 @@ SphericalCompression::block_maps(const size_t number_of_blocks) const {
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 SphericalCompression::functions_of_time(
-    const std::unordered_map<std::string, double>&
-    /*initial_expiration_times*/) const {
+    const std::vector<std::pair<std::string, double>>& initial_expiration_times)
+    const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
+
+  if (initial_expiration_times.size()) {
+    ASSERT(initial_expiration_times.size() == 1,
+           "There is only 1 function of time for a SphericalCompression time "
+           "dependence, however, " +
+               get_output(initial_expiration_times.size()) +
+               " initial exiration times were supplied.");
+    // initial_expiration_times should only have one item so this is ok
+    function_of_time_name_ = initial_expiration_times[0].first;
+    expiration_time_ = initial_expiration_times[0].second;
+  }
+
   result[function_of_time_name_] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,
@@ -99,7 +111,7 @@ SphericalCompression::functions_of_time(
                                      {initial_velocity_},
                                      {initial_acceleration_},
                                      {0.0}}},
-          std::numeric_limits<double>::infinity());
+          expiration_time_);
   return result;
 }
 

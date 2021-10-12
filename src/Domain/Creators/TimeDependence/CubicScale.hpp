@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
@@ -123,7 +124,7 @@ class CubicScale final : public TimeDependence<MeshDim> {
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
@@ -142,7 +143,10 @@ class CubicScale final : public TimeDependence<MeshDim> {
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
   double outer_boundary_{std::numeric_limits<double>::signaling_NaN()};
   bool use_linear_scaling_{false};
-  std::array<std::string, 2> functions_of_time_names_{};
+  mutable std::array<std::string, 2> functions_of_time_names_{};
+  mutable std::array<double, 2> expiration_times_{
+      {std::numeric_limits<double>::infinity(),
+       std::numeric_limits<double>::infinity()}};
   std::array<double, 2> initial_expansion_{};
   std::array<double, 2> velocity_{};
   std::array<double, 2> acceleration_{};

@@ -140,7 +140,7 @@ std::vector<std::array<size_t, 1>> Interval::initial_refinement_levels() const {
 
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-Interval::functions_of_time(const std::unordered_map<std::string, double>&
+Interval::functions_of_time(const std::vector<std::pair<std::string, double>>&
                                 initial_expiration_times) const {
   if (time_dependence_->is_none()) {
     (void)(initial_expiration_times);

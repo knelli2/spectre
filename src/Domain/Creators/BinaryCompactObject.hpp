@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -668,7 +669,7 @@ class BinaryCompactObject : public DomainCreator<3> {
     return block_groups_;
   }
 
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,

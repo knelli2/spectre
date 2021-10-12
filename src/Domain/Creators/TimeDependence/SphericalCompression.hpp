@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
@@ -134,7 +135,7 @@ class SphericalCompression final : public TimeDependence<3> {
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, mesh_dim>>> override;
 
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
@@ -156,7 +157,8 @@ class SphericalCompression final : public TimeDependence<3> {
   double initial_value_{std::numeric_limits<double>::signaling_NaN()};
   double initial_velocity_{std::numeric_limits<double>::signaling_NaN()};
   double initial_acceleration_{std::numeric_limits<double>::signaling_NaN()};
-  std::string function_of_time_name_{};
+  mutable std::string function_of_time_name_{};
+  mutable double expiration_time_{std::numeric_limits<double>::infinity()};
 };
 
 bool operator!=(const SphericalCompression& lhs,

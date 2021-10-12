@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -289,7 +290,7 @@ class CylindricalBinaryCompactObject : public DomainCreator<3> {
 
   std::vector<std::array<size_t, 3>> initial_refinement_levels() const override;
 
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,

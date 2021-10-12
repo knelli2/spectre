@@ -93,14 +93,28 @@ template <size_t MeshDim>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 CubicScale<MeshDim>::functions_of_time(
-    const std::unordered_map<std::string, double>&
-    /*initial_expiration_times*/) const {
+    const std::vector<std::pair<std::string, double>>& initial_expiration_times)
+    const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
 
   // Use a 3rd deriv function of time so that it can be used with a control
   // system.
+  if (initial_expiration_times.size()) {
+    // initial_expiration_times is ordered such that object A is first, and
+    // object B is second
+    ASSERT(initial_expiration_times.size() == 2,
+           "There are only 2 functions of time for a CubicScale time "
+           "dependence, however, " +
+               get_output(initial_expiration_times.size()) +
+               " initial exiration times were supplied.");
+    for (size_t i = 0; i < initial_expiration_times.size(); i++) {
+      functions_of_time_names_[i] = initial_expiration_times[i].first;
+      expiration_times_[i] = initial_expiration_times[i].second;
+    }
+  }
+
   result[functions_of_time_names_[0]] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,
@@ -108,7 +122,7 @@ CubicScale<MeshDim>::functions_of_time(
                                      {velocity_[0]},
                                      {acceleration_[0]},
                                      {0.0}}},
-          std::numeric_limits<double>::infinity());
+          expiration_times_[0]);
   result[functions_of_time_names_[1]] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,
@@ -116,7 +130,7 @@ CubicScale<MeshDim>::functions_of_time(
                                      {velocity_[1]},
                                      {acceleration_[1]},
                                      {0.0}}},
-          std::numeric_limits<double>::infinity());
+          expiration_times_[0]);
   return result;
 }
 

@@ -93,8 +93,9 @@ struct TimeDependence {
       domain::CoordinateMapBase<Frame::Grid, Frame::Inertial, MeshDim>>> = 0;
 
   /// Returns the functions of time for the domain.
-  virtual auto functions_of_time(const std::unordered_map<std::string, double>&
-                                     initial_expiration_times = {}) const
+  virtual auto functions_of_time(
+      const std::vector<std::pair<std::string, double>>&
+          initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;

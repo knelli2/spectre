@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "ControlSystem/Averager.hpp"
@@ -47,7 +48,7 @@ class TestCreator : public DomainCreator<1> {
       const override {
     ERROR("");
   }
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                          /*initial_expiration_times*/) const
       -> std::unordered_map<
           std::string,

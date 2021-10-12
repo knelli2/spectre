@@ -9,6 +9,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "Domain/BoundaryConditions/BoundaryCondition.hpp"
@@ -135,7 +136,7 @@ class Rectangle : public DomainCreator<2> {
 
   std::vector<std::array<size_t, 2>> initial_refinement_levels() const override;
 
-  auto functions_of_time(const std::unordered_map<std::string, double>&
+  auto functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,

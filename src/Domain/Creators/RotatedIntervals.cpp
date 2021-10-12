@@ -151,7 +151,7 @@ RotatedIntervals ::initial_refinement_levels() const {
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 RotatedIntervals::functions_of_time(
-    const std::unordered_map<std::string, double>& initial_expiration_times)
+    const std::vector<std::pair<std::string, double>>& initial_expiration_times)
     const {
   if (time_dependence_->is_none()) {
     (void)(initial_expiration_times);

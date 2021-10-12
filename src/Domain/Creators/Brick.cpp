@@ -142,7 +142,7 @@ std::vector<std::array<size_t, 3>> Brick::initial_refinement_levels() const {
 
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-Brick::functions_of_time(const std::unordered_map<std::string, double>&
+Brick::functions_of_time(const std::vector<std::pair<std::string, double>>&
                              initial_expiration_times) const {
   if (time_dependence_->is_none()) {
     (void)(initial_expiration_times);
