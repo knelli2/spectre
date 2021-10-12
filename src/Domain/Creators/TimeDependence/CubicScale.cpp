@@ -22,6 +22,7 @@
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/Gsl.hpp"
 
 namespace domain {
@@ -39,12 +40,29 @@ CubicScale<MeshDim>::CubicScale(const double initial_time,
       initial_expansion_(initial_expansion),
       velocity_(velocity),
       acceleration_(acceleration) {
+  // This makes the function name unique because this function of time doesn't
+  // expire. This also encodes initial data info in the name for diagnostic
+  // purposes
   if (use_linear_scaling_) {
-    functon_of_time_names_[0] = "CubicScale";
-    functon_of_time_names_[1] = "CubicScale";
+    // If we are using linear scaling, then the names must be the same so it
+    // doesn't matter about initial conditions
+    functions_of_time_names_[0] = "CubicScale";
+    functions_of_time_names_[1] = "CubicScale";
   } else {
-    functon_of_time_names_[0] = "CubicScaleA";
-    functon_of_time_names_[1] = "CubicScaleB";
+    functions_of_time_names_[0] =
+        "CubicScaleA::a=" + get_output(initial_expansion_[0]) +
+        "::dta=" + get_output(velocity_[0]) +
+        "::d2ta=" + get_output(acceleration_[0]) +
+        "::t_0=" + get_output(initial_time_) +
+        "::outer_boundary=" + get_output(outer_boundary_) +
+        "::use_linear_scale=false";
+    functions_of_time_names_[1] =
+        "CubicScaleB::a=" + get_output(initial_expansion_[1]) +
+        "::dta=" + get_output(velocity_[1]) +
+        "::d2ta=" + get_output(acceleration_[1]) +
+        "::t_0=" + get_output(initial_time_) +
+        "::outer_boundary=" + get_output(outer_boundary_) +
+        "::use_linear_scale=false";
   }
 }
 
@@ -112,7 +130,6 @@ auto CubicScale<MeshDim>::map_for_composition() const -> MapForComposition {
 template <size_t Dim>
 bool operator==(const CubicScale<Dim>& lhs, const CubicScale<Dim>& rhs) {
   return lhs.initial_time_ == rhs.initial_time_ and
-         lhs.initial_expiration_delta_t_ == rhs.initial_expiration_delta_t_ and
          lhs.outer_boundary_ == rhs.outer_boundary_ and
          lhs.functions_of_time_names_ == rhs.functions_of_time_names_ and
          lhs.initial_expansion_ == rhs.initial_expansion_ and

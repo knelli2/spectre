@@ -320,7 +320,6 @@ void test_interpolation_target_receive_vars() {
   std::deque<temporal_id_type> pending_temporal_ids{};
   std::unique_ptr<ActionTesting::MockRuntimeSystem<metavars>> runner_ptr{};
   if constexpr (IsTimeDependent::value) {
-    const double expiration_time = 13.5 / 16.0;
     current_temporal_ids.push_back(first_time);
     pending_temporal_ids.push_back(second_time);
     const auto domain_creator = domain::creators::Brick(
@@ -328,7 +327,7 @@ void test_interpolation_target_receive_vars() {
         {{false, false, false}},
         std::make_unique<
             domain::creators::time_dependence::UniformTranslation<3>>(
-            0.0, expiration_time, std::array<double, 3>({{0.1, 0.2, 0.3}})));
+            0.0, std::array<double, 3>({{0.1, 0.2, 0.3}})));
     runner_ptr = std::make_unique<ActionTesting::MockRuntimeSystem<metavars>>(
         domain_creator.create_domain(), domain_creator.functions_of_time());
   } else {

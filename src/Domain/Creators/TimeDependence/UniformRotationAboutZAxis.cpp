@@ -24,6 +24,7 @@
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/Gsl.hpp"
 
 namespace domain {
@@ -31,10 +32,15 @@ namespace creators::time_dependence {
 
 template <size_t MeshDim>
 UniformRotationAboutZAxis<MeshDim>::UniformRotationAboutZAxis(
-    const double initial_time,
-    const double angular_velocity)
-    : initial_time_(initial_time),
-      angular_velocity_(angular_velocity)) {}
+    const double initial_time, const double angular_velocity)
+    : initial_time_(initial_time), angular_velocity_(angular_velocity) {
+  // This makes the function name unique because this function of time doesn't
+  // expire. This also encodes all initial data info in the name for diagnostic
+  // purposes
+  function_of_time_name_ =
+      "UniformRotation::omega=" + get_output(angular_velocity_) +
+      "::t_0=" + get_output(initial_time_);
+}
 
 template <size_t MeshDim>
 std::unique_ptr<TimeDependence<MeshDim>>
@@ -101,7 +107,6 @@ template <size_t Dim>
 bool operator==(const UniformRotationAboutZAxis<Dim>& lhs,
                 const UniformRotationAboutZAxis<Dim>& rhs) {
   return lhs.initial_time_ == rhs.initial_time_ and
-         lhs.initial_expiration_delta_t_ == rhs.initial_expiration_delta_t_ and
          lhs.angular_velocity_ == rhs.angular_velocity_ and
          lhs.function_of_time_name_ == rhs.function_of_time_name_;
 }

@@ -74,9 +74,7 @@ class Controller {
     time_between_updates_ = update_fraction_ * current_min_timescale;
   }
 
-  double get_update_fraction() {
-    return update_fraction_;
-  }
+  double get_update_fraction() { return update_fraction_; }
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& p) {

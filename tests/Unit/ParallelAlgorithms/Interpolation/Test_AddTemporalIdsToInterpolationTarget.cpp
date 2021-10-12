@@ -323,7 +323,6 @@ void test_add_temporal_ids_time_dependent() {
       mock_interpolation_target<metavars,
                                 typename metavars::InterpolationTargetA>;
 
-  const double expiration_time = 0.1;
   // Create a Domain with time-dependence. For this test we don't care
   // what the Domain actually is, we care only that it has time-dependence.
   const auto domain_creator = domain::creators::Brick(
@@ -331,7 +330,7 @@ void test_add_temporal_ids_time_dependent() {
       {{false, false, false}},
       std::make_unique<
           domain::creators::time_dependence::UniformTranslation<3>>(
-          0.0, expiration_time, std::array<double, 3>({{0.1, 0.2, 0.3}})));
+          0.0, std::array<double, 3>({{0.1, 0.2, 0.3}})));
 
   ActionTesting::MockRuntimeSystem<metavars> runner{
       {domain_creator.create_domain()}, {domain_creator.functions_of_time()}};

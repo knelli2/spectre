@@ -40,7 +40,8 @@ struct OptionList {
                  domain::FunctionsOfTime::OptionTags::FunctionOfTimeNameMap>,
       tmpl::flatten<tmpl::list<
           domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
-          control_system::option_holders<Metavariables::control_systems>>>>;
+          control_system::option_holders<
+              typename Metavariables::control_systems>>>>;
 };
 
 template <typename Metavariables>
@@ -107,7 +108,7 @@ struct FunctionsOfTime : db::SimpleTag {
         if (functions_of_time.count(spectre_name) == 0) {
           ERROR("Trying to import data for key "
                 << spectre_name
-                << "in FunctionsOfTime, but FunctionsOfTime does not "
+                << " in FunctionsOfTime, but FunctionsOfTime does not "
                    "contain that key. This might happen if the option "
                    "FunctionOfTimeNameMap is not specified correctly. Keys "
                    "contained in FunctionsOfTime: "
@@ -149,7 +150,7 @@ struct FunctionsOfTime : db::SimpleTag {
           domain_creator,
       const OptionHolders&&... option_holders) {
     std::unordered_map<std::string, double> initial_expiration_times{};
-    [[maube_unused]] const auto lambda =
+    [[maybe_unused]] const auto lambda =
         [&initial_expiration_times](const auto& option_holder) {
           const auto controller = option_holder.controller;
           const std::string name = option_holder.name;
@@ -159,7 +160,7 @@ struct FunctionsOfTime : db::SimpleTag {
           const double curr_timescale = min(tuner.current_timescale());
           initial_expiration_times[name] = update_fraction * curr_timescale;
         };
-    EXPAND_PACK_LEFT_TO_RIGHT(lambda(option_holders)...);
+    EXPAND_PACK_LEFT_TO_RIGHT(lambda(option_holders));
     return domain_creator->functions_of_time(initial_expiration_times);
   }
 };

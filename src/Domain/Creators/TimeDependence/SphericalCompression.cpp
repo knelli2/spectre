@@ -29,8 +29,7 @@ namespace domain {
 namespace creators::time_dependence {
 
 SphericalCompression::SphericalCompression(
-    const double initial_time,
-    const double min_radius, const double max_radius,
+    const double initial_time, const double min_radius, const double max_radius,
     const std::array<double, 3> center, const double initial_value,
     const double initial_velocity, const double initial_acceleration,
     const Options::Context& context)
@@ -40,7 +39,7 @@ SphericalCompression::SphericalCompression(
       center_(center),
       initial_value_(initial_value),
       initial_velocity_(initial_velocity),
-      initial_acceleration_(initial_acceleration)) {
+      initial_acceleration_(initial_acceleration) {
   if (min_radius >= max_radius) {
     PARSE_ERROR(context,
                 "Tried to create a SphericalCompression TimeDependence, but "
@@ -48,6 +47,20 @@ SphericalCompression::SphericalCompression(
                     << min_radius << ") is not less than the maximum radius ("
                     << max_radius << ")");
   }
+  // This makes the function name unique because this function of time doesn't
+  // expire. This also encodes all initial data info in the name for diagnostic
+  // purposes
+  // clang-format off
+  function_of_time_name_ =
+      "SpherialCompression"s +
+      "::r_min="s + get_output(min_radius_) +
+      "::r_max="s + get_output(max_radius_) +
+      "::center="s + get_output(center_) +
+      "::value="s + get_output(initial_value_) +
+      "::dtvalue="s + get_output(initial_velocity_) +
+      "::d2tvalue="s + get_output(initial_acceleration_) +
+      "::t_0="s + get_output(initial_time_);
+  // clang-format on
 }
 
 std::unique_ptr<TimeDependence<3>> SphericalCompression::get_clone() const {
@@ -98,7 +111,6 @@ auto SphericalCompression::map_for_composition() const -> MapForComposition {
 bool operator==(const SphericalCompression& lhs,
                 const SphericalCompression& rhs) {
   return lhs.initial_time_ == rhs.initial_time_ and
-         lhs.initial_expiration_delta_t_ == rhs.initial_expiration_delta_t_ and
          lhs.min_radius_ == rhs.min_radius_ and
          lhs.max_radius_ == rhs.max_radius_ and lhs.center_ == rhs.center_ and
          lhs.initial_value_ == rhs.initial_value_ and

@@ -317,8 +317,7 @@ BinaryCompactObject::BinaryCompactObject(
       decay_timescale_outer_boundary_velocity;
   initial_rotation_angle_ = initial_rotation_angle;
   initial_angular_velocity_ = initial_angular_velocity;
-  rotation_about_z_axis_function_of_time_name_ = initial_size_map_values_ =
-      initial_size_map_values;
+  initial_size_map_values_ = initial_size_map_values;
   initial_size_map_velocities_ = initial_size_map_velocities;
   initial_size_map_accelerations_ = initial_size_map_accelerations;
 }
@@ -659,7 +658,7 @@ BinaryCompactObject::functions_of_time(
           initial_time_,
           std::array<DataVector, 3>{
               {{initial_expansion_}, {initial_expansion_velocity_}, {0.0}}},
-          initial_expiration_delta_t_);
+          std::numeric_limits<double>::infinity());
 
   // ExpansionMap FunctionOfTime for the function \f$b(t)\f$ in the
   // domain::CoordinateMaps::TimeDependent::CubicScale map
@@ -677,7 +676,7 @@ BinaryCompactObject::functions_of_time(
                                      {initial_angular_velocity_},
                                      {0.0},
                                      {0.0}}},
-          initial_expiration_delta_t);
+          std::numeric_limits<double>::infinity());
 
   // CompressionMap FunctionOfTime for object A
   result[size_map_function_of_time_names_[0]] =
@@ -687,7 +686,7 @@ BinaryCompactObject::functions_of_time(
                                      {initial_size_map_velocities_[0]},
                                      {initial_size_map_accelerations_[0]},
                                      {0.0}}},
-          initial_expiration_delta_t_);
+          std::numeric_limits<double>::infinity());
   // CompressionMap FunctionOfTime for object B
   result[size_map_function_of_time_names_[1]] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
@@ -696,7 +695,7 @@ BinaryCompactObject::functions_of_time(
                                      {initial_size_map_velocities_[1]},
                                      {initial_size_map_accelerations_[1]},
                                      {0.0}}},
-          initial_expiration_delta_t_);
+          std::numeric_limits<double>::infinity());
 
   return result;
 }

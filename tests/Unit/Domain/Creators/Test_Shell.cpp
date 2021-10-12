@@ -56,6 +56,7 @@
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
 #include "Utilities/CloneUniquePtrs.hpp"
 #include "Utilities/ConstantExpressions.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/MakeArray.hpp"
 #include "Utilities/MakeVector.hpp"
@@ -513,15 +514,18 @@ void test_shell_factory_equiangular_time_dependent() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
-        "      Velocity: [2.3, -0.3, 1.2]\n"
-        "      FunctionOfTimeName: Translation\n" +
+        "      Velocity: [2.3, -0.3, 1.2]\n" +
         (expected_boundary_conditions.empty() ? std::string{}
                                               : boundary_conditions_string()));
     const double inner_radius = 1.0;
     const double outer_radius = 3.0;
     const size_t refinement_level = 2;
     const std::array<size_t, 2> grid_points_r_angular{{2, 3}};
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3, -0.3, 1.2}};
+    const std::string f_of_t_name =
+        "UniformTranslation::vel=" + get_output(velocity) +
+        "::t_0=" + get_output(initial_time);
     test_shell_construction(
         dynamic_cast<const creators::Shell&>(*shell), inner_radius,
         outer_radius, true, grid_points_r_angular,
@@ -529,15 +533,14 @@ void test_shell_factory_equiangular_time_dependent() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "Translation",
-                {1.0,
-                 std::array<DataVector, 3>{
-                     {{3, 0.0}, {2.3, -0.3, 1.2}, {3, 0.0}}},
-                 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{3, 0.0}, velocity, {3, 0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            Translation3D{"Translation"}, Translation3D{"Translation"},
-            Translation3D{"Translation"}, Translation3D{"Translation"},
-            Translation3D{"Translation"}, Translation3D{"Translation"}),
+            Translation3D{f_of_t_name}, Translation3D{f_of_t_name},
+            Translation3D{f_of_t_name}, Translation3D{f_of_t_name},
+            Translation3D{f_of_t_name}, Translation3D{f_of_t_name}),
         expected_boundary_conditions);
   };
   helper(BoundaryCondVector{}, std::false_type{});

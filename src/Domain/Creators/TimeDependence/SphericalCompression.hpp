@@ -135,7 +135,7 @@ class SphericalCompression final : public TimeDependence<3> {
           Frame::Grid, Frame::Inertial, mesh_dim>>> override;
 
   auto functions_of_time(const std::unordered_map<std::string, double>&
-                             initial_expiration_times) const
+                             initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
@@ -156,7 +156,7 @@ class SphericalCompression final : public TimeDependence<3> {
   double initial_value_{std::numeric_limits<double>::signaling_NaN()};
   double initial_velocity_{std::numeric_limits<double>::signaling_NaN()};
   double initial_acceleration_{std::numeric_limits<double>::signaling_NaN()};
-  std::string function_of_time_name_{"SphericalCompression"};
+  std::string function_of_time_name_{};
 };
 
 bool operator!=(const SphericalCompression& lhs,

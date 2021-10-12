@@ -39,6 +39,7 @@
 #include "Helpers/Domain/Creators/TestHelpers.hpp"
 #include "Helpers/Domain/DomainTestHelpers.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/MakeVector.hpp"
 
 namespace domain {
@@ -276,25 +277,28 @@ void test_rectangle_factory() {
   }
   {
     INFO("Rectangle factory time dependent");
-    const auto domain_creator = TestHelpers::test_option_tag<
-        domain::OptionTags::DomainCreator<2>,
-        TestHelpers::domain::BoundaryConditions::
-            MetavariablesWithoutBoundaryConditions<
-                2, domain::creators::Rectangle>>(
-        "Rectangle:\n"
-        "  LowerBound: [0,0]\n"
-        "  UpperBound: [1,2]\n"
-        "  IsPeriodicIn: [True,False]\n"
-        "  InitialGridPoints: [3,4]\n"
-        "  InitialRefinement: [2,3]\n"
-        "  TimeDependence:\n"
-        "    UniformTranslation:\n"
-        "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
-        "      Velocity: [2.3, -0.3]\n"
-        "      FunctionOfTimeName: Translation");
+    const auto domain_creator =
+        TestHelpers::test_option_tag<domain::OptionTags::DomainCreator<2>,
+                                     TestHelpers::domain::BoundaryConditions::
+                                         MetavariablesWithoutBoundaryConditions<
+                                             2, domain::creators::Rectangle>>(
+            "Rectangle:\n"
+            "  LowerBound: [0,0]\n"
+            "  UpperBound: [1,2]\n"
+            "  IsPeriodicIn: [True,False]\n"
+            "  InitialGridPoints: [3,4]\n"
+            "  InitialRefinement: [2,3]\n"
+            "  TimeDependence:\n"
+            "    UniformTranslation:\n"
+            "      InitialTime: 1.0\n"
+            "      Velocity: [2.3, -0.3]\n");
     const auto* rectangle_creator =
         dynamic_cast<const creators::Rectangle*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3, -0.3}};
+    const std::string f_of_t_name =
+        "UniformTranslation::vel=" + get_output(velocity) +
+        "::t_0=" + get_output(initial_time);
     test_rectangle_construction(
         *rectangle_creator, {{0., 0.}}, {{1., 2.}}, {{{3, 4}}}, {{{2, 3}}},
         expected_neighbors,
@@ -303,12 +307,12 @@ void test_rectangle_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "Translation",
-                {1.0,
-                 std::array<DataVector, 3>{{{2, 0.0}, {2.3, -0.3}, {2, 0.0}}},
-                 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{2, 0.0}, velocity, {2, 0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            Translation2D{"Translation"}));
+            Translation2D{f_of_t_name}));
   }
   {
     INFO("Rectangle factory time dependent, with boundary conditions");
@@ -325,15 +329,18 @@ void test_rectangle_factory() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
         "      Velocity: [2.3, -0.3]\n"
-        "      FunctionOfTimeName: Translation\n"
         "  BoundaryCondition:\n"
         "    TestBoundaryCondition:\n"
         "      Direction: lower-xi\n"
         "      BlockId: 0\n");
     const auto* rectangle_creator =
         dynamic_cast<const creators::Rectangle*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3, -0.3}};
+    const std::string f_of_t_name =
+        "UniformTranslation::vel=" + get_output(velocity) +
+        "::t_0=" + get_output(initial_time);
     test_rectangle_construction(
         *rectangle_creator, {{0., 0.}}, {{1., 2.}}, {{{3, 4}}}, {{{2, 3}}},
         {{}},
@@ -343,12 +350,12 @@ void test_rectangle_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "Translation",
-                {1.0,
-                 std::array<DataVector, 3>{{{2, 0.0}, {2.3, -0.3}, {2, 0.0}}},
-                 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{2, 0.0}, velocity, {2, 0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            Translation2D{"Translation"}),
+            Translation2D{f_of_t_name}),
         expected_boundary_conditions);
   }
 }  // namespace domain

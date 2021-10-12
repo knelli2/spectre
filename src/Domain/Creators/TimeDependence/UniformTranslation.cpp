@@ -23,16 +23,21 @@
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/Gsl.hpp"
 
 namespace domain {
 namespace creators::time_dependence {
 template <size_t MeshDim>
 UniformTranslation<MeshDim>::UniformTranslation(
-    const double initial_time,
-    const std::array<double, MeshDim>& velocity)
-    : initial_time_(initial_time),
-      velocity_(velocity)) {}
+    const double initial_time, const std::array<double, MeshDim>& velocity)
+    : initial_time_(initial_time), velocity_(velocity) {
+  // This makes the function name unique because this function of time doesn't
+  // expire. This also encodes all initial data info in the name for diagnostic
+  // purposes
+  function_of_time_name_ = "UniformTranslation::vel=" + get_output(velocity_) +
+                           "::t_0=" + get_output(initial_time_);
+}
 
 template <size_t MeshDim>
 std::unique_ptr<TimeDependence<MeshDim>>
@@ -91,7 +96,6 @@ template <size_t Dim>
 bool operator==(const UniformTranslation<Dim>& lhs,
                 const UniformTranslation<Dim>& rhs) {
   return lhs.initial_time_ == rhs.initial_time_ and
-         lhs.initial_expiration_delta_t_ == rhs.initial_expiration_delta_t_ and
          lhs.velocity_ == rhs.velocity_ and
          lhs.function_of_time_name_ == rhs.function_of_time_name_;
 }

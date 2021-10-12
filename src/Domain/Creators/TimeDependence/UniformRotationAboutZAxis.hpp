@@ -118,7 +118,7 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
   auto functions_of_time(const std::unordered_map<std::string, double>&
-                             initial_expiration_times) const
+                             initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
@@ -135,7 +135,7 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
 
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
   double angular_velocity_{std::numeric_limits<double>::signaling_NaN()};
-  std::string funtion_of_time_name_{"UniformRotation"};
+  std::string function_of_time_name_{};
 };
 
 template <size_t Dim>

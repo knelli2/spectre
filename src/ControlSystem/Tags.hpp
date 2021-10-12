@@ -175,15 +175,14 @@ struct MeasurementTimescales : db::SimpleTag {
 /// a TaggedTuple and assigned to their corresponding DataBox tags.
 template <typename ControlSystem>
 struct OptionHolder {
- private:
-  constexpr size_t deriv_order_ = ControlSystem::deriv_order;
+  static constexpr size_t deriv_order = ControlSystem::deriv_order;
   struct Averager {
-    using type = ::Averager<deriv_order_>;
+    using type = ::Averager<deriv_order>;
     static constexpr Options::String help = {"Options for the averager."};
   };
 
   struct Controller {
-    using type = ::Controller<deriv_order_>;
+    using type = ::Controller<deriv_order>;
     static constexpr Options::String help = {"Options for the controller."};
   };
 
@@ -196,8 +195,8 @@ struct OptionHolder {
   using options = tmpl::list<Averager, Controller, TimescaleTuner>;
   static constexpr Options::String help = {"Options for a control system."};
 
-  OptionHolder(::Averager<deriv_order_> input_averager,
-               ::Controller<deriv_order_> input_controller,
+  OptionHolder(::Averager<deriv_order> input_averager,
+               ::Controller<deriv_order> input_controller,
                ::TimescaleTuner input_tuner)
       : averager(std::move(input_averager)),
         controller(std::move(input_controller)),
@@ -220,8 +219,8 @@ struct OptionHolder {
 
   // These members are specifically made pubic for easy access during
   // initialization
-  ::Averager<deriv_order_> averager{};
-  ::Controller<deriv_order_> controller{};
+  ::Averager<deriv_order> averager{};
+  ::Controller<deriv_order> controller{};
   ::TimescaleTuner tuner{};
   std::string name{ControlSystem::name()};
 };

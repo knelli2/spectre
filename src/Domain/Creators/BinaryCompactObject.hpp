@@ -669,7 +669,7 @@ class BinaryCompactObject : public DomainCreator<3> {
   }
 
   auto functions_of_time(const std::unordered_map<std::string, double>&
-                             initial_expiration_times) const
+                             initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
@@ -701,8 +701,6 @@ class BinaryCompactObject : public DomainCreator<3> {
   // Variables for FunctionsOfTime options
   bool enable_time_dependence_{false};
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
-  std::optional<double> initial_expiration_delta_t_{
-      std::numeric_limits<double>::infinity()};
   double expansion_map_outer_boundary_{
       std::numeric_limits<double>::signaling_NaN()};
   double initial_expansion_{std::numeric_limits<double>::signaling_NaN()};

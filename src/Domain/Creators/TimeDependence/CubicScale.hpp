@@ -124,7 +124,7 @@ class CubicScale final : public TimeDependence<MeshDim> {
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
   auto functions_of_time(const std::unordered_map<std::string, double>&
-                             initial_expiration_times) const
+                             initial_expiration_times = {}) const
       -> std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
