@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "DataStructures/DataVector.hpp"
@@ -159,15 +160,13 @@ void test() {
       "::dta=" + get_output(velocity[0]) +
       "::d2ta=" + get_output(acceleration[0]) +
       "::t_0=" + get_output(initial_time) +
-      "::outer_boundary=" + get_output(outer_boundary) +
-      "::use_linear_scale=false";
+      "::outer_boundary=" + get_output(outer_boundary);
   const std::string f_of_t_name1 =
       "CubicScaleB::a=" + get_output(initial_expansion[1]) +
       "::dta=" + get_output(velocity[1]) +
       "::d2ta=" + get_output(acceleration[1]) +
       "::t_0=" + get_output(initial_time) +
-      "::outer_boundary=" + get_output(outer_boundary) +
-      "::use_linear_scale=false";
+      "::outer_boundary=" + get_output(outer_boundary);
 
   const std::unique_ptr<
       domain::creators::time_dependence::TimeDependence<MeshDim>>
@@ -236,11 +235,80 @@ void test() {
   CHECK_FALSE(cubic_scale0 == cubic_scale9);
 }
 
+void test_names(bool use_linear_scaling) {
+  const double initial_time = 0.0;
+  const double outer_boundary = 10.4;
+  const std::array<double, 2> initial_expansion{{1.0, 1.0}};
+  const std::array<double, 2> velocity{{-0.1, 0.0}};
+  const std::array<double, 2> acceleration{{-0.05, 0.0}};
+
+  CubicScale<1> time_dep{initial_time,      outer_boundary, use_linear_scaling,
+                         initial_expansion, velocity,       acceleration};
+
+  const auto functions_of_time_without_expr = time_dep.functions_of_time();
+  std::array<std::string, 2> expected_without_expr_names{};
+  std::array<std::string, 2> expected_with_expr_names{};
+  if (use_linear_scaling) {
+    expected_without_expr_names[0] = "CubicScale";
+    expected_without_expr_names[1] = "CubicScale";
+    expected_with_expr_names[0] = "WithExpiration";
+    expected_with_expr_names[1] = "WithExpiration";
+  } else {
+    expected_without_expr_names[0] =
+        "CubicScaleA::a=" + get_output(initial_expansion[0]) +
+        "::dta=" + get_output(velocity[0]) +
+        "::d2ta=" + get_output(acceleration[0]) +
+        "::t_0=" + get_output(initial_time) +
+        "::outer_boundary=" + get_output(outer_boundary);
+    expected_without_expr_names[1] =
+        "CubicScaleB::a=" + get_output(initial_expansion[1]) +
+        "::dta=" + get_output(velocity[1]) +
+        "::d2ta=" + get_output(acceleration[1]) +
+        "::t_0=" + get_output(initial_time) +
+        "::outer_boundary=" + get_output(outer_boundary);
+    expected_with_expr_names[0] = "WithExpiration0";
+    expected_with_expr_names[1] = "WithExpiration1";
+  }
+
+  const std::array<double, 2> expected_expr_times{{1.5, 2.5}};
+  std::vector<std::pair<std::string, double>> initial_expr_times{
+      {expected_with_expr_names[0], expected_expr_times[0]}};
+  initial_expr_times.emplace_back(expected_with_expr_names[1],
+                                  expected_expr_times[1]);
+  const auto functions_of_time_with_expr =
+      time_dep.functions_of_time(initial_expr_times);
+
+  size_t tot_f_of_t = 2;
+  if (use_linear_scaling) {
+      tot_f_of_t = 1;
+  }
+  CHECK(functions_of_time_without_expr.size() == tot_f_of_t);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_names[0]) ==
+        1);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_names[1]) ==
+        1);
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_names[0])
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_names[1])
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_with_expr.size() == tot_f_of_t);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_names[0]) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_names[1]) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_names[0]) == 0);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_names[1]) == 0);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_names[0])
+            ->time_bounds()[1] == expected_expr_times[0]);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_names[1])
+            ->time_bounds()[1] == expected_expr_times[1]);
+}
+
 SPECTRE_TEST_CASE("Unit.Domain.Creators.TimeDependence.CubicScale",
                   "[Domain][Unit]") {
   test<1>();
   test<2>();
   test<3>();
+  test_names(true);
+  test_names(false);
 }
 }  // namespace
 }  // namespace domain::creators::time_dependence

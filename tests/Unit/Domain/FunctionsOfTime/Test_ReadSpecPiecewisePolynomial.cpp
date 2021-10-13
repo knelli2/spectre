@@ -180,13 +180,11 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.ReadSpecPiecewisePolynomial",
   const std::string expansion_name =
       "CubicScaleA::a=" + get_output(1.0) + "::dta=" + get_output(0.0) +
       "::d2ta=" + get_output(0.0) + "::t_0=" + get_output(initial_time) +
-      "::outer_boundary=" + get_output(outer_boundary) +
-      "::use_linear_scale=false";
+      "::outer_boundary=" + get_output(outer_boundary);
   const std::string unity_name =
       "CubicScaleB::a=" + get_output(1.0) + "::dta=" + get_output(0.0) +
       "::d2ta=" + get_output(0.0) + "::t_0=" + get_output(initial_time) +
-      "::outer_boundary=" + get_output(outer_boundary) +
-      "::use_linear_scale=false";
+      "::outer_boundary=" + get_output(outer_boundary);
   const double omega = 0.0;
   const std::string rotation_name =
       "UniformRotation::omega=" + get_output(omega) +

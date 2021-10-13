@@ -118,7 +118,7 @@ class Composition final
  private:
   CoordMap coord_map_;
 
-  std::unordered_map<std::string,
+  mutable std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       functions_of_time_;
 };

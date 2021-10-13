@@ -225,6 +225,61 @@ void test_composition_3d(const gsl::not_null<T> gen,
             {f_of_t_names0, f_of_t_names1});
 }
 
+void test_names() {
+  using Composition1d =
+      Composition<TimeDependenceCompositionTag<UniformTranslation<1>>,
+                  TimeDependenceCompositionTag<UniformTranslation<1>, 1>>;
+
+  const double initial_time = 0.0;
+  const std::array<std::array<double, 1>, 2> velocities{{{2.4}, {-1.4}}};
+
+  std::unique_ptr<domain::creators::time_dependence::TimeDependence<1>>
+      time_dep0 =
+          std::make_unique<UniformTranslation<1>>(initial_time, velocities[0]);
+  std::unique_ptr<domain::creators::time_dependence::TimeDependence<1>>
+      time_dep1 =
+          std::make_unique<UniformTranslation<1>>(initial_time, velocities[1]);
+  const std::unique_ptr<domain::creators::time_dependence::TimeDependence<1>>
+      time_dep = std::make_unique<Composition1d>(std::move(time_dep0),
+                                                 std::move(time_dep1));
+
+  const auto functions_of_time_without_expr = time_dep->functions_of_time();
+  const std::array<std::string, 2> expected_without_expr_names{
+      {"UniformTranslation::vel=" + get_output(velocities[0]) +
+           "::t_0=" + get_output(initial_time),
+       "UniformTranslation::vel=" + get_output(velocities[1]) +
+           "::t_0=" + get_output(initial_time)}};
+
+  const std::array<std::string, 2> expected_with_expr_names{
+      {"WithExpiration0", "WithoutExpiration1"}};
+  const std::array<double, 2> expected_expr_times{{1.5, 2.5}};
+  std::vector<std::pair<std::string, double>> initial_expr_times{
+      {expected_with_expr_names[0], expected_expr_times[0]}};
+  initial_expr_times.emplace_back(expected_with_expr_names[1],
+                                  expected_expr_times[1]);
+  const auto functions_of_time_with_expr =
+      time_dep->functions_of_time(initial_expr_times);
+
+  CHECK(functions_of_time_without_expr.size() == 2);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_names[0]) ==
+        1);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_names[1]) ==
+        1);
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_names[0])
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_names[1])
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_with_expr.size() == 2);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_names[0]) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_names[1]) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_names[0]) == 0);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_names[1]) == 0);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_names[0])
+            ->time_bounds()[1] == expected_expr_times[0]);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_names[1])
+            ->time_bounds()[1] == expected_expr_times[1]);
+}
+
 SPECTRE_TEST_CASE("Unit.Domain.Creators.TimeDependence.Composition",
                   "[Domain][Unit]") {
   MAKE_GENERATOR(gen);
@@ -232,6 +287,7 @@ SPECTRE_TEST_CASE("Unit.Domain.Creators.TimeDependence.Composition",
   test_composition_1d(make_not_null(&gen), initial_time);
   test_composition_2d(make_not_null(&gen), initial_time);
   test_composition_3d(make_not_null(&gen), initial_time);
+  test_names();
 }
 }  // namespace
 }  // namespace domain::creators::time_dependence

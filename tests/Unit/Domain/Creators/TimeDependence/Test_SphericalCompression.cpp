@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "DataStructures/DataVector.hpp"
@@ -172,6 +173,50 @@ void test_equivalence() {
   CHECK_FALSE(sc0 == sc7);
 }
 
+void test_names() {
+  const double initial_time = 0.0;
+  const double min_radius{0.4};
+  const double max_radius{4.0};
+  const std::array<double, 3> center{{-0.02, 0.013, 0.024}};
+  const double initial_value{1.0};
+  const double initial_velocity{-0.1};
+  const double initial_acceleration{0.01};
+
+  SphericalCompression time_dep{
+      initial_time,  min_radius,       max_radius,          center,
+      initial_value, initial_velocity, initial_acceleration};
+
+  const auto functions_of_time_without_expr = time_dep.functions_of_time();
+  // clang-format off
+  const std::string expected_without_expr_name =
+      "SpherialCompression"s +
+      "::r_min="s + get_output(min_radius) +
+      "::r_max="s + get_output(max_radius) +
+      "::center="s + get_output(center) +
+      "::value="s + get_output(initial_value) +
+      "::dtvalue="s + get_output(initial_velocity) +
+      "::d2tvalue="s + get_output(initial_acceleration) +
+      "::t_0="s + get_output(initial_time);
+  // clang-format on
+
+  const std::string expected_with_expr_name = "WithExpiration";
+  const double expected_expr_time = 1.5;
+  const std::vector<std::pair<std::string, double>> initial_expr_times{
+      {expected_with_expr_name, expected_expr_time}};
+  const auto functions_of_time_with_expr =
+      time_dep.functions_of_time(initial_expr_times);
+
+  CHECK(functions_of_time_without_expr.size() == 1);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_name) == 1);
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_name)
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_with_expr.size() == 1);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_name) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_name) == 0);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_name)
+            ->time_bounds()[1] == expected_expr_time);
+}
+
 SPECTRE_TEST_CASE("Unit.Domain.Creators.TimeDependence.SphericalCompression",
                   "[Domain][Unit]") {
   constexpr double initial_time{1.3};
@@ -213,6 +258,7 @@ SPECTRE_TEST_CASE("Unit.Domain.Creators.TimeDependence.SphericalCompression",
        initial_time, f_of_t_name, min_radius, max_radius, center);
 
   test_equivalence();
+  test_names();
 }
 
 // [[OutputRegex, Tried to create a SphericalCompression TimeDependence]]

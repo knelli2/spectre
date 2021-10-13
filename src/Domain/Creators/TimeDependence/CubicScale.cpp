@@ -54,15 +54,13 @@ CubicScale<MeshDim>::CubicScale(const double initial_time,
         "::dta=" + get_output(velocity_[0]) +
         "::d2ta=" + get_output(acceleration_[0]) +
         "::t_0=" + get_output(initial_time_) +
-        "::outer_boundary=" + get_output(outer_boundary_) +
-        "::use_linear_scale=false";
+        "::outer_boundary=" + get_output(outer_boundary_);
     functions_of_time_names_[1] =
         "CubicScaleB::a=" + get_output(initial_expansion_[1]) +
         "::dta=" + get_output(velocity_[1]) +
         "::d2ta=" + get_output(acceleration_[1]) +
         "::t_0=" + get_output(initial_time_) +
-        "::outer_boundary=" + get_output(outer_boundary_) +
-        "::use_linear_scale=false";
+        "::outer_boundary=" + get_output(outer_boundary_);
   }
 }
 
@@ -115,6 +113,9 @@ CubicScale<MeshDim>::functions_of_time(
     }
   }
 
+  // If we are using linear scaling, the function of time names will be the same
+  // so this first assignment will be overwritten by the second assignmnet.
+  // This is expected.
   result[functions_of_time_names_[0]] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,

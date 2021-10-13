@@ -132,9 +132,21 @@ auto Composition<TimeDependenceCompTag0, TimeDependenceCompTags...>::block_maps(
 template <typename TimeDependenceCompTag0, typename... TimeDependenceCompTags>
 auto Composition<TimeDependenceCompTag0, TimeDependenceCompTags...>::
     functions_of_time(const std::vector<std::pair<std::string, double>>&
-                      /*initial_expiration_times*/) const
+                          initial_expiration_times) const
     -> std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
+  if (initial_expiration_times.size()) {
+    std::vector<std::pair<std::string, double>> rest_expiration_times =
+        initial_expiration_times;
+    const std::vector<std::pair<std::string, double>> first_expiration_time{
+        rest_expiration_times[0]};
+    rest_expiration_times.erase(rest_expiration_times.begin());
+    functions_of_time_ = detail::combine_functions_of_time(
+        {db::tag_name<TimeDependenceCompTag0>(),
+         db::tag_name<TimeDependenceCompTags>()...},
+        std::move(first_time_dep->functions_of_time(first_expiration_time)),
+        std::move(rest_time_dep->functions_of_time(rest_expiration_times))...)
+  }
   return clone_unique_ptrs(functions_of_time_);
 }
 }  // namespace time_dependence

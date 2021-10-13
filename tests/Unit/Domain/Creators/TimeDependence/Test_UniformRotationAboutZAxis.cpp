@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "DataStructures/DataVector.hpp"
@@ -171,6 +172,35 @@ void test_equivalence() {
   }
 }
 
+void test_names() {
+  const double angular_velocity = 2.4;
+  const double initial_time = 0.0;
+
+  UniformRotationAboutZAxis<2> time_dep{initial_time, angular_velocity};
+
+  const auto functions_of_time_without_expr = time_dep.functions_of_time();
+  const std::string expected_without_expr_name =
+      "UniformRotation::omega=" + get_output(angular_velocity) +
+      "::t_0=" + get_output(initial_time);
+
+  const std::string expected_with_expr_name = "WithExpiration";
+  const double expected_expr_time = 1.5;
+  const std::vector<std::pair<std::string, double>> initial_expr_times{
+      {expected_with_expr_name, expected_expr_time}};
+  const auto functions_of_time_with_expr =
+      time_dep.functions_of_time(initial_expr_times);
+
+  CHECK(functions_of_time_without_expr.size() == 1);
+  CHECK(functions_of_time_without_expr.count(expected_without_expr_name) == 1);
+  CHECK(functions_of_time_without_expr.at(expected_without_expr_name)
+            ->time_bounds()[1] == std::numeric_limits<double>::infinity());
+  CHECK(functions_of_time_with_expr.size() == 1);
+  CHECK(functions_of_time_with_expr.count(expected_with_expr_name) == 1);
+  CHECK(functions_of_time_with_expr.count(expected_without_expr_name) == 0);
+  CHECK(functions_of_time_with_expr.at(expected_with_expr_name)
+            ->time_bounds()[1] == expected_expr_time);
+}
+
 SPECTRE_TEST_CASE(
     "Unit.Domain.Creators.TimeDependence.UniformRotationAboutZAxis",
     "[Domain][Unit]") {
@@ -210,6 +240,7 @@ SPECTRE_TEST_CASE(
   }
 
   test_equivalence();
+  test_names();
 }
 }  // namespace
 
