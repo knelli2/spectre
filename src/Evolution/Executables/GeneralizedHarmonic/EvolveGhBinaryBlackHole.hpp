@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -10,6 +11,11 @@
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.tpp"
 #include "ApparentHorizons/ComputeItems.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Metafunctions.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Creators/Factory1D.hpp"
@@ -17,6 +23,7 @@
 #include "Domain/Creators/Factory3D.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Protocols/Metavariables.hpp"
 #include "Domain/Tags.hpp"
@@ -190,9 +197,9 @@ struct EvolutionMetavars {
         gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Grid>>;
     using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
     // Observe horizon in grid frame too.
-    using tags_to_observe = tmpl::list<
-        StrahlkorperGr::Tags::AreaCompute<::Frame::Grid>,
-        StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Grid>>;
+    using tags_to_observe =
+        tmpl::list<StrahlkorperGr::Tags::AreaCompute<::Frame::Grid>,
+                   StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Grid>>;
     using compute_items_on_target = tmpl::append<
         tmpl::list<
             StrahlkorperGr::Tags::AreaElementCompute<::Frame::Grid>,
@@ -230,9 +237,9 @@ struct EvolutionMetavars {
         gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Grid>>;
     using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
     // Observe horizon in grid frame too.
-    using tags_to_observe = tmpl::list<
-        StrahlkorperGr::Tags::AreaCompute<::Frame::Grid>,
-        StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Grid>>;
+    using tags_to_observe =
+        tmpl::list<StrahlkorperGr::Tags::AreaCompute<::Frame::Grid>,
+                   StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Grid>>;
     using compute_items_on_target = tmpl::append<
         tmpl::list<
             StrahlkorperGr::Tags::AreaElementCompute<::Frame::Grid>,
@@ -260,7 +267,18 @@ struct EvolutionMetavars {
         intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB, AhB>;
   };
 
-  using interpolation_target_tags = tmpl::list<AhA,AhB>;
+  // Control system stuff
+  // static constexpr size_t deriv_order = 2;
+  using control_systems = tmpl::list<>;
+  using control_components =
+      control_system::control_components<EvolutionMetavars, control_systems>;
+  using control_events = control_system::control_system_events<control_systems>;
+  using control_triggers =
+      control_system::control_system_triggers<control_systems>;
+
+  using interpolation_target_tags = tmpl::push_back<
+      control_system::metafunctions::interpolation_target_tags<control_systems>,
+      AhA, AhB>;
   using interpolator_source_vars =
       tmpl::list<gr::Tags::SpacetimeMetric<volume_dim, ::Frame::Inertial>,
                  GeneralizedHarmonic::Tags::Pi<volume_dim, ::Frame::Inertial>,
@@ -278,7 +296,9 @@ struct EvolutionMetavars {
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger, tmpl::flatten<tmpl::list<
+                                     DenseTriggers::standard_dense_triggers,
+                                     control_triggers>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<
             Event,
@@ -289,7 +309,7 @@ struct EvolutionMetavars {
                 Events::ObserveNorms<::Tags::Time, observe_fields>,
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields, tmpl::list<>>,
-                Events::time_events<system>>>>,
+                Events::time_events<system>, control_events>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
                    tmpl::list<GeneralizedHarmonic::BoundaryConditions::
@@ -412,6 +432,7 @@ struct EvolutionMetavars {
   }
 
   using step_actions = tmpl::list<
+      ::domain::Actions::CheckFunctionsOfTimeAreReady,
       evolution::dg::Actions::ComputeTimeDerivative<EvolutionMetavars>,
       tmpl::conditional_t<
           local_time_stepping,
@@ -449,6 +470,7 @@ struct EvolutionMetavars {
       Initialization::Actions::AddComputeTags<tmpl::push_back<
           StepChoosers::step_chooser_compute_tags<EvolutionMetavars>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
@@ -498,8 +520,10 @@ struct EvolutionMetavars {
       observers::ObserverWriter<EvolutionMetavars>,
       importers::ElementDataReader<EvolutionMetavars>,
       intrp::Interpolator<EvolutionMetavars>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhA>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhB>, gh_dg_element_array>>;
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
+      gh_dg_element_array, control_components>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "

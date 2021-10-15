@@ -24,6 +24,7 @@ function(add_generalized_harmonic_executable_without_horizon
 endfunction(add_generalized_harmonic_executable_without_horizon)
 
 set(LIBS_TO_LINK
+  ControlSystem
   CoordinateMaps
   DiscontinuousGalerkin
   Domain
