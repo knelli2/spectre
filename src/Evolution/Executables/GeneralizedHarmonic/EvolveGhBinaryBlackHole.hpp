@@ -177,6 +177,8 @@ struct EvolutionMetavars {
     static constexpr bool enable_time_dependent_maps = true;
   };
 
+  using control_systems = tmpl::list<>;
+
   using observe_fields = tmpl::list<
       gr::Tags::Lapse<DataVector>,
       ::Tags::PointwiseL2Norm<GeneralizedHarmonic::Tags::GaugeConstraint<
