@@ -110,6 +110,7 @@ void test_control_sys_inputs() {
       increase_timescale_threshold, increase_factor, decrease_factor);
   const Averager<2> expected_averager(0.25, true);
   const Controller<2> expected_controller(0.3);
+  const std::string expected_name{"LabelA"};
 
   using system = control_system::TestHelpers::System<
       2, control_system::TestHelpers::TestStructs_detail::LabelA,
@@ -133,6 +134,7 @@ void test_control_sys_inputs() {
   CHECK(expected_averager == input_holder.averager);
   CHECK(expected_controller == input_holder.controller);
   CHECK(expected_tuner == input_holder.tuner);
+  CHECK(expected_name == input_holder.name);
 }
 
 void test_measurement_tag() {
