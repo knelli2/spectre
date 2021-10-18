@@ -80,17 +80,9 @@ class CompositionCubicScaleAndUniformRotationAboutZAxis final
       CompositionCubicScaleAndUniformRotationAboutZAxis&&) = default;
 
   explicit CompositionCubicScaleAndUniformRotationAboutZAxis(
-      std::unique_ptr<TimeDependence<MeshDim>> cubic_scale,
-      std::unique_ptr<TimeDependence<MeshDim>> uniform_rotation_about_z_axis);
-
-  /// Constructor for copying the composition time dependence. Internally
-  /// performs all the copying necessary to deal with the functions of time.
-  CompositionCubicScaleAndUniformRotationAboutZAxis(
-      CoordMap coord_map,
-      const std::unordered_map<
-          std::string,
-          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          functions_of_time);
+      const std::unique_ptr<TimeDependence<MeshDim>>& cubic_scale,
+      const std::unique_ptr<TimeDependence<MeshDim>>&
+          uniform_rotation_about_z_axis);
 
   auto get_clone() const -> std::unique_ptr<TimeDependence<MeshDim>> override;
 
@@ -98,16 +90,17 @@ class CompositionCubicScaleAndUniformRotationAboutZAxis final
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
-  auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
+  auto functions_of_time(const std::unordered_map<std::string, double>&
+                             initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
 
  private:
-  CoordMap coord_map_;
+  std::unique_ptr<TimeDependence<MeshDim>> cubic_scale_;
+  std::unique_ptr<TimeDependence<MeshDim>> uniform_rotation_about_z_axis_;
 
-  std::unordered_map<std::string,
-                     std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-      functions_of_time_;
+  CoordMap coord_map_;
 };
 }  // namespace time_dependence
 }  // namespace creators

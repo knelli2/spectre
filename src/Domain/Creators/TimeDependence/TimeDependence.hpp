@@ -33,14 +33,14 @@ class None;
 class SphericalCompression;
 template <size_t MeshDim>
 class UniformRotationAboutZAxis;
-template <size_t MeshDim>
+template <size_t MeshDim, size_t Index = 0>
 class UniformTranslation;
 template <size_t MeshDim>
 class CompositionCubicScaleAndUniformRotationAboutZAxis;
 template <size_t MeshDim>
 class CompositionUniformTranslation;
 namespace OptionTags {
-template <typename TimeDep, size_t Index = 0>
+template <typename TimeDep>
 struct TimeDependenceCompositionTag;
 }
 }  // namespace domain::creators::time_dependence
@@ -68,7 +68,8 @@ struct TimeDependence {
                  CompositionCubicScaleAndUniformRotationAboutZAxis<3>>;
   using creatable_classes_any_dim =
       tmpl::list<CubicScale<MeshDim>, None<MeshDim>,
-                 UniformTranslation<MeshDim>,
+                 UniformTranslation<MeshDim>, UniformTranslation<MeshDim, 1>,
+                 UniformTranslation<MeshDim, 2>,
                  CompositionUniformTranslation<MeshDim>>;
 
  public:
@@ -96,9 +97,11 @@ struct TimeDependence {
       domain::CoordinateMapBase<Frame::Grid, Frame::Inertial, MeshDim>>> = 0;
 
   /// Returns the functions of time for the domain.
-  virtual auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
+  virtual auto functions_of_time(const std::unordered_map<std::string, double>&
+                                     initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
 
   /// Returns `true` if the instance is `None`, meaning no time dependence.
   bool is_none() const {

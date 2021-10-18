@@ -465,24 +465,19 @@ std::string create_option_string(const bool excise_A, const bool excise_B,
   const std::string time_dependence{
       add_time_dependence ? "  TimeDependentMaps:\n"
                             "    InitialTime: 1.0\n"
-                            "    InitialExpirationDeltaT: 9.0\n"
                             "    ExpansionMap: \n"
                             "      OuterBoundary: 25.0\n"
                             "      InitialExpansion: 1.0\n"
                             "      InitialExpansionVelocity: -0.1\n"
-                            "      FunctionOfTimeName: 'ExpansionFactor'\n"
                             "      AsymptoticVelocityOuterBoundary: -0.1\n"
                             "      DecayTimescaleOuterBoundaryVelocity: 5.0\n"
                             "    RotationAboutZAxisMap:\n"
                             "      InitialRotationAngle: 2.0\n"
                             "      InitialAngularVelocity: -0.2\n"
-                            "      FunctionOfTimeName: RotationAngle\n"
                             "    SizeMap:\n"
                             "      InitialValues: [0.0, 0.0]\n"
                             "      InitialVelocities: [-0.1, -0.2]\n"
-                            "      InitialAccelerations: [0.01, 0.02]\n"
-                            "      FunctionOfTimeNames: ['LambdaFactorA0', "
-                            " 'LambdaFactorB0']"
+                            "      InitialAccelerations: [0.01, 0.02]"
                           : ""};
   const std::string interior_A{
       add_boundary_condition
@@ -569,10 +564,7 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions) {
   const std::array<double, 4> times_to_check{{0.0, 4.4, 7.8}};
 
   constexpr double initial_time = 0.0;
-  constexpr double expiration_time = 10.0;
   constexpr double expected_time = 1.0; // matches InitialTime: 1.0 above
-  constexpr double expected_update_delta_t =
-      9.0;  // matches InitialExpirationDeltaT: 9.0 above
   constexpr double expected_initial_function_value =
       1.0;  // hard-coded in BinaryCompactObject.cpp
   constexpr double expected_asymptotic_velocity_outer_boundary =
@@ -595,49 +587,53 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions) {
       expected_functions_of_time = std::make_tuple(
           std::pair<std::string,
                     domain::FunctionsOfTime::PiecewisePolynomial<3>>{
-              "LambdaFactorA0"s,
+              "SizeA"s,
               {expected_time, lambda_factor_a0_coefs,
-               expected_time + expected_update_delta_t}},
+               std::numeric_limits<double>::infinity()}},
           std::pair<std::string,
                     domain::FunctionsOfTime::PiecewisePolynomial<3>>{
-              "LambdaFactorB0"s,
+              "SizeB"s,
               {expected_time, lambda_factor_b0_coefs,
-               expected_time + expected_update_delta_t}},
+               std::numeric_limits<double>::infinity()}},
           std::pair<std::string,
                     domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-              "ExpansionFactor"s,
+              "Expansion"s,
               {expected_time, expansion_factor_coefs,
-               expected_time + expected_update_delta_t}},
+               std::numeric_limits<double>::infinity()}},
           std::pair<std::string, domain::FunctionsOfTime::FixedSpeedCubic>{
-              "ExpansionFactorOuterBoundary"s,
+              "ExpansionOuterBoundary"s,
               {expected_initial_function_value, expected_time,
                expected_asymptotic_velocity_outer_boundary,
                expected_decay_timescale_outer_boundary_velocity}},
           std::pair<std::string,
                     domain::FunctionsOfTime::PiecewisePolynomial<3>>{
-              "RotationAngle"s,
+              "Rotation"s,
               {expected_time, rotation_angle_coefs,
-               expected_time + expected_update_delta_t}});
+               std::numeric_limits<double>::infinity()}});
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       functions_of_time{};
-  functions_of_time["ExpansionFactor"] =
+  functions_of_time["Expansion"] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
-          initial_time, expansion_factor_coefs, expiration_time);
-  functions_of_time["ExpansionFactorOuterBoundary"] =
+          initial_time, expansion_factor_coefs,
+          std::numeric_limits<double>::infinity());
+  functions_of_time["ExpansionOuterBoundary"] =
       std::make_unique<domain::FunctionsOfTime::FixedSpeedCubic>(
           expected_initial_function_value, initial_time,
           expected_asymptotic_velocity_outer_boundary,
           expected_decay_timescale_outer_boundary_velocity);
-  functions_of_time["RotationAngle"] =
+  functions_of_time["Rotation"] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<3>>(
-          initial_time, rotation_angle_coefs, expiration_time);
-  functions_of_time["LambdaFactorA0"] =
+          initial_time, rotation_angle_coefs,
+          std::numeric_limits<double>::infinity());
+  functions_of_time["SizeA"] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<3>>(
-          initial_time, lambda_factor_a0_coefs, expiration_time);
-  functions_of_time["LambdaFactorB0"] =
+          initial_time, lambda_factor_a0_coefs,
+          std::numeric_limits<double>::infinity());
+  functions_of_time["SizeB"] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<3>>(
-          initial_time, lambda_factor_b0_coefs, expiration_time);
+          initial_time, lambda_factor_b0_coefs,
+          std::numeric_limits<double>::infinity());
 
   for (const double time : times_to_check) {
     test_binary_compact_object_construction(

@@ -62,8 +62,12 @@ class DomainCreator {
       const = 0;
 
   /// Retrieve the functions of time used for moving meshes.
-  virtual auto functions_of_time() const -> std::unordered_map<
-      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
+  virtual auto functions_of_time(const std::unordered_map<std::string, double>&
+                                     initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
+    (void)(initial_expiration_times);
     return {};
   }
 };

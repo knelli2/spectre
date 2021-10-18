@@ -14,32 +14,21 @@ namespace domain::creators::time_dependence {
 
 template <size_t MeshDim>
 CompositionUniformTranslation<MeshDim>::CompositionUniformTranslation(
-    std::unique_ptr<TimeDependence<MeshDim>> uniform_translation0,
-    std::unique_ptr<TimeDependence<MeshDim>> uniform_translation1)
-    : coord_map_(domain::push_back(
-          dynamic_cast<UniformTranslation<MeshDim>&>(*uniform_translation0)
+    const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation0,
+    const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation1)
+    : uniform_translation0_(uniform_translation0->get_clone()),
+      uniform_translation1_(uniform_translation1->get_clone()),
+      coord_map_(domain::push_back(
+          dynamic_cast<UniformTranslation<MeshDim>&>(*uniform_translation0_)
               .map_for_composition(),
-          dynamic_cast<UniformTranslation<MeshDim>&>(*uniform_translation1)
-              .map_for_composition())),
-      functions_of_time_(domain::FunctionsOfTime::combine_functions_of_time(
-          uniform_translation0->functions_of_time(),
-          uniform_translation1->functions_of_time())) {}
-
-template <size_t MeshDim>
-CompositionUniformTranslation<MeshDim>::CompositionUniformTranslation(
-    CoordMap coord_map,
-    const std::unordered_map<
-        std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-        functions_of_time)
-    : coord_map_(std::move(coord_map)) {
-  functions_of_time_ = clone_unique_ptrs(functions_of_time);
-}
+          dynamic_cast<UniformTranslation<MeshDim, 1>&>(*uniform_translation1_)
+              .map_for_composition())) {}
 
 template <size_t MeshDim>
 auto CompositionUniformTranslation<MeshDim>::get_clone() const
     -> std::unique_ptr<TimeDependence<MeshDim>> {
-  return std::make_unique<CompositionUniformTranslation>(coord_map_,
-                                                         functions_of_time_);
+  return std::make_unique<CompositionUniformTranslation>(uniform_translation0_,
+                                                         uniform_translation1_);
 }
 
 template <size_t MeshDim>
@@ -57,10 +46,18 @@ auto CompositionUniformTranslation<MeshDim>::block_maps(size_t number_of_blocks)
 }
 
 template <size_t MeshDim>
-auto CompositionUniformTranslation<MeshDim>::functions_of_time() const
-    -> std::unordered_map<
+auto CompositionUniformTranslation<MeshDim>::functions_of_time(
+    const std::unordered_map<std::string, double>& initial_expiration_times)
+    const -> std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
-  return clone_unique_ptrs(functions_of_time_);
+  const auto ut0_f_of_t =
+      dynamic_cast<UniformTranslation<MeshDim>&>(*uniform_translation0_)
+          .functions_of_time(initial_expiration_times);
+  const auto ut1_f_of_t =
+      dynamic_cast<UniformTranslation<MeshDim, 1>&>(*uniform_translation1_)
+          .functions_of_time(initial_expiration_times);
+
+  return detail::combine_functions_of_time(ut0_f_of_t, ut1_f_of_t);
 }
 
 #define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)

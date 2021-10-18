@@ -52,7 +52,7 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
 
   using options = tmpl::list<
       OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim>>,
-      OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim>, 1>>;
+      OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim, 1>>>;
 
   CompositionUniformTranslation() = default;
   ~CompositionUniformTranslation() override = default;
@@ -64,17 +64,8 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
       default;
 
   explicit CompositionUniformTranslation(
-      std::unique_ptr<TimeDependence<MeshDim>> uniform_translation0,
-      std::unique_ptr<TimeDependence<MeshDim>> uniform_translation1);
-
-  /// Constructor for copying the composition time dependence. Internally
-  /// performs all the copying necessary to deal with the functions of time.
-  CompositionUniformTranslation(
-      CoordMap coord_map,
-      const std::unordered_map<
-          std::string,
-          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          functions_of_time);
+      const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation0,
+      const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation1);
 
   auto get_clone() const -> std::unique_ptr<TimeDependence<MeshDim>> override;
 
@@ -82,16 +73,17 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
-  auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
+  auto functions_of_time(const std::unordered_map<std::string, double>&
+                             initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
 
  private:
-  CoordMap coord_map_;
+  std::unique_ptr<TimeDependence<MeshDim>> uniform_translation0_;
+  std::unique_ptr<TimeDependence<MeshDim>> uniform_translation1_;
 
-  std::unordered_map<std::string,
-                     std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-      functions_of_time_;
+  CoordMap coord_map_;
 };
 }  // namespace time_dependence
 }  // namespace creators

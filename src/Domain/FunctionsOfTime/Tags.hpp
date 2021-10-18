@@ -9,6 +9,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Tags.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/OptionTags.hpp"
@@ -16,9 +18,11 @@
 #include "Domain/FunctionsOfTime/ReadSpecPiecewisePolynomial.hpp"
 #include "Domain/OptionTags.hpp"
 #include "Options/Options.hpp"
+#include "Time/Tags.hpp"
 #include "Utilities/StdHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/CreateHasStaticMemberVariable.hpp"
+#include "Utilities/TypeTraits/IsA.hpp"
 
 /// \cond
 template <size_t VolumeDim>
@@ -37,7 +41,13 @@ struct OptionList {
       tmpl::list<domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
                  domain::FunctionsOfTime::OptionTags::FunctionOfTimeFile,
                  domain::FunctionsOfTime::OptionTags::FunctionOfTimeNameMap>,
-      tmpl::list<domain::OptionTags::DomainCreator<Metavariables::volume_dim>>>;
+      tmpl::flatten<tmpl::list<
+          domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
+          ::OptionTags::InitialSlabSize,
+          control_system::option_holders<tmpl::transform<
+              tmpl::filter<typename Metavariables::component_list,
+                           tt::is_a_lambda<ControlComponent, tmpl::_1>>,
+              tmpl::bind<tmpl::back, tmpl::_1>>>>>>;
 };
 
 template <typename Metavariables>
@@ -104,7 +114,7 @@ struct FunctionsOfTime : db::SimpleTag {
         if (functions_of_time.count(spectre_name) == 0) {
           ERROR("Trying to import data for key "
                 << spectre_name
-                << "in FunctionsOfTime, but FunctionsOfTime does not "
+                << " in FunctionsOfTime, but FunctionsOfTime does not "
                    "contain that key. This might happen if the option "
                    "FunctionOfTimeNameMap is not specified correctly. Keys "
                    "contained in FunctionsOfTime: "
@@ -140,11 +150,28 @@ struct FunctionsOfTime : db::SimpleTag {
     }
   }
 
-  template <typename Metavariables>
+  template <typename Metavariables, typename... OptionHolders>
   static type create_from_options(
       const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
-          domain_creator) {
-    return domain_creator->functions_of_time();
+          domain_creator,
+      const double initial_slab_size, const OptionHolders&&... option_holders) {
+    std::unordered_map<std::string, double> initial_expiration_times{};
+    [[maybe_unused]] const auto lambda = [&initial_expiration_times,
+                                          &initial_slab_size](
+                                             const auto& option_holder) {
+      const auto controller = option_holder.controller;
+      const std::string name = option_holder.name;
+      const auto tuner = option_holder.tuner;
+
+      const double update_fraction = controller.get_update_fraction();
+      const double curr_timescale = min(tuner.current_timescale());
+      const double initial_expiration_time = update_fraction * curr_timescale;
+      initial_expiration_times[name] =
+          initial_expiration_time < initial_slab_size ? initial_slab_size
+                                                      : initial_expiration_time;
+    };
+    EXPAND_PACK_LEFT_TO_RIGHT(lambda(option_holders));
+    return domain_creator->functions_of_time(initial_expiration_times);
   }
 };
 }  // namespace domain::Tags

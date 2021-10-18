@@ -222,7 +222,7 @@ struct OptionHolder {
     p | name;
   };
 
-  // These members are specifically made pubic for easy access during
+  // These members are specifically made public for easy access during
   // initialization
   ::Averager<deriv_order> averager{};
   ::Controller<deriv_order> controller{};
@@ -232,6 +232,7 @@ struct OptionHolder {
 
 template <typename ControlSystems>
 using option_holders =
-    tmpl::transform<ControlSystems, tmpl::bind<OptionHolder, tmpl::_1>>;
+    tmpl::transform<ControlSystems,
+                    tmpl::bind<OptionTags::ControlSystemInputs, tmpl::_1>>;
 
 }  // namespace control_system

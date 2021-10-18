@@ -47,9 +47,11 @@ class TestCreator : public DomainCreator<1> {
       const override {
     ERROR("");
   }
-  auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override {
+  auto functions_of_time(const std::unordered_map<std::string, double>&
+                         /*initial_expiration_times*/) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override {
     const std::array<DataVector, 3> initial_values{{{-1.0}, {-2.0}, {-3.0}}};
 
     std::unordered_map<std::string,
