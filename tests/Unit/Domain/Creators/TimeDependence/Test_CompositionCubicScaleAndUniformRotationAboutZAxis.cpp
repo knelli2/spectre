@@ -61,6 +61,50 @@ void test_impl(
 
   CHECK_FALSE(time_dep->is_none());
 
+  // Test functions of time without expiration times
+  {
+    const auto functions_of_time = time_dep->functions_of_time();
+    auto functions_of_time_for_expected =
+        expected_time_deps[0]->functions_of_time();
+    for (size_t i = 1; i < expected_time_deps.size(); i++) {
+      functions_of_time_for_expected =
+          domain::FunctionsOfTime::combine_functions_of_time(
+              functions_of_time_for_expected,
+              expected_time_deps[i]->functions_of_time());
+    }
+
+    REQUIRE(functions_of_time.size() == expected_f_of_t_names.size());
+    for (const auto& f_of_t_name : expected_f_of_t_names) {
+      CHECK(functions_of_time.count(f_of_t_name) == 1);
+      CHECK(functions_of_time.at(f_of_t_name)->time_bounds()[1] ==
+            std::numeric_limits<double>::infinity());
+    }
+  }
+  // Test functions of time with expiration times
+  {
+    const double init_expr_time = 5.0;
+    std::unordered_map<std::string, double> init_expr_times{};
+    for (auto& name : expected_f_of_t_names) {
+      init_expr_times[name] = init_expr_time;
+    }
+    const auto functions_of_time = time_dep->functions_of_time(init_expr_times);
+    auto functions_of_time_for_expected =
+        expected_time_deps[0]->functions_of_time(init_expr_times);
+    for (size_t i = 1; i < expected_time_deps.size(); i++) {
+      functions_of_time_for_expected =
+          domain::FunctionsOfTime::combine_functions_of_time(
+              functions_of_time_for_expected,
+              expected_time_deps[i]->functions_of_time(init_expr_times));
+    }
+
+    REQUIRE(functions_of_time.size() == expected_f_of_t_names.size());
+    for (const auto& f_of_t_name : expected_f_of_t_names) {
+      CHECK(functions_of_time.count(f_of_t_name) == 1);
+      CHECK(functions_of_time.at(f_of_t_name)->time_bounds()[1] ==
+            init_expr_time);
+    }
+  }
+
   const auto functions_of_time = time_dep->functions_of_time();
   auto functions_of_time_for_expected =
       expected_time_deps[0]->functions_of_time();
@@ -69,11 +113,6 @@ void test_impl(
         domain::FunctionsOfTime::combine_functions_of_time(
             functions_of_time_for_expected,
             expected_time_deps[i]->functions_of_time());
-  }
-
-  REQUIRE(functions_of_time.size() == expected_f_of_t_names.size());
-  for (const auto& f_of_t_name : expected_f_of_t_names) {
-    CHECK(functions_of_time.count(f_of_t_name) == 1);
   }
 
   // For a random point at a random time check that the values agree. This is to
@@ -150,7 +189,7 @@ void test_impl(
 template <size_t Dim, typename T>
 void test_composition_cubic_scale_uniform_rotation(
     const gsl::not_null<T> gen, const double initial_time,
-    const double update_delta_t) {
+    const bool use_linear_scaling) {
   static_assert(Dim != 1,
                 "CompositionCubicScaleAndUniformRotationAboutZAxis undefined "
                 "for Dim == 1.");
@@ -161,25 +200,26 @@ void test_composition_cubic_scale_uniform_rotation(
   const std::array<double, 2> initial_expansion{{1.0, 1.0}};
   const std::array<double, 2> velocity{{-0.1, 0.0}};
   const std::array<double, 2> acceleration{{-0.05, 0.0}};
-  const std::string cs_name0{"Expansion0"};
-  const std::string cs_name1{"Expansion1"};
+  const std::string cs_name0{"CubicScale"s + (use_linear_scaling ? "" : "A")};
+  const std::string cs_name1{"CubicScale"s + (use_linear_scaling ? "" : "B")};
   std::array<std::string, 2> f_of_t_names{cs_name0, cs_name1};
 
-  CubicScale<Dim> time_dep0(initial_time, update_delta_t, outer_boundary,
-                            f_of_t_names, initial_expansion, velocity,
-                            acceleration);
+  CubicScale<Dim> time_dep0(initial_time, outer_boundary, use_linear_scaling,
+                            initial_expansion, velocity, acceleration);
 
   const double angular_velocity = 2.4;
-  const std::string rot_name{"RotationAngle"};
+  const std::string rot_name{"Rotation"};
 
-  UniformRotationAboutZAxis<Dim> time_dep1(initial_time, update_delta_t,
-                                           angular_velocity, rot_name);
+  UniformRotationAboutZAxis<Dim> time_dep1(initial_time, angular_velocity);
 
   std::vector<std::unique_ptr<TimeDependence<Dim>>> expected_time_deps{};
   expected_time_deps.push_back(time_dep0.get_clone());
   expected_time_deps.push_back(time_dep1.get_clone());
 
-  const std::vector<std::string> expected_names{rot_name, cs_name0, cs_name1};
+  std::vector<std::string> expected_names{rot_name, cs_name0};
+  if (not use_linear_scaling) {
+    expected_names.push_back(cs_name1);
+  }
 
   const std::unique_ptr<TimeDependence<Dim>> time_dep =
       std::make_unique<Composition>(time_dep0.get_clone(),
@@ -193,31 +233,35 @@ void test_composition_cubic_scale_uniform_rotation(
 
 template <typename T>
 void test_options(const gsl::not_null<T> gen, const double initial_time,
-                  const double update_delta_t) {
+                  const bool use_linear_scaling) {
   INFO("Test create by options");
   const double outer_boundary = 10.4;
   const std::array<double, 2> initial_expansion{{1.0, 1.0}};
   const std::array<double, 2> velocity{{-0.1, 0.0}};
   const std::array<double, 2> acceleration{{-0.05, 0.0}};
-  const std::string cs_name0{"Expansion0"};
-  const std::string cs_name1{"Expansion1"};
+  const std::string cs_name0{"CubicScale"s + (use_linear_scaling ? "" : "A")};
+  const std::string cs_name1{"CubicScale"s + (use_linear_scaling ? "" : "B")};
   std::array<std::string, 2> f_of_t_names{cs_name0, cs_name1};
 
-  CubicScale<2> time_dep0(initial_time, update_delta_t, outer_boundary,
-                          f_of_t_names, initial_expansion, velocity,
-                          acceleration);
+  CubicScale<2> time_dep0(initial_time, outer_boundary, use_linear_scaling,
+                          initial_expansion, velocity, acceleration);
 
   const double angular_velocity = 2.4;
-  const std::string rot_name{"RotationAngle"};
+  const std::string rot_name{"Rotation"};
 
-  UniformRotationAboutZAxis<2> time_dep1(initial_time, update_delta_t,
-                                         angular_velocity, rot_name);
+  UniformRotationAboutZAxis<2> time_dep1(initial_time, angular_velocity);
 
   std::vector<std::unique_ptr<TimeDependence<2>>> expected_time_deps{};
   expected_time_deps.push_back(time_dep0.get_clone());
   expected_time_deps.push_back(time_dep1.get_clone());
 
-  const std::vector<std::string> expected_names{rot_name, cs_name0, cs_name1};
+  std::vector<std::string> expected_names{rot_name, cs_name0};
+  if (not use_linear_scaling) {
+    expected_names.push_back(cs_name1);
+  }
+
+  const std::string linear_scale_str =
+      "      UseLinearScaling: "s + (use_linear_scaling ? "true\n" : "false\n");
 
   const auto created_with_options =
       TestHelpers::test_creation<std::unique_ptr<TimeDependence<2>>>(
@@ -225,18 +269,15 @@ void test_options(const gsl::not_null<T> gen, const double initial_time,
           "  CubicScale:\n"
           "    CubicScale:\n"
           "      InitialTime: 1.3\n"
-          "      InitialExpirationDeltaT: 2.5\n"
           "      OuterBoundary: 10.4\n"
-          "      InitialExpansion: [1.0, 1.0]\n"
+          "      InitialExpansion: [1.0, 1.0]\n" +
+          linear_scale_str +
           "      Velocity: [-0.1, 0.0]\n"
           "      Acceleration: [-0.05, 0.0]\n"
-          "      FunctionOfTimeNames: [Expansion0, Expansion1]\n"
           "  UniformRotationAboutZAxis:\n"
           "    UniformRotationAboutZAxis:\n"
           "      InitialTime: 1.3\n"
-          "      InitialExpirationDeltaT: 2.5\n"
-          "      AngularVelocity: 2.4\n"
-          "      FunctionOfTimeName: RotationAngle\n");
+          "      AngularVelocity: 2.4\n");
 
   test_impl(gen, initial_time, created_with_options, expected_time_deps,
             expected_names);
@@ -247,12 +288,16 @@ SPECTRE_TEST_CASE(
     "[Domain][Unit]") {
   MAKE_GENERATOR(gen);
   const double initial_time = 1.3;
-  const double update_delta_t = 2.5;
-  test_composition_cubic_scale_uniform_rotation<2>(
-      make_not_null(&gen), initial_time, update_delta_t);
-  test_composition_cubic_scale_uniform_rotation<3>(
-      make_not_null(&gen), initial_time, update_delta_t);
-  test_options(make_not_null(&gen), initial_time, update_delta_t);
+  test_composition_cubic_scale_uniform_rotation<2>(make_not_null(&gen),
+                                                   initial_time, true);
+  test_composition_cubic_scale_uniform_rotation<2>(make_not_null(&gen),
+                                                   initial_time, false);
+  test_composition_cubic_scale_uniform_rotation<3>(make_not_null(&gen),
+                                                   initial_time, true);
+  test_composition_cubic_scale_uniform_rotation<3>(make_not_null(&gen),
+                                                   initial_time, false);
+  test_options(make_not_null(&gen), initial_time, true);
+  test_options(make_not_null(&gen), initial_time, false);
 }
 }  // namespace
 }  // namespace domain::creators::time_dependence

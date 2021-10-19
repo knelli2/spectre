@@ -32,6 +32,23 @@ namespace creators {
 namespace time_dependence {
 /*!
  * \brief A TimeDependence that is a composition of two `UniformTranslation`s.
+ *
+ * To create this from options, use something like
+ *
+ * ```
+ * CompositionUniformTranslation:
+ *   UniformTranslation:
+ *     UniformTranslation:
+ *       InitialTime:
+ *       Velocity:
+ *   UniformTranslation1:
+ *     UniformTranslation1:
+ *       InitialTime:
+ *       Velocity:
+ * ```
+ *
+ * The reason for the `UniformTranslation1` is so that the factory can
+ * distinguish the two and so that the names of the FunctionsOfTime are unique.
  */
 template <size_t MeshDim>
 class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
@@ -40,19 +57,18 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
       domain::CoordinateMaps::TimeDependent::Translation<MeshDim>;
 
  public:
+  static constexpr size_t mesh_dim = MeshDim;
+
   using CoordMap = domain::CoordinateMap<Frame::Grid, Frame::Inertial,
                                          TranslationMap, TranslationMap>;
-  // using CoordMap = detail::generate_coordinate_map_t<tmpl::flatten<
-  //    tmpl::list<typename UniformTranslation<MeshDim>::maps_list,
-  //               typename UniformTranslation<MeshDim>::maps_list>>>;
-  // static_assert(std::is_same_v<CoordMap, int> , "Hello I failed.");
+
   using maps_list = tmpl::list<CoordMap>;
   static constexpr Options::String help = {
       "A composition of two UniformTranslations."};
 
   using options = tmpl::list<
       OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim>>,
-      OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim>, 1>>;
+      OptionTags::TimeDependenceCompositionTag<UniformTranslation<MeshDim, 1>>>;
 
   CompositionUniformTranslation() = default;
   ~CompositionUniformTranslation() override = default;
@@ -64,17 +80,8 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
       default;
 
   explicit CompositionUniformTranslation(
-      std::unique_ptr<TimeDependence<MeshDim>> uniform_translation0,
-      std::unique_ptr<TimeDependence<MeshDim>> uniform_translation1);
-
-  /// Constructor for copying the composition time dependence. Internally
-  /// performs all the copying necessary to deal with the functions of time.
-  CompositionUniformTranslation(
-      CoordMap coord_map,
-      const std::unordered_map<
-          std::string,
-          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          functions_of_time);
+      const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation0,
+      const std::unique_ptr<TimeDependence<MeshDim>>& uniform_translation1);
 
   auto get_clone() const -> std::unique_ptr<TimeDependence<MeshDim>> override;
 
@@ -82,16 +89,17 @@ class CompositionUniformTranslation final : public TimeDependence<MeshDim> {
       -> std::vector<std::unique_ptr<domain::CoordinateMapBase<
           Frame::Grid, Frame::Inertial, MeshDim>>> override;
 
-  auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
+  auto functions_of_time(const std::unordered_map<std::string, double>&
+                             initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> override;
 
  private:
-  CoordMap coord_map_;
+  std::unique_ptr<TimeDependence<MeshDim>> uniform_translation0_;
+  std::unique_ptr<TimeDependence<MeshDim>> uniform_translation1_;
 
-  std::unordered_map<std::string,
-                     std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-      functions_of_time_;
+  CoordMap coord_map_;
 };
 }  // namespace time_dependence
 }  // namespace creators

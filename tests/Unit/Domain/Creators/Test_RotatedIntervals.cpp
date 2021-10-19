@@ -332,11 +332,12 @@ void test_rotated_intervals_factory() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
-        "      Velocity: [2.3]\n"
-        "      FunctionOfTimeName: TranslationX\n");
+        "      Velocity: [2.3]\n");
     const auto* rotated_intervals_creator =
         dynamic_cast<const creators::RotatedIntervals*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3}};
+    const std::string f_of_t_name = "Translation";
     test_rotated_intervals_construction(
         *rotated_intervals_creator, {{0.0}}, {{0.5}}, {{1.0}}, {{{3}}, {{2}}},
         {{{2}}, {{2}}},
@@ -349,11 +350,13 @@ void test_rotated_intervals_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "TranslationX",
-                {1.0, std::array<DataVector, 3>{{{0.0}, {2.3}, {0.0}}}, 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{0.0}, velocity, {0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            CoordinateMaps::TimeDependent::Translation<1>{"TranslationX"},
-            CoordinateMaps::TimeDependent::Translation<1>{"TranslationX"}),
+            CoordinateMaps::TimeDependent::Translation<1>{f_of_t_name},
+            CoordinateMaps::TimeDependent::Translation<1>{f_of_t_name}),
         {});
   }
   {
@@ -372,9 +375,7 @@ void test_rotated_intervals_factory() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
         "      Velocity: [2.3]\n"
-        "      FunctionOfTimeName: TranslationX\n"
         "  BoundaryConditions:\n"
         "    LowerBoundary:\n"
         "      TestBoundaryCondition:\n"
@@ -386,6 +387,9 @@ void test_rotated_intervals_factory() {
         "        BlockId: 1\n");
     const auto* rotated_intervals_creator =
         dynamic_cast<const creators::RotatedIntervals*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3}};
+    const std::string f_of_t_name = "Translation";
     test_rotated_intervals_construction(
         *rotated_intervals_creator, {{0.0}}, {{0.5}}, {{1.0}}, {{{3}}, {{2}}},
         {{{2}}, {{2}}},
@@ -396,11 +400,13 @@ void test_rotated_intervals_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "TranslationX",
-                {1.0, std::array<DataVector, 3>{{{0.0}, {2.3}, {0.0}}}, 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{0.0}, velocity, {0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            CoordinateMaps::TimeDependent::Translation<1>{"TranslationX"},
-            CoordinateMaps::TimeDependent::Translation<1>{"TranslationX"}),
+            CoordinateMaps::TimeDependent::Translation<1>{f_of_t_name},
+            CoordinateMaps::TimeDependent::Translation<1>{f_of_t_name}),
         expected_boundary_conditions);
   }
 }

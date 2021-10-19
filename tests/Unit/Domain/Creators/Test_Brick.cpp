@@ -365,11 +365,12 @@ void test_brick_factory() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
-        "      Velocity: [2.3, -0.3, 0.5]\n"
-        "      FunctionOfTimeName: Translation");
+        "      Velocity: [2.3, -0.3, 0.5]\n");
     const auto* brick_creator =
         dynamic_cast<const creators::Brick*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3, -0.3, 0.5}};
+    const std::string f_of_t_name = "Translation";
     test_brick_construction(
         *brick_creator, {{0., 0., 0.}}, {{1., 2., 3.}}, {{{3, 4, 3}}},
         {{{2, 3, 2}}},
@@ -383,13 +384,12 @@ void test_brick_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "Translation",
-                {1.0,
-                 std::array<DataVector, 3>{
-                     {{3, 0.0}, {2.3, -0.3, 0.5}, {3, 0.0}}},
-                 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{3, 0.0}, velocity, {3, 0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            Translation3D{"Translation"}));
+            Translation3D{f_of_t_name}));
   }
   {
     INFO("Brick factory time dependent");
@@ -405,12 +405,13 @@ void test_brick_factory() {
         "  TimeDependence:\n"
         "    UniformTranslation:\n"
         "      InitialTime: 1.0\n"
-        "      InitialExpirationDeltaT: 9.0\n"
-        "      Velocity: [2.3, -0.3, 0.5]\n"
-        "      FunctionOfTimeName: Translation\n" +
+        "      Velocity: [2.3, -0.3, 0.5]\n" +
         boundary_conditions);
     const auto* brick_creator =
         dynamic_cast<const creators::Brick*>(domain_creator.get());
+    const double initial_time = 1.0;
+    const DataVector velocity{{2.3, -0.3, 0.5}};
+    const std::string f_of_t_name = "Translation";
     test_brick_construction(
         *brick_creator, {{0., 0., 0.}}, {{1., 2., 3.}}, {{{3, 4, 3}}},
         {{{2, 3, 2}}}, {{}},
@@ -424,13 +425,12 @@ void test_brick_factory() {
         std::make_tuple(
             std::pair<std::string,
                       domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-                "Translation",
-                {1.0,
-                 std::array<DataVector, 3>{
-                     {{3, 0.0}, {2.3, -0.3, 0.5}, {3, 0.0}}},
-                 10.0}}),
+                f_of_t_name,
+                {initial_time,
+                 std::array<DataVector, 3>{{{3, 0.0}, velocity, {3, 0.0}}},
+                 std::numeric_limits<double>::infinity()}}),
         make_vector_coordinate_map_base<Frame::Grid, Frame::Inertial>(
-            Translation3D{"Translation"}),
+            Translation3D{f_of_t_name}),
         create_boundary_conditions());
   }
 }

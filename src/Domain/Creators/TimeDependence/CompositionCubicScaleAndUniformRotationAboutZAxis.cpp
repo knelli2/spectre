@@ -15,35 +15,24 @@ namespace domain::creators::time_dependence {
 template <size_t MeshDim>
 CompositionCubicScaleAndUniformRotationAboutZAxis<MeshDim>::
     CompositionCubicScaleAndUniformRotationAboutZAxis(
-        std::unique_ptr<TimeDependence<MeshDim>> cubic_scale,
-        std::unique_ptr<TimeDependence<MeshDim>> uniform_rotation_about_z_axis)
-    : coord_map_(
-          domain::push_back(dynamic_cast<CubicScale<MeshDim>&>(*cubic_scale)
+        const std::unique_ptr<TimeDependence<MeshDim>>& cubic_scale,
+        const std::unique_ptr<TimeDependence<MeshDim>>&
+            uniform_rotation_about_z_axis)
+    : cubic_scale_(cubic_scale->get_clone()),
+      uniform_rotation_about_z_axis_(
+          uniform_rotation_about_z_axis->get_clone()),
+      coord_map_(
+          domain::push_back(dynamic_cast<CubicScale<MeshDim>&>(*cubic_scale_)
                                 .map_for_composition(),
                             dynamic_cast<UniformRotationAboutZAxis<MeshDim>&>(
-                                *uniform_rotation_about_z_axis)
-                                .map_for_composition())),
-      functions_of_time_(domain::FunctionsOfTime::combine_functions_of_time(
-          cubic_scale->functions_of_time(),
-          uniform_rotation_about_z_axis->functions_of_time())) {}
-
-template <size_t MeshDim>
-CompositionCubicScaleAndUniformRotationAboutZAxis<MeshDim>::
-    CompositionCubicScaleAndUniformRotationAboutZAxis(
-        CoordMap coord_map,
-        const std::unordered_map<
-            std::string,
-            std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-            functions_of_time)
-    : coord_map_(std::move(coord_map)) {
-  functions_of_time_ = clone_unique_ptrs(functions_of_time);
-}
+                                *uniform_rotation_about_z_axis_)
+                                .map_for_composition())) {}
 
 template <size_t MeshDim>
 auto CompositionCubicScaleAndUniformRotationAboutZAxis<MeshDim>::get_clone()
     const -> std::unique_ptr<TimeDependence<MeshDim>> {
   return std::make_unique<CompositionCubicScaleAndUniformRotationAboutZAxis>(
-      coord_map_, functions_of_time_);
+      cubic_scale_, uniform_rotation_about_z_axis_);
 }
 
 template <size_t MeshDim>
@@ -63,10 +52,20 @@ auto CompositionCubicScaleAndUniformRotationAboutZAxis<MeshDim>::block_maps(
 
 template <size_t MeshDim>
 auto CompositionCubicScaleAndUniformRotationAboutZAxis<
-    MeshDim>::functions_of_time() const
+    MeshDim>::functions_of_time(const std::unordered_map<std::string, double>&
+                                    initial_expiration_times) const
     -> std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> {
-  return clone_unique_ptrs(functions_of_time_);
+  const auto cubic_scale_f_of_t =
+      dynamic_cast<CubicScale<MeshDim>&>(*cubic_scale_)
+          .functions_of_time(initial_expiration_times);
+  const auto rotation_f_of_t =
+      dynamic_cast<UniformRotationAboutZAxis<MeshDim>&>(
+          *uniform_rotation_about_z_axis_)
+          .functions_of_time(initial_expiration_times);
+
+  return domain::FunctionsOfTime::combine_functions_of_time(cubic_scale_f_of_t,
+                                                            rotation_f_of_t);
 }
 
 #define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)

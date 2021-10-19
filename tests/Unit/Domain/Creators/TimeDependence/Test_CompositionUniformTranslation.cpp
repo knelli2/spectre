@@ -112,8 +112,7 @@ void test_impl(
 
 template <size_t Dim, typename T>
 void test_composition_uniform_translation(const gsl::not_null<T> gen,
-                                          const double initial_time,
-                                          const double update_delta_t) {
+                                          const double initial_time) {
   INFO("Test composition of two uniform translations");
   using Composition = CompositionUniformTranslation<Dim>;
   UniformCustomDistribution<double> dist_double{-1.0, 1.0};
@@ -126,15 +125,13 @@ void test_composition_uniform_translation(const gsl::not_null<T> gen,
   const std::string f_of_t_names1 = "Translation1";
 
   std::unique_ptr<TimeDependence<Dim>> time_dep0 =
-      std::make_unique<UniformTranslation<Dim>>(initial_time, update_delta_t,
-                                                velocity0, f_of_t_names0);
+      std::make_unique<UniformTranslation<Dim>>(initial_time, velocity0);
   std::unique_ptr<TimeDependence<Dim>> time_dep1 =
-      std::make_unique<UniformTranslation<Dim>>(initial_time, update_delta_t,
-                                                velocity1, f_of_t_names1);
+      std::make_unique<UniformTranslation<Dim, 1>>(initial_time, velocity1);
 
   std::unique_ptr<TimeDependence<Dim>> expected_time_dep =
-      std::make_unique<UniformTranslation<Dim>>(
-          initial_time, update_delta_t, velocity0 + velocity1, "TranslationX");
+      std::make_unique<UniformTranslation<Dim, 2>>(initial_time,
+                                                   velocity0 + velocity1);
 
   const std::unique_ptr<TimeDependence<Dim>> time_dep{
       std::make_unique<Composition>(std::move(time_dep0),
@@ -148,8 +145,7 @@ void test_composition_uniform_translation(const gsl::not_null<T> gen,
 }
 
 template <typename T>
-void test_options(const gsl::not_null<T> gen, const double initial_time,
-                  const double update_delta_t) {
+void test_options(const gsl::not_null<T> gen, const double initial_time) {
   INFO("Test create by options");
 
   const std::array<double, 1> velocity0{{0.5}};
@@ -158,8 +154,8 @@ void test_options(const gsl::not_null<T> gen, const double initial_time,
   const std::string f_of_t_names1 = "Translation1";
 
   std::unique_ptr<TimeDependence<1>> expected_time_dep =
-      std::make_unique<UniformTranslation<1>>(
-          initial_time, update_delta_t, velocity0 + velocity1, "TranslationX");
+      std::make_unique<UniformTranslation<1>>(initial_time,
+                                              velocity0 + velocity1);
 
   const auto created_with_options =
       TestHelpers::test_creation<std::unique_ptr<TimeDependence<1>>>(
@@ -167,15 +163,11 @@ void test_options(const gsl::not_null<T> gen, const double initial_time,
           "  UniformTranslation:\n"
           "    UniformTranslation:\n"
           "      InitialTime: 1.3\n"
-          "      InitialExpirationDeltaT: 2.5\n"
           "      Velocity: [0.5]\n"
-          "      FunctionOfTimeName: Translation\n"
           "  UniformTranslation1:\n"
-          "    UniformTranslation:\n"
+          "    UniformTranslation1:\n"
           "      InitialTime: 1.3\n"
-          "      InitialExpirationDeltaT: 2.5\n"
-          "      Velocity: [1.5]\n"
-          "      FunctionOfTimeName: Translation1\n");
+          "      Velocity: [1.5]\n");
 
   test_impl(gen, initial_time, created_with_options, expected_time_dep,
             {f_of_t_names0, f_of_t_names1});
@@ -186,14 +178,10 @@ SPECTRE_TEST_CASE(
     "[Domain][Unit]") {
   MAKE_GENERATOR(gen);
   const double initial_time = 1.3;
-  const double update_delta_t = 2.5;
-  test_composition_uniform_translation<1>(make_not_null(&gen), initial_time,
-                                          update_delta_t);
-  test_composition_uniform_translation<2>(make_not_null(&gen), initial_time,
-                                          update_delta_t);
-  test_composition_uniform_translation<3>(make_not_null(&gen), initial_time,
-                                          update_delta_t);
-  test_options(make_not_null(&gen), initial_time, update_delta_t);
+  test_composition_uniform_translation<1>(make_not_null(&gen), initial_time);
+  test_composition_uniform_translation<2>(make_not_null(&gen), initial_time);
+  test_composition_uniform_translation<3>(make_not_null(&gen), initial_time);
+  test_options(make_not_null(&gen), initial_time);
 }
 }  // namespace
 }  // namespace domain::creators::time_dependence

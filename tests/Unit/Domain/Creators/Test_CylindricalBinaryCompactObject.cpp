@@ -340,9 +340,7 @@ std::string create_option_string(
           ? "  TimeDependence:\n"
             "    UniformTranslation:\n"
             "      InitialTime: 1.0\n"
-            "      InitialExpirationDeltaT: 9.0\n"
             "      Velocity: [2.3, -0.3, 0.5]\n"
-            "      FunctionOfTimeName: Translation\n"
           : "  TimeDependence: None\n"};
   const std::string boundary_conditions{
       add_boundary_condition ? std::string{"  BoundaryConditions:\n"
@@ -397,27 +395,27 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions) {
   const std::array<double, 4> times_to_check{{0.0, 4.4, 7.8}};
 
   constexpr double initial_time = 0.0;
-  constexpr double expiration_time = 10.0;
   constexpr double expected_time = 1.0; // matches InitialTime: 1.0 above
-  constexpr double expected_update_delta_t =
-      9.0;  // matches InitialExpirationDeltaT: 9.0 above
+  const DataVector velocity{{2.3, -0.3, 0.5}};
+  const std::string f_of_t_name = "Translation";
   std::array<DataVector, 3> function_of_time_coefficients{
-      {{3,0.0}, {2.3,-0.3,0.5}, {3,0.0}}};
+      {{3, 0.0}, velocity, {3, 0.0}}};
 
   const std::tuple<
       std::pair<std::string, domain::FunctionsOfTime::PiecewisePolynomial<2>>>
       expected_functions_of_time = std::make_tuple(
           std::pair<std::string,
                     domain::FunctionsOfTime::PiecewisePolynomial<2>>{
-              "Translation"s,
+              f_of_t_name,
               {expected_time, function_of_time_coefficients,
-               expected_time + expected_update_delta_t}});
+               std::numeric_limits<double>::infinity()}});
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       functions_of_time{};
-  functions_of_time["Translation"] =
+  functions_of_time[f_of_t_name] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
-          initial_time, function_of_time_coefficients, expiration_time);
+          initial_time, function_of_time_coefficients,
+          std::numeric_limits<double>::infinity());
 
   for (const double time : times_to_check) {
     test_binary_compact_object_construction(
