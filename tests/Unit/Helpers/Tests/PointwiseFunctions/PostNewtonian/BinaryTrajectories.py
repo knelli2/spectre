@@ -4,6 +4,7 @@
 import numpy as np
 
 initial_separation = 15.366
+initial_velocity = np.array([0.1, -0.2, 0.3])
 
 
 def separation(time, init_sep):
@@ -18,9 +19,10 @@ def positions1(time):
     init_sep = initial_separation
     return [
         0.5 * separation(time, init_sep) *
-        np.cos(orbital_frequency(time, init_sep) * time),
-        0.5 * separation(time, init_sep) *
-        np.sin(orbital_frequency(time, init_sep) * time), 0.0
+        np.cos(orbital_frequency(time, init_sep) * time) +
+        initial_velocity[0] * time, 0.5 * separation(time, init_sep) *
+        np.sin(orbital_frequency(time, init_sep) * time) +
+        initial_velocity[1] * time, initial_velocity[2] * time
     ]
 
 
@@ -28,7 +30,8 @@ def positions2(time):
     init_sep = initial_separation
     return [
         -0.5 * separation(time, init_sep) *
-        np.cos(orbital_frequency(time, init_sep) * time),
-        -0.5 * separation(time, init_sep) *
-        np.sin(orbital_frequency(time, init_sep) * time), 0.0
+        np.cos(orbital_frequency(time, init_sep) * time) +
+        initial_velocity[0] * time, -0.5 * separation(time, init_sep) *
+        np.sin(orbital_frequency(time, init_sep) * time) +
+        initial_velocity[1] * time, initial_velocity[2] * time
     ]
