@@ -19,11 +19,11 @@
  * \f}
  * In terms of these functions, the positions of objects 1 and 2 are
  * \f{align}{
- *   x_1(t) &= \frac{r(t)}{2}\cos\left[\Omega(t) t\right], \\
- *   y_1(t) &= \frac{r(t)}{2}\sin\left[\Omega(t) t\right], \\
- *   x_2(t) &= -\frac{r(t)}{2}\cos\left[\Omega(t) t\right], \\
- *   y_2(t) &= -\frac{r(t)}{2}\sin\left[\Omega(t) t\right], \\
- *   z_1(t) &= z_2(t) = 0.
+ *   x_1(t) &= \frac{r(t)}{2}\cos\left[\Omega(t) t\right] + v_x t, \\
+ *   y_1(t) &= \frac{r(t)}{2}\sin\left[\Omega(t) t\right], + v_y t\\
+ *   x_2(t) &= -\frac{r(t)}{2}\cos\left[\Omega(t) t\right], + v_x t\\
+ *   y_2(t) &= -\frac{r(t)}{2}\sin\left[\Omega(t) t\right], + v_y t\\
+ *   z_1(t) &= z_2(t) = v_z t.
  * \f} These trajectories are useful for, e.g., testing a horizon-tracking
  * control system.
  *
@@ -32,7 +32,10 @@
  */
 class BinaryTrajectories {
  public:
-  BinaryTrajectories(double initial_separation);
+  BinaryTrajectories(double initial_separation,
+                     const std::array<double, 3>& velocity =
+                         std::array<double, 3>{{0.0, 0.0, 0.0}},
+                     bool newtonian = false);
   BinaryTrajectories() = default;
   BinaryTrajectories(BinaryTrajectories&&) = default;
   BinaryTrajectories& operator=(BinaryTrajectories&&) = default;
@@ -42,9 +45,14 @@ class BinaryTrajectories {
 
   double separation(double time) const;
   double orbital_frequency(double time) const;
+  double omega(const double time) const;
   std::pair<std::array<double, 3>, std::array<double, 3>> positions(
       double time) const;
+  std::pair<std::array<double, 3>, std::array<double, 3>>
+  positions_no_expansion(double time) const;
 
  private:
   double initial_separation_fourth_power_;
+  std::array<double, 3> velocity_;
+  bool newtonian_;
 };
