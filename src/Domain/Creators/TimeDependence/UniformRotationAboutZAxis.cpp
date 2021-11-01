@@ -31,20 +31,14 @@ namespace creators::time_dependence {
 
 template <size_t MeshDim>
 UniformRotationAboutZAxis<MeshDim>::UniformRotationAboutZAxis(
-    const double initial_time,
-    const std::optional<double> initial_expiration_delta_t,
-    const double angular_velocity, std::string function_of_time_name)
-    : initial_time_(initial_time),
-      initial_expiration_delta_t_(initial_expiration_delta_t),
-      angular_velocity_(angular_velocity),
-      function_of_time_name_(std::move(function_of_time_name)) {}
+    const double initial_time, const double angular_velocity)
+    : initial_time_(initial_time), angular_velocity_(angular_velocity) {}
 
 template <size_t MeshDim>
 std::unique_ptr<TimeDependence<MeshDim>>
 UniformRotationAboutZAxis<MeshDim>::get_clone() const {
-  return std::make_unique<UniformRotationAboutZAxis>(
-      initial_time_, initial_expiration_delta_t_, angular_velocity_,
-      function_of_time_name_);
+  return std::make_unique<UniformRotationAboutZAxis>(initial_time_,
+                                                     angular_velocity_);
 }
 
 template <size_t MeshDim>
@@ -66,19 +60,28 @@ UniformRotationAboutZAxis<MeshDim>::block_maps(
 template <size_t MeshDim>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-UniformRotationAboutZAxis<MeshDim>::functions_of_time() const {
+UniformRotationAboutZAxis<MeshDim>::functions_of_time(
+    const std::unordered_map<std::string, double>& initial_expiration_times)
+    const {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       result{};
   // We use a third-order `PiecewisePolynomial` to ensure sufficiently
   // smooth behavior of the function of time
+  if (not initial_expiration_times.empty()) {
+    ASSERT(initial_expiration_times.count(function_of_time_name_) == 1,
+           "Could not find function of time '" + function_of_time_name_ +
+               "' in supplied map of expiration times. Keys of supplied "
+               "expiration times are " +
+               keys_of(initial_expiration_times));
+    expiration_time_ = initial_expiration_times.at(function_of_time_name_);
+  }
+
   result[function_of_time_name_] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
           initial_time_,
           std::array<DataVector, 4>{{{0.0}, {angular_velocity_}, {0.0}, {0.0}}},
-          initial_expiration_delta_t_
-              ? initial_time_ + *initial_expiration_delta_t_
-              : std::numeric_limits<double>::max());
+          expiration_time_);
   return result;
 }
 
@@ -105,7 +108,6 @@ template <size_t Dim>
 bool operator==(const UniformRotationAboutZAxis<Dim>& lhs,
                 const UniformRotationAboutZAxis<Dim>& rhs) {
   return lhs.initial_time_ == rhs.initial_time_ and
-         lhs.initial_expiration_delta_t_ == rhs.initial_expiration_delta_t_ and
          lhs.angular_velocity_ == rhs.angular_velocity_ and
          lhs.function_of_time_name_ == rhs.function_of_time_name_;
 }

@@ -33,7 +33,7 @@ class None;
 class SphericalCompression;
 template <size_t MeshDim>
 class UniformRotationAboutZAxis;
-template <size_t MeshDim>
+template <size_t MeshDim, size_t Index = 0>
 class UniformTranslation;
 template <typename TimeDependenceCompTag0, typename... TimeDependenceCompTags>
 class Composition;
@@ -51,7 +51,9 @@ namespace time_dependence {
 ///
 /// The simplest examples of a `TimeDependence` are `None` and
 /// `UniformTranslation`. The `None` class is treated in a special manner to
-/// communicate to the code that the domain is time-independent.
+/// communicate to the code that the domain is time-independent. The
+/// `UniformTranslation` takes an extra template parameter `Index` so that its
+/// name is unique from other `UniformTranslation`s.
 template <size_t MeshDim>
 struct TimeDependence {
  private:
@@ -93,9 +95,11 @@ struct TimeDependence {
       domain::CoordinateMapBase<Frame::Grid, Frame::Inertial, MeshDim>>> = 0;
 
   /// Returns the functions of time for the domain.
-  virtual auto functions_of_time() const -> std::unordered_map<
-      std::string,
-      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
+  virtual auto functions_of_time(const std::unordered_map<std::string, double>&
+                                     initial_expiration_times = {}) const
+      -> std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> = 0;
 
   /// Returns `true` if the instance is `None`, meaning no time dependence.
   bool is_none() const {

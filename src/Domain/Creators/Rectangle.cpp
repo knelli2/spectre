@@ -139,11 +139,13 @@ std::vector<std::array<size_t, 2>> Rectangle::initial_refinement_levels()
 
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-Rectangle::functions_of_time() const {
+Rectangle::functions_of_time(const std::unordered_map<std::string, double>&
+                                 initial_expiration_times) const {
   if (time_dependence_->is_none()) {
+    (void)(initial_expiration_times);
     return {};
   } else {
-    return time_dependence_->functions_of_time();
+    return time_dependence_->functions_of_time(initial_expiration_times);
   }
 }
 }  // namespace domain::creators
