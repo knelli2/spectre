@@ -52,6 +52,7 @@
 #include "Evolution/Systems/ScalarAdvection/Subcell/NeighborPackagedData.hpp"
 #include "Evolution/Systems/ScalarAdvection/Subcell/TciOnDgGrid.hpp"
 #include "Evolution/Systems/ScalarAdvection/Subcell/TciOnFdGrid.hpp"
+#include "Evolution/Systems/ScalarAdvection/Subcell/TciOptions.hpp"
 #include "Evolution/Systems/ScalarAdvection/Subcell/TimeDerivative.hpp"
 #include "Evolution/Systems/ScalarAdvection/Subcell/VelocityAtFace.hpp"
 #include "Evolution/Systems/ScalarAdvection/System.hpp"
@@ -286,7 +287,8 @@ struct EvolutionMetavars {
       tmpl::list<initial_data_tag, Tags::EventsAndTriggers,
                  tmpl::conditional_t<
                      use_dg_subcell,
-                     tmpl::list<ScalarAdvection::fd::Tags::Reconstructor<Dim>>,
+                     tmpl::list<ScalarAdvection::subcell::Tags::TciOptions,
+                                ScalarAdvection::fd::Tags::Reconstructor<Dim>>,
                      tmpl::list<>>,
                  PhaseControl::Tags::PhaseChangeAndTriggers<phase_changes>>;
 

@@ -8,6 +8,7 @@
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/DgSubcell/Tags/Inactive.hpp"
+#include "Evolution/Systems/ScalarAdvection/Subcell/TciOptions.hpp"
 #include "Evolution/Systems/ScalarAdvection/Tags.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -22,7 +23,8 @@ namespace ScalarAdvection::subcell {
  * \brief Troubled-cell indicator applied to the finite difference subcell
  * solution to check if the corresponding DG solution is admissible.
  *
- * Applies the Persson TCI to \f$U\f$ on the DG grid.
+ * Applies the Persson TCI to \f$U\f$ on the DG grid if its absolute value is
+ * greater than `tci_options.u_cutoff`.
  *
  * \note TCI is run after reconstructing the solution to the DG grid during the
  * subcell(FD) time stepping procedure, therefore `Inactive<Tag>` is the
@@ -36,10 +38,11 @@ struct TciOnFdGrid {
 
  public:
   using return_tags = tmpl::list<>;
-  using argument_tags =
-      tmpl::list<Inactive<ScalarAdvection::Tags::U>, ::domain::Tags::Mesh<Dim>>;
+  using argument_tags = tmpl::list<Inactive<ScalarAdvection::Tags::U>,
+                                   ::domain::Tags::Mesh<Dim>, Tags::TciOptions>;
 
   static bool apply(const Scalar<DataVector>& dg_u, const Mesh<Dim>& dg_mesh,
+                    const TciOptions& tci_options,
                     const double persson_exponent);
 };
 }  // namespace ScalarAdvection::subcell

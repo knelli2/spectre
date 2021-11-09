@@ -5,6 +5,8 @@
 
 #include <cstddef>
 
+#include "DataStructures/DataVector.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Evolution/DgSubcell/PerssonTci.hpp"
 #include "Evolution/DgSubcell/TwoMeshRdmpTci.hpp"
@@ -17,10 +19,14 @@ bool DgInitialDataTci<Dim>::apply(
     const Variables<tmpl::list<Inactive<ScalarAdvection::Tags::U>>>&
         subcell_vars,
     double rdmp_delta0, double rdmp_epsilon, double persson_exponent,
-    const Mesh<Dim>& dg_mesh) {
-  return evolution::dg::subcell::persson_tci(
-             get<ScalarAdvection::Tags::U>(dg_vars), dg_mesh,
-             persson_exponent) or
+    const Mesh<Dim>& dg_mesh, const TciOptions& tci_options) {
+  const double max_abs_u =
+      max(abs(get(get<ScalarAdvection::Tags::U>(dg_vars))));
+
+  return ((max_abs_u > tci_options.u_cutoff) and
+          evolution::dg::subcell::persson_tci(
+              get<ScalarAdvection::Tags::U>(dg_vars), dg_mesh,
+              persson_exponent)) or
          evolution::dg::subcell::two_mesh_rdmp_tci(dg_vars, subcell_vars,
                                                    rdmp_delta0, rdmp_epsilon);
 }

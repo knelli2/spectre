@@ -9,6 +9,7 @@
 #include "Evolution/DgSubcell/Mesh.hpp"
 #include "Evolution/DgSubcell/Tags/Inactive.hpp"
 #include "Evolution/Systems/ScalarAdvection/Subcell/InitialDataTci.hpp"
+#include "Evolution/Systems/ScalarAdvection/Subcell/TciOptions.hpp"
 #include "Evolution/Systems/ScalarAdvection/Tags.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "NumericalAlgorithms/Spectral/Spectral.hpp"
@@ -40,6 +41,7 @@ void test() {
   const double persson_exponent{4.0};
   const double rdmp_delta0{1.0e-4};
   const double rdmp_epsilon{1.0e-3};
+  const ScalarAdvection::subcell::TciOptions tci_options{1.0e-8};
 
   {
     INFO("TCI is happy");
@@ -47,7 +49,7 @@ void test() {
     const InactiveVars subcell_vars{number_of_subcell_grid_points, 1.0};
     CHECK_FALSE(ScalarAdvection::subcell::DgInitialDataTci<Dim>::apply(
         dg_vars, subcell_vars, rdmp_delta0, rdmp_epsilon, persson_exponent,
-        dg_mesh));
+        dg_mesh, tci_options));
   }
 
   {
@@ -56,7 +58,7 @@ void test() {
     const InactiveVars subcell_vars{number_of_subcell_grid_points, 2.0};
     CHECK(ScalarAdvection::subcell::DgInitialDataTci<Dim>::apply(
         dg_vars, subcell_vars, rdmp_delta0, rdmp_epsilon, persson_exponent,
-        dg_mesh));
+        dg_mesh, tci_options));
   }
 
   {
@@ -68,8 +70,18 @@ void test() {
     // set rdmp_delta0 to be very large to ensure that it's the Persson TCI
     // which triggers alarm here
     CHECK(ScalarAdvection::subcell::DgInitialDataTci<Dim>::apply(
-        dg_vars, subcell_vars, rdmp_delta0, rdmp_epsilon, persson_exponent,
-        dg_mesh));
+        dg_vars, subcell_vars, 1.0e100, rdmp_epsilon, persson_exponent, dg_mesh,
+        tci_options));
+  }
+
+  {
+    INFO("U is below cutoff");
+    InactiveVars subcell_vars{number_of_subcell_grid_points, 1.0};
+    // set dg_vars to be below the cutoff
+    get(get<ScalarAdvection::Tags::U>(dg_vars)) *= 1.0e-9;
+    CHECK_FALSE(ScalarAdvection::subcell::DgInitialDataTci<Dim>::apply(
+        dg_vars, subcell_vars, 1.0e100, rdmp_epsilon, persson_exponent, dg_mesh,
+        tci_options));
   }
 }
 }  // namespace

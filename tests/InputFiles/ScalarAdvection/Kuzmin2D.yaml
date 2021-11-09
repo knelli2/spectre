@@ -37,6 +37,8 @@ SpatialDiscretization:
         RdmpEpsilon: 1.0e-3
         PerssonExponent: 4.0
       AlwaysUseSubcells: false
+    TciOptions:
+      UCutoff: 1.0e-10
   SubcellSolver:
     Reconstructor:
       MonotisedCentral
