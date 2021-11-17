@@ -8,8 +8,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "ControlSystem/Controller.hpp"
 #include "ControlSystem/InitialExpirationTimes.hpp"
 #include "ControlSystem/Tags.hpp"
+#include "ControlSystem/TimescaleTuner.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
@@ -25,6 +27,15 @@ struct ControlComponent;
 /// \endcond
 
 namespace control_system::Tags {
+namespace detail {
+template <size_t DerivOrder>
+DataVector calculate_measurement_timescales(
+    const ::Controller<DerivOrder>& controller, const ::TimescaleTuner& tuner) {
+  return tuner.current_timescale() * controller.get_update_fraction() *
+         (1.0 / static_cast<double>(DerivOrder + 1));
+}
+}  // namespace detail
+
 /// \ingroup DataBoxTagsGroup
 /// \ingroup ControlSystemGroup
 /// \brief The measurement timescales associated with
@@ -73,14 +84,9 @@ struct MeasurementTimescales : db::SimpleTag {
           const std::string& name =
               std::decay_t<decltype(option_holder)>::control_system::name();
           const auto& tuner = option_holder.tuner;
-          const auto& averager = option_holder.averager;
-
-          const double update_fraction = controller.get_update_fraction();
-          const double averaging_fraction = averager.avg_timescale_frac();
-          const DataVector& curr_timescale = tuner.current_timescale();
 
           DataVector measurement_timescales =
-              averaging_fraction * update_fraction * curr_timescale;
+              detail::calculate_measurement_timescales(controller, tuner);
           // At a minimum, we can only measure once a time step with GTS.
           for (size_t i = 0; i < measurement_timescales.size(); i++) {
             measurement_timescales[i] =
