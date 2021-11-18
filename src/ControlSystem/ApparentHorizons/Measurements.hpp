@@ -41,7 +41,7 @@ struct Mesh;
 
 namespace control_system::ah {
 enum class HorizonLabel { AhA, AhB };
-std::string name(const HorizonLabel h) {
+SPECTRE_ALWAYS_INLINE std::string name(const HorizonLabel h) {
   return h == HorizonLabel::AhA ? "AhA" : "AhB";
 }
 
