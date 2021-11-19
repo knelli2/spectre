@@ -35,6 +35,8 @@ struct ControlComponent {
 
   using metavariables = Metavariables;
 
+  using system = ControlSystem;
+
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       typename metavariables::Phase, metavariables::Phase::Initialization,
       tmpl::list<
