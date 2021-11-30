@@ -13,6 +13,7 @@
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "ControlSystem/TimescaleTuner.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Options/Options.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
@@ -31,6 +32,11 @@ namespace QueueTags {
 template <::ah::ObjectLabel WhichHorizon>
 struct Center {
   using type = DataVector;
+};
+
+template <typename Frame>
+struct Strahlkorper {
+  using type = ::Strahlkorper<Frame>;
 };
 }  // namespace QueueTags
 
