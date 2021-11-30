@@ -26,5 +26,5 @@ add_test_library(
   ${LIBRARY}
   "ControlSystem"
   "${LIBRARY_SOURCES}"
-  "Boost::boost;ControlSystem;Domain;FunctionsOfTime"
+  "Boost::boost;ControlSystem;Domain;FunctionsOfTime;ApparentHorizons"
   )

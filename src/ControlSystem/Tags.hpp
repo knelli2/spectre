@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "ApparentHorizons/Strahlkorper.hpp"
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/Controller.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
@@ -30,6 +31,11 @@ namespace QueueTags {
 template <ah::HorizonLabel WhichHorizon>
 struct Center {
   using type = DataVector;
+};
+
+template <typename Frame>
+struct Strahlkorper {
+  using type = ::Strahlkorper<Frame>;
 };
 }  // namespace QueueTags
 
