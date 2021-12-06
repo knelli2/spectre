@@ -236,6 +236,7 @@ HTML_EXTRA_FILES       = @PROJECT_SOURCE_DIR@/docs/config/icons/octicons.eot \
                          @PROJECT_SOURCE_DIR@/docs/config/js/spectre.js \
                          @PROJECT_SOURCE_DIR@/docs/.nojekyll \
                          @PROJECT_SOURCE_DIR@/docs/config/MathJax.js \
+                         @PROJECT_SOURCE_DIR@/docs/config/doxygen-awesome-darkmode-toggle.js \
                          @PROJECT_SOURCE_DIR@/LICENSE.txt
 
 GENERATE_TREEVIEW      = YES
@@ -245,6 +246,7 @@ TREEVIEW_WIDTH         = 280
 
 HTML_EXTRA_STYLESHEET  = @PROJECT_SOURCE_DIR@/docs/config/doxygen-awesome.css \
                          @PROJECT_SOURCE_DIR@/docs/config/doxygen-awesome-sidebar-only.css \
+                         @PROJECT_SOURCE_DIR@/docs/config/doxygen-awesome-sidebar-only-darkmode-toggle.css \
                          @PROJECT_SOURCE_DIR@/docs/config/custom.css
 
 HTML_COLORSTYLE_HUE    = 209
