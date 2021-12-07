@@ -21,6 +21,7 @@
 #include "ControlSystem/TimescaleTuner.hpp"
 #include "Framework/TestCreation.hpp"
 #include "Helpers/ControlSystem/TestStructs.hpp"
+#include "Helpers/ControlSystem/Examples.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 
 namespace {
@@ -36,6 +37,9 @@ void test_all_tags() {
   TestHelpers::db::test_simple_tag<controller_tag>("Controller");
   using fot_tag = control_system::Tags::FunctionsOfTimeInitialize;
   TestHelpers::db::test_simple_tag<fot_tag>("FunctionsOfTime");
+  using control_error_tag =
+      control_system::Tags::ControlError<FakeControlSystem<0>>;
+  TestHelpers::db::test_base_tag<control_error_tag>("ControlError");
 
   using system = control_system::TestHelpers::System<
       2, control_system::TestHelpers::TestStructs_detail::LabelA,
@@ -64,6 +68,7 @@ void test_control_sys_inputs() {
   const Averager<2> expected_averager(0.25, true);
   const Controller<2> expected_controller(0.3);
   const std::string expected_name{"LabelA"};
+  const TestHelpers::ExampleControlError expected_control_error{};
 
   using system = control_system::TestHelpers::System<
       2, control_system::TestHelpers::TestStructs_detail::LabelA,
@@ -83,12 +88,14 @@ void test_control_sys_inputs() {
       "  DecreaseThreshold: 1e-2\n"
       "  IncreaseThreshold: 1e-4\n"
       "  IncreaseFactor: 1.01\n"
-      "  DecreaseFactor: 0.99\n");
+      "  DecreaseFactor: 0.99\n"
+      "ControlError:\n");
   CHECK(expected_averager == input_holder.averager);
   CHECK(expected_controller == input_holder.controller);
   CHECK(expected_tuner == input_holder.tuner);
   CHECK(expected_name ==
         std::decay_t<decltype(input_holder)>::control_system::name());
+  CHECK(expected_control_error == input_holder.control_error);
 }
 }  // namespace
 
