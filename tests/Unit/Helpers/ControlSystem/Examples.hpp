@@ -90,6 +90,23 @@ struct ExampleMeasurement
 };
 /// [Measurement]
 
+/// [ControlError]
+struct ExampleControlError
+    : tt::ConforsTo<control_system::protocols::ControlError> {
+  template <typename Metavariables, typename... TupleTags>
+  DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
+                        const double time,
+                        const std::string& function_of_time_name,
+                        const tuples::TaggedTuple<TupleTags...>& measurements) {
+    (void)cache;
+    (void)time;
+    (void)function_of_time_name;
+    (void)measurements;
+    return DataVector{};
+  }
+}
+/// [ControlError]
+
 /// [ControlSystem]
 struct ExampleControlSystem
     : tt::ConformsTo<control_system::protocols::ControlSystem> {
