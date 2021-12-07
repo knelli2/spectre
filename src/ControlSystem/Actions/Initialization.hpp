@@ -29,13 +29,14 @@ namespace Actions {
  * - Uses:
  *   - `control_system::Tags::ControlSystemInputs<ControlSystem>`
  * - Adds:
- *   - `control_system::Tags::Averager<2>`
- *   - `control_system::Tags::Controller<2>`
+ *   - `control_system::Tags::Averager<deriv_order>`
+ *   - `control_system::Tags::Controller<deriv_order>`
  *   - `control_system::Tags::TimescaleTuner`
+ *   - `control_system::Tags::ControlError`
  *   - `control_system::Tags::ControlSystemName`
  * - Removes: Nothing
  * - Modifies:
- *   - `control_system::Tags::Controller<2>`
+ *   - `control_system::Tags::Controller<deriv_order>`
  *
  * \note This action relies on the `SetupDataBox` aggregated initialization
  * mechanism, so `Actions::SetupDataBox` must be present in the `Initialization`
@@ -52,6 +53,7 @@ struct Initialize {
       tmpl::list<control_system::Tags::Averager<deriv_order>,
                  control_system::Tags::Controller<deriv_order>,
                  control_system::Tags::TimescaleTuner,
+                 control_system::Tags::ControlError<ControlSystem>,
                  control_system::Tags::ControlSystemName>;
 
   using simple_tags =
@@ -72,7 +74,8 @@ struct Initialize {
         db::get<control_system::Tags::ControlSystemInputs<ControlSystem>>(box);
     ::Initialization::mutate_assign<tags_to_be_initialized>(
         make_not_null(&box), option_holder.averager, option_holder.controller,
-        option_holder.tuner, ControlSystem::name());
+        option_holder.tuner, option_holder.control_error,
+        ControlSystem::name());
 
     // Set the initial time between updates using the initial timescale
     const auto& tuner = db::get<control_system::Tags::TimescaleTuner>(box);

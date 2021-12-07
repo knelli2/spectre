@@ -118,6 +118,11 @@ template <size_t DerivOrder>
 struct Controller : db::SimpleTag {
   using type = ::Controller<DerivOrder>;
 };
+
+template <typename ControlSystem>
+struct ControlError : db::SimpleTag {
+  using type = typename ControlSystem::control_error;
+};
 }  // namespace Tags
 
 /// \ingroup ControlSystemGroup
@@ -153,15 +158,25 @@ struct OptionHolder {
         "which other timescales are based of off."};
   };
 
-  using options = tmpl::list<Averager, Controller, TimescaleTuner>;
+  struct ControlError {
+    using type = typename ControlSystem::control_error;
+    static constexpr Options::String help = {
+        "Computes the control error for the control system based on quantities "
+        "in the simulation."};
+  };
+
+  using options =
+      tmpl::list<Averager, Controller, TimescaleTuner, ControlError>;
   static constexpr Options::String help = {"Options for a control system."};
 
   OptionHolder(::Averager<deriv_order> input_averager,
                ::Controller<deriv_order> input_controller,
-               ::TimescaleTuner input_tuner)
+               ::TimescaleTuner input_tuner,
+               typename ControlSystem::control_error input_control_error)
       : averager(std::move(input_averager)),
         controller(std::move(input_controller)),
-        tuner(std::move(input_tuner)) {}
+        tuner(std::move(input_tuner)),
+        control_error(std::move(input_control_error)) {}
 
   OptionHolder() = default;
   OptionHolder(const OptionHolder& /*rhs*/) = default;
@@ -175,6 +190,7 @@ struct OptionHolder {
     p | averager;
     p | controller;
     p | tuner;
+    p | control_error;
   };
 
   // These members are specifically made public for easy access during
@@ -182,5 +198,6 @@ struct OptionHolder {
   ::Averager<deriv_order> averager{};
   ::Controller<deriv_order> controller{};
   ::TimescaleTuner tuner{};
+  typename ControlSystem::control_error control_error{};
 };
 }  // namespace control_system
