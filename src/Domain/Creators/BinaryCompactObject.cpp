@@ -323,11 +323,11 @@ BinaryCompactObject::BinaryCompactObject(
   initial_size_map_velocities_ = initial_size_map_velocities;
   initial_size_map_accelerations_ = initial_size_map_accelerations;
 
-  for (size_t i = 0; i < initial_rotation_angle.size()) {
+  for (size_t i = 0; i < initial_rotation_angle.size(); i++) {
     initial_rotation_angle_[i] = gsl::at(initial_rotation_angle, i);
     initial_angular_velocity_[i] = gsl::at(initial_angular_velocity, i);
   }
-  for (size_t i = 0; i < initial_quaternion.size()) {
+  for (size_t i = 0; i < initial_quaternion.size(); i++) {
     initial_quaternion_[i] = gsl::at(initial_quaternion, i);
   }
 }

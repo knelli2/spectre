@@ -12,8 +12,11 @@
 #include "ApparentHorizons/Tags.hpp"
 #include "ControlSystem/Actions/InitializeMeasurements.hpp"
 #include "ControlSystem/ApparentHorizons/Measurements.hpp"
+#include "ControlSystem/Component.hpp"
 #include "ControlSystem/Event.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/Systems/Expansion.hpp"
+#include "ControlSystem/Systems/Rotation.hpp"
 #include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
@@ -246,35 +249,8 @@ struct EvolutionMetavars {
         intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB, AhB>;
   };
 
-  struct ControlTest
-      : tt::ConformsTo<control_system::protocols::ControlSystem> {
-    static std::string name() { return "ControlTest"; }
-
-    using simple_tags = tmpl::list<>;
-
-    using measurement = control_system::ah::BothHorizons;
-
-    struct process_measurement {
-      template <typename Submeasurement>
-      using argument_tags =
-          tmpl::list<StrahlkorperTags::Strahlkorper<::Frame::Grid>>;
-
-      template <typename Metavariables,
-                control_system::ah::HorizonLabel Horizon>
-      static void apply(
-          typename measurement::template FindHorizon<Horizon> /*meta*/,
-          const Strahlkorper<::Frame::Grid>& strahlkorper,
-          Parallel::GlobalCache<Metavariables>& /*cache*/,
-          const LinkedMessageId<double>& measurement_id) {
-        const auto center = strahlkorper.physical_center();
-        Parallel::printf("%s: %.5g %.16g %.16g %.16g\n",
-                         control_system::ah::name(Horizon), measurement_id.id,
-                         center[0], center[1], center[2]);
-      }
-    };
-  };
-
-  using control_systems = tmpl::list<ControlTest>;
+  using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
+                                     control_system::Systems::Expansion<2>>;
 
   using interpolation_target_tags = tmpl::push_back<
       control_system::metafunctions::interpolation_target_tags<control_systems>,
@@ -524,7 +500,8 @@ struct EvolutionMetavars {
       intrp::Interpolator<EvolutionMetavars>, gh_dg_element_array,
       tmpl::transform<interpolation_target_tags,
                       tmpl::bind<intrp::InterpolationTarget,
-                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>>>;
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
+      control_system::control_components<EvolutionMetavars, control_systems>>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "
