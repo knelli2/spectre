@@ -49,8 +49,6 @@ template <size_t VolumeDim>
 class Rotation;
 template <bool InteriorMap>
 class SphericalCompression;
-template <typename Map1, typename Map2>
-class ProductOf2Maps;
 }  // namespace TimeDependent
 }  // namespace CoordinateMaps
 
@@ -192,16 +190,12 @@ class BinaryCompactObject : public DomainCreator<3> {
       domain::CoordinateMap<
           Frame::Grid, Frame::Inertial,
           domain::CoordinateMaps::TimeDependent::CubicScale<3>,
-          domain::CoordinateMaps::TimeDependent::ProductOf2Maps<
-              domain::CoordinateMaps::TimeDependent::Rotation<2>,
-              domain::CoordinateMaps::Identity<1>>>,
+          domain::CoordinateMaps::TimeDependent::Rotation<3>>,
       domain::CoordinateMap<
           Frame::Grid, Frame::Inertial,
           domain::CoordinateMaps::TimeDependent::SphericalCompression<false>,
           domain::CoordinateMaps::TimeDependent::CubicScale<3>,
-          domain::CoordinateMaps::TimeDependent::ProductOf2Maps<
-              domain::CoordinateMaps::TimeDependent::Rotation<2>,
-              domain::CoordinateMaps::Identity<1>>>>;
+          domain::CoordinateMaps::TimeDependent::Rotation<3>>>;
 
   /// Options for an excision region in the domain
   struct Excision {
@@ -480,13 +474,19 @@ class BinaryCompactObject : public DomainCreator<3> {
   };
   /// \brief The initial value of the rotation angle.
   struct InitialRotationAngle {
-    using type = double;
+    using type = std::array<double, 3>;
     static constexpr Options::String help = {"Rotation angle at initial time."};
     using group = RotationAboutZAxisMap;
   };
   /// \brief The angular velocity of the rotation.
   struct InitialAngularVelocity {
-    using type = double;
+    using type = std::array<double, 3>;
+    static constexpr Options::String help = {"The angular velocity."};
+    using group = RotationAboutZAxisMap;
+  };
+  /// \brief The initial quaternion.
+  struct InitialQuaternion {
+    using type = std::array<double, 4>;
     static constexpr Options::String help = {"The angular velocity."};
     using group = RotationAboutZAxisMap;
   };
@@ -560,8 +560,9 @@ class BinaryCompactObject : public DomainCreator<3> {
       tmpl::list<InitialTime, ExpansionMapOuterBoundary, InitialExpansion,
                  InitialExpansionVelocity, AsymptoticVelocityOuterBoundary,
                  DecayTimescaleOuterBoundaryVelocity, InitialRotationAngle,
-                 InitialAngularVelocity, InitialSizeMapValues,
-                 InitialSizeMapVelocities, InitialSizeMapAccelerations>;
+                 InitialAngularVelocity, InitialQuaternion,
+                 InitialSizeMapValues, InitialSizeMapVelocities,
+                 InitialSizeMapAccelerations>;
 
   template <typename Metavariables>
   using options = tmpl::conditional_t<
@@ -637,7 +638,9 @@ class BinaryCompactObject : public DomainCreator<3> {
       double initial_expansion, double initial_expansion_velocity,
       double asymptotic_velocity_outer_boundary,
       double decay_timescale_outer_boundary_velocity,
-      double initial_rotation_angle, double initial_angular_velocity,
+      std::array<double, 3> initial_rotation_angle,
+      std::array<double, 3> initial_angular_velocity,
+      std::array<double, 4> initial_quaternion,
       std::array<double, 2> initial_size_map_values,
       std::array<double, 2> initial_size_map_velocities,
       std::array<double, 2> initial_size_map_accelerations, Object object_A,
@@ -722,9 +725,9 @@ class BinaryCompactObject : public DomainCreator<3> {
       std::numeric_limits<double>::signaling_NaN()};
   double decay_timescale_outer_boundary_velocity_{
       std::numeric_limits<double>::signaling_NaN()};
-  double initial_rotation_angle_{std::numeric_limits<double>::signaling_NaN()};
-  double initial_angular_velocity_{
-      std::numeric_limits<double>::signaling_NaN()};
+  DataVector initial_rotation_angle_{3, 0.0};
+  DataVector initial_angular_velocity_{3, 0.0};
+  DataVector initial_quaternion_{4, 0.0};
   inline static const std::string rotation_about_z_axis_function_of_time_name_{
       "Rotation"};
   std::array<double, 2> initial_size_map_values_{
