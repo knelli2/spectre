@@ -10,6 +10,15 @@
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.tpp"
 #include "ApparentHorizons/ComputeItems.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/ApparentHorizons/Measurements.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/Systems/Expansion.hpp"
+#include "ControlSystem/Systems/Rotation.hpp"
+#include "ControlSystem/Trigger.hpp"
+#include "ControlSystem/WriteData.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Creators/Factory1D.hpp"
@@ -17,6 +26,7 @@
 #include "Domain/Creators/Factory3D.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Protocols/Metavariables.hpp"
 #include "Domain/Tags.hpp"
@@ -179,95 +189,12 @@ struct EvolutionMetavars {
     static constexpr bool enable_time_dependent_maps = true;
   };
 
-  // Find horizons in grid frame, but also interpolate
-  // inertial-frame quantities for observers.
-  using horizons_vars_to_interpolate_to_target = tmpl::list<
-      gr::Tags::SpatialMetric<volume_dim, ::Frame::Grid, DataVector>,
-      gr::Tags::InverseSpatialMetric<volume_dim, ::Frame::Grid>,
-      gr::Tags::ExtrinsicCurvature<volume_dim, ::Frame::Grid>,
-      gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Grid>,
-      // everything below here is for observers.
-      gr::Tags::SpatialMetric<volume_dim, ::Frame::Inertial, DataVector>,
-      gr::Tags::InverseSpatialMetric<volume_dim, ::Frame::Inertial, DataVector>,
-      gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Inertial>,
-      gr::Tags::ExtrinsicCurvature<volume_dim, ::Frame::Inertial>,
-      gr::Tags::SpatialRicci<volume_dim, ::Frame::Inertial>>;
-  // Observe horizons in inertial frame.
-  using horizons_tags_to_observe = tmpl::list<
-      StrahlkorperGr::Tags::AreaCompute<::Frame::Inertial>,
-      StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Inertial>,
-      StrahlkorperTags::MaxRicciScalarCompute,
-      StrahlkorperTags::MinRicciScalarCompute,
-      StrahlkorperGr::Tags::ChristodoulouMassCompute<::Frame::Inertial>,
-      StrahlkorperGr::Tags::DimensionlessSpinMagnitudeCompute<
-          ::Frame::Inertial>>;
-  // These ComputeItems are used only for observers, since the
-  // actual horizon-finding does not use any ComputeItems.
-  using horizons_compute_items_on_target = tmpl::append<
-      tmpl::list<
-          StrahlkorperTags::ThetaPhiCompute<::Frame::Inertial>,
-          StrahlkorperTags::RadiusCompute<::Frame::Inertial>,
-          StrahlkorperTags::RhatCompute<::Frame::Inertial>,
-          StrahlkorperTags::InvJacobianCompute<::Frame::Inertial>,
-          StrahlkorperTags::InvHessianCompute<::Frame::Inertial>,
-          StrahlkorperTags::JacobianCompute<::Frame::Inertial>,
-          StrahlkorperTags::DxRadiusCompute<::Frame::Inertial>,
-          StrahlkorperTags::D2xRadiusCompute<::Frame::Inertial>,
-          StrahlkorperTags::NormalOneFormCompute<::Frame::Inertial>,
-          StrahlkorperTags::OneOverOneFormMagnitudeCompute<
-              volume_dim, ::Frame::Inertial, DataVector>,
-          StrahlkorperTags::TangentsCompute<::Frame::Inertial>,
-          StrahlkorperTags::UnitNormalOneFormCompute<::Frame::Inertial>,
-          StrahlkorperTags::UnitNormalVectorCompute<::Frame::Inertial>,
-          StrahlkorperTags::GradUnitNormalOneFormCompute<::Frame::Inertial>,
-          // Note that StrahlkorperTags::ExtrinsicCurvatureCompute is the
-          // 2d extrinsic curvature of the strahlkorper embedded in the 3d
-          // slice, whereas gr::tags::ExtrinsicCurvature is the 3d extrinsic
-          // curvature of the slice embedded in 4d spacetime.  Both quantities
-          // are in the DataBox.
-          StrahlkorperGr::Tags::AreaElementCompute<::Frame::Inertial>,
-          StrahlkorperTags::ExtrinsicCurvatureCompute<::Frame::Inertial>,
-          StrahlkorperTags::RicciScalarCompute<::Frame::Inertial>,
-          StrahlkorperGr::Tags::SpinFunctionCompute<::Frame::Inertial>,
-          StrahlkorperGr::Tags::DimensionfulSpinMagnitudeCompute<
-              ::Frame::Inertial>>,
-      horizons_tags_to_observe>;
+  // using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
+  //                                    control_system::Systems::Expansion<2>>;
+  using control_systems = tmpl::list<control_system::Systems::Expansion<2>>;
 
-  struct AhA {
-    using temporal_id = ::Tags::Time;
-    using vars_to_interpolate_to_target =
-        horizons_vars_to_interpolate_to_target;
-    using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
-    using tags_to_observe = horizons_tags_to_observe;
-    using compute_items_on_target = horizons_compute_items_on_target;
-    using compute_target_points =
-        intrp::TargetPoints::ApparentHorizon<AhA, ::Frame::Grid>;
-    using post_interpolation_callback =
-        intrp::callbacks::FindApparentHorizon<AhA, ::Frame::Grid>;
-    using horizon_find_failure_callback =
-        intrp::callbacks::ErrorOnFailedApparentHorizon;
-    using post_horizon_find_callback =
-        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhA, AhA>;
-  };
-
-  struct AhB {
-    using temporal_id = ::Tags::Time;
-    using vars_to_interpolate_to_target =
-        horizons_vars_to_interpolate_to_target;
-    using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
-    using tags_to_observe = horizons_tags_to_observe;
-    using compute_items_on_target = horizons_compute_items_on_target;
-    using compute_target_points =
-        intrp::TargetPoints::ApparentHorizon<AhB, ::Frame::Grid>;
-    using post_interpolation_callback =
-        intrp::callbacks::FindApparentHorizon<AhB, ::Frame::Grid>;
-    using horizon_find_failure_callback =
-        intrp::callbacks::ErrorOnFailedApparentHorizon;
-    using post_horizon_find_callback =
-        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB, AhB>;
-  };
-
-  using interpolation_target_tags = tmpl::list<AhA,AhB>;
+  using interpolation_target_tags =
+      control_system::metafunctions::interpolation_target_tags<control_systems>;
   using interpolator_source_vars = tmpl::list<
       gr::Tags::SpacetimeMetric<volume_dim, ::Frame::Inertial>,
       GeneralizedHarmonic::Tags::Pi<volume_dim, ::Frame::Inertial>,
@@ -301,19 +228,20 @@ struct EvolutionMetavars {
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger,
+                   tmpl::flatten<tmpl::list<
+                       control_system::control_system_triggers<control_systems>,
+                       DenseTriggers::standard_dense_triggers>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
-        tmpl::pair<
-            Event,
-            tmpl::flatten<tmpl::list<
-                intrp::Events::Interpolate<3, AhA, interpolator_source_vars>,
-                intrp::Events::Interpolate<3, AhB, interpolator_source_vars>,
-                Events::Completion,
-                Events::ObserveNorms<::Tags::Time, observe_fields>,
-                dg::Events::field_observations<volume_dim, Tags::Time,
-                                               observe_fields, tmpl::list<>,
-                                               tmpl::list<>>,
-                Events::time_events<system>>>>,
+        tmpl::pair<Event,
+                   tmpl::flatten<tmpl::list<
+                       Events::Completion,
+                       Events::ObserveNorms<::Tags::Time, observe_fields>,
+                       dg::Events::field_observations<
+                           volume_dim, Tags::Time, observe_fields, tmpl::list<>,
+                           tmpl::list<>>,
+                       control_system::control_system_events<control_systems>,
+                       Events::time_events<system>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
                    tmpl::list<GeneralizedHarmonic::BoundaryConditions::
@@ -336,11 +264,11 @@ struct EvolutionMetavars {
                                          Triggers::time_triggers>>>;
   };
 
+  // Add in control system tags by hand because they are all identical
   using observed_reduction_data_tags =
-      observers::collect_reduction_data_tags<tmpl::push_back<
+      observers::collect_reduction_data_tags<tmpl::flatten<tmpl::list<
           tmpl::at<typename factory_creation::factory_classes, Event>,
-          typename AhA::post_horizon_find_callback,
-          typename AhB::post_horizon_find_callback>>;
+          control_system::detail::WriterHelper>>>;
 
   enum class Phase {
     Initialization,
@@ -474,6 +402,7 @@ struct EvolutionMetavars {
           StepChoosers::step_chooser_compute_tags<EvolutionMetavars>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using gh_dg_element_array = DgElementArray<
@@ -506,6 +435,7 @@ struct EvolutionMetavars {
           Parallel::PhaseActions<
               Phase, Phase::Evolve,
               tmpl::list<
+                  ::domain::Actions::CheckFunctionsOfTimeAreReady,
                   Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                   step_actions, Actions::AdvanceTime,
                   PhaseControl::Actions::ExecutePhaseChange<phase_changes>>>>>>;
@@ -521,9 +451,11 @@ struct EvolutionMetavars {
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
       importers::ElementDataReader<EvolutionMetavars>,
-      intrp::Interpolator<EvolutionMetavars>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhA>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhB>, gh_dg_element_array>>;
+      intrp::Interpolator<EvolutionMetavars>, gh_dg_element_array,
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
+      control_system::control_components<EvolutionMetavars, control_systems>>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "
