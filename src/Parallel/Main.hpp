@@ -586,7 +586,7 @@ void Main<Metavariables>::
                        Parallel::proxy_from_parallel_component, tmpl::_1>>>;
   // Put each singleton on a different proc. In the future, this should be
   // changed so that no DG elements get placed on these procs so singletons have
-  // thier own procs.
+  // their own procs.
   int singleton_which_proc = 0;
   const int number_of_procs = sys::number_of_procs();
   tmpl::for_each<array_component_list>([this, &singleton_which_proc,
@@ -610,7 +610,7 @@ void Main<Metavariables>::
                                  ? 0
                                  : singleton_which_proc + 1;
     } else {
-      // This is a Spectre array component build on a Charm++ array chare. The
+      // This is a Spectre array component built on a Charm++ array chare. The
       // component is in charge of allocating and distributing its elements over
       // the computing system.
       parallel_component::allocate_array(
