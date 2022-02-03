@@ -61,7 +61,8 @@ struct DgElementArray {
   static void allocate_array(
       Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
       const tuples::tagged_tuple_from_typelist<initialization_tags>&
-          initialization_items);
+          initialization_items,
+      const size_t num_singleton_components = 0);
 
   static void execute_next_phase(
       const typename Metavariables::Phase next_phase,
@@ -76,7 +77,8 @@ template <class Metavariables, class PhaseDepActionList>
 void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
     Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
     const tuples::tagged_tuple_from_typelist<initialization_tags>&
-        initialization_items) {
+        initialization_items,
+    const size_t num_singleton_components) {
   auto& local_cache = *Parallel::local_branch(global_cache);
   auto& dg_element_array =
       Parallel::get_parallel_component<DgElementArray>(local_cache);
@@ -90,8 +92,10 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
     use_z_order_distribution = Metavariables::use_z_order_distribution;
   }
   int which_proc = 0;
+  const size_t total_available_procs =
+      static_cast<size_t>(sys::number_of_procs()) - num_singleton_components;
   const domain::BlockZCurveProcDistribution<volume_dim> element_distribution{
-      static_cast<size_t>(sys::number_of_procs()), initial_refinement_levels};
+      total_available_procs, initial_refinement_levels};
   for (const auto& block : domain.blocks()) {
     const auto initial_ref_levs = initial_refinement_levels[block.id()];
     const std::vector<ElementId<volume_dim>> element_ids =
@@ -104,11 +108,11 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
             .insert(global_cache, initialization_items, target_proc);
       }
     } else {
-      const int number_of_procs = sys::number_of_procs();
       for (size_t i = 0; i < element_ids.size(); ++i) {
         dg_element_array(ElementId<volume_dim>(element_ids[i]))
             .insert(global_cache, initialization_items, which_proc);
-        which_proc = which_proc + 1 == number_of_procs ? 0 : which_proc + 1;
+        which_proc =
+            which_proc + 1 == total_available_procs ? 0 : which_proc + 1;
       }
     }
   }

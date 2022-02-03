@@ -26,6 +26,7 @@
 #include "Parallel/Printf.hpp"
 #include "Parallel/Reduction.hpp"
 #include "Parallel/TypeTraits.hpp"
+#include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/FileSystem.hpp"
 #include "Utilities/Formaline.hpp"
@@ -584,11 +585,19 @@ void Main<Metavariables>::
       tmpl::filter<component_list,
                    Parallel::is_array_proxy<tmpl::bind<
                        Parallel::proxy_from_parallel_component, tmpl::_1>>>;
-  // Put each singleton on a different proc. In the future, this should be
-  // changed so that no DG elements get placed on these procs so singletons have
-  // thier own procs.
-  int singleton_which_proc = 0;
-  const int number_of_procs = sys::number_of_procs();
+  constexpr size_t num_singletons =
+      tmpl::count_if<array_component_list,
+                     std::is_same<Parallel::Algorithms::Singleton,
+                                  tmpl::parent<tmpl::_1>::chare_type>>::value;
+  const size_t number_of_procs = static_cast<size_t>(sys::number_of_procs());
+  const size_t number_of_procs_to_reserve =
+      num_singletons > number_of_procs ? 0 : num_singletons;
+  // Put each singleton on a different proc. Start from the back because these
+  // are the procs we reserved for singletons from the array component. If there
+  // are more singletons than number of procs, then when we reserve procs for
+  // the singletons there will be none left for the elements of the array
+  // parallel components, so set
+  size_t singleton_which_proc = number_of_procs - 1;
   tmpl::for_each<array_component_list>([this, &singleton_which_proc,
                                         &number_of_procs](
                                            auto parallel_component_v) {
@@ -606,9 +615,7 @@ void Main<Metavariables>::
               options_, typename parallel_component::initialization_tags{}),
           singleton_which_proc);
       array_proxy.doneInserting();
-      singleton_which_proc = singleton_which_proc + 1 == number_of_procs
-                                 ? 0
-                                 : singleton_which_proc + 1;
+      singleton_which_proc = singleton_which_proc - 1;
     } else {
       // This is a Spectre array component build on a Charm++ array chare. The
       // component is in charge of allocating and distributing its elements over
@@ -616,7 +623,8 @@ void Main<Metavariables>::
       parallel_component::allocate_array(
           global_cache_proxy_,
           Parallel::create_from_options<Metavariables>(
-              options_, typename parallel_component::initialization_tags{}));
+              options_, typename parallel_component::initialization_tags{}),
+          num_singletons);
     }
   });
 
