@@ -35,6 +35,7 @@ struct is_group_proxy : std::is_base_of<CProxy_IrrGroup, T>::type {};
 template <typename T>
 struct is_node_group_proxy : std::is_base_of<CProxy_NodeGroup, T>::type {};
 
+/// @{
 /// \ingroup ParallelGroup
 /// Check if `T` is a ParallelComponent for a Charm++ bound array
 template <typename T, typename = std::void_t<>>
@@ -47,6 +48,7 @@ struct is_bound_array<T, std::void_t<typename T::bind_to>> : std::true_type {
   static_assert(Parallel::is_array_proxy<typename T::bind_to::type>::value,
                 "Can only bind to an array chare");
 };
+/// @}
 
 /// @{
 /// \ingroup ParallelGroup
