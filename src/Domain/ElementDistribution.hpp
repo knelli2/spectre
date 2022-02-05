@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -91,7 +92,8 @@ template <size_t Dim>
 struct BlockZCurveProcDistribution {
   BlockZCurveProcDistribution(
       size_t number_of_procs,
-      const std::vector<std::array<size_t, Dim>>& refinements_by_block);
+      const std::vector<std::array<size_t, Dim>>& refinements_by_block,
+      const std::unordered_set<size_t>& procs_to_ignore = {});
 
   /// Gets the suggested processor number for a particular element,
   /// determined by the greedy block assignment and Morton curve element

@@ -94,7 +94,8 @@ size_t z_curve_index(const ElementId<Dim>& element_id) {
 template <size_t Dim>
 BlockZCurveProcDistribution<Dim>::BlockZCurveProcDistribution(
     size_t number_of_procs,
-    const std::vector<std::array<size_t, Dim>>& refinements_by_block) {
+    const std::vector<std::array<size_t, Dim>>& refinements_by_block,
+    const std::unordered_set<size_t>& procs_to_ignore) {
   block_element_distribution_ =
       std::vector<std::vector<std::pair<size_t, size_t>>>(
           refinements_by_block.size());
@@ -117,15 +118,21 @@ BlockZCurveProcDistribution<Dim>::BlockZCurveProcDistribution(
   size_t remaining_elements_in_block =
       add_number_of_elements_for_refinement(0_st, refinements_by_block[0]);
   size_t current_block = 0;
+  size_t number_of_ignored_procs_so_far = 0;
   for (size_t i = 0; i < number_of_procs; ++i) {
+    size_t current_proc_number = i + number_of_ignored_procs_so_far;
+    while (procs_to_ignore.find(current_proc_number) != procs_to_ignore.end()) {
+      ++number_of_ignored_procs_so_far;
+      ++current_proc_number;
+    }
     size_t remaining_elements_on_proc =
         (number_of_elements / number_of_procs) +
         (i < (number_of_elements % number_of_procs) ? 1 : 0);
     while (remaining_elements_on_proc > 0) {
       block_element_distribution_.at(current_block)
-          .emplace_back(
-              std::make_pair(i, std::min(remaining_elements_in_block,
-                                         remaining_elements_on_proc)));
+          .emplace_back(std::make_pair(current_proc_number,
+                                       std::min(remaining_elements_in_block,
+                                                remaining_elements_on_proc)));
       if (remaining_elements_in_block <= remaining_elements_on_proc) {
         remaining_elements_on_proc -= remaining_elements_in_block;
         ++current_block;
