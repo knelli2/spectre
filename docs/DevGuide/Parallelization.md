@@ -241,7 +241,8 @@ signature of the `allocate_array` functions must be:
 static void allocate_array(
     Parallel::CProxy_GlobalCache<metavariables>& global_cache,
     const tuples::tagged_tuple_from_typelist<initialization_tags>&
-    initialization_items);
+    initialization_items,
+    std::unordered_set<size_t>& procs_to_ignore);
 \endcode
 The `allocate_array` function is called by the Main parallel component
 when the execution starts and will typically insert elements into
