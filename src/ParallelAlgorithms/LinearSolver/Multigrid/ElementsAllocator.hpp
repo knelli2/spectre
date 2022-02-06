@@ -7,6 +7,7 @@
 #include <charm++.h>
 #include <cstddef>
 #include <optional>
+#include <unordered_set>
 #include <vector>
 
 #include "Domain/ElementDistribution.hpp"
@@ -79,7 +80,8 @@ struct ElementsAllocator
             typename... InitializationTags>
   static void apply(Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
                     const tuples::TaggedTuple<InitializationTags...>&
-                        original_initialization_items) {
+                        original_initialization_items,
+                    const std::unordered_set<size_t>& procs_to_ignore = {}) {
     // Copy the initialization items so we can adjust them on each refinement
     // level
     auto initialization_items =
@@ -161,7 +163,8 @@ struct ElementsAllocator
       // processors
       const int number_of_procs = sys::number_of_procs();
       const domain::BlockZCurveProcDistribution<Dim> element_distribution{
-          static_cast<size_t>(number_of_procs), initial_refinement_levels};
+          static_cast<size_t>(number_of_procs), initial_refinement_levels,
+          procs_to_ignore};
       for (const auto& element_id : element_ids) {
         const size_t target_proc =
             element_distribution.get_proc_for_element(element_id);

@@ -193,6 +193,7 @@ void check_element_distribution_cohesion(
   // number of blocks in which a given processor participates low for more
   // intricate cases, but the upper bound becomes more complicated to write out.
   for (const auto& [proc, blocks] : block_set_per_proc) {
+    (void)proc;
     CHECK(blocks.size() <=
           static_cast<size_t>(
               std::ceil(static_cast<double>(refinement_levels_by_block.size()) /
