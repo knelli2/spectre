@@ -48,6 +48,36 @@ struct is_bound_array<T, std::void_t<typename T::bind_to>> : std::true_type {
                 "Can only bind to an array chare");
 };
 
+namespace detail {
+template <typename Proxy>
+struct get_parallel_component_from_proxy;
+
+template <typename ParallelComponent, template <typename...> class Proxy,
+          typename... Ts>
+struct get_parallel_component_from_proxy<Proxy<ParallelComponent, Ts...>> {
+  using type = ParallelComponent;
+};
+}  // namespace detail
+
+/// \ingroup ParallelGroup
+/// \brief Check if `ParallelComponent` is of type `ChareType`.
+///
+/// \details Requires `chare_type` be a type alias in the parallel component.
+template <typename ChareType, typename ParallelComponent>
+struct is_chare_type
+    : std::is_same<ChareType, typename ParallelComponent::chare_type>::type {};
+
+/// \ingroup ParallelGroup
+/// \brief Check if `Proxy` is a proxy of a parallel component of type
+/// `ChareType`.
+///
+/// \details Requires `chare_type` be a type alias in the parallel component.
+template <typename ChareType, typename Proxy>
+struct is_chare_type_from_proxy
+    : std::is_same<ChareType,
+                   typename detail::get_parallel_component_from_proxy<
+                       Proxy>::type::chare_type>::type {};
+
 /// @{
 /// \ingroup ParallelGroup
 /// \brief Check if `T` has a `pup` member function
@@ -144,4 +174,4 @@ template <typename T>
 using is_pupable_t = typename is_pupable<T>::type;
 /// @}
 
-} // namespace Parallel
+}  // namespace Parallel
