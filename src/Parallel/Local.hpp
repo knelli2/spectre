@@ -8,6 +8,11 @@
 #include "Parallel/TypeTraits.hpp"
 
 namespace Parallel {
+/// \cond
+namespace Algorithms {
+struct Singleton;
+}  // namespace Algorithms
+/// \endcond
 
 /// Wrapper for calling Charm++'s `.ckLocal()` on a proxy
 ///
@@ -23,7 +28,8 @@ auto* local(Proxy&& proxy) {
   // It only makes sense to call .ckLocal() on some kinds of proxies
   static_assert(is_array_element_proxy<std::decay_t<Proxy>>::value or
                 is_array_proxy<std::decay_t<Proxy>>::value);
-  if constexpr (is_array_proxy<std::decay_t<Proxy>>::value) {
+  if constexpr (is_chare_type_from_proxy<Parallel::Algorithms::Singleton,
+                                         std::decay_t<Proxy>>::value) {
     // The array case should be a single-element array serving as a singleton
     return proxy[0].ckLocal();
   } else {
