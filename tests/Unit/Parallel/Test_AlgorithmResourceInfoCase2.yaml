@@ -1,0 +1,14 @@
+# Distributed under the MIT License.
+# See LICENSE.txt for details.
+
+# We are running on 2 procs
+# [place_parallel_components]
+ResourceInfo:
+  AvoidProc0: true
+  SingletonParallelComponent:
+    Proc: Auto
+    Exclusive: false
+# [place_parallel_components]
+  SingletonParallelComponentExclusive:
+    Proc: 1
+    Exclusive: false
