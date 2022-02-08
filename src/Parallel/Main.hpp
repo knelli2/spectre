@@ -13,6 +13,7 @@
 #include <regex>
 #include <string>
 #include <type_traits>
+#include <unordered_set>
 
 #include "Informer/Informer.hpp"
 #include "Options/ParseOptions.hpp"
@@ -25,6 +26,7 @@
 #include "Parallel/PhaseControlReductionHelpers.hpp"
 #include "Parallel/Printf.hpp"
 #include "Parallel/Reduction.hpp"
+#include "Parallel/Tags/ResourceInfo.hpp"
 #include "Parallel/TypeTraits.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/FileSystem.hpp"
@@ -112,6 +114,9 @@ class Main : public CBase_Main<Metavariables> {
           reduction_data);
 
  private:
+  // Allocate all singleton components and return procs to ignore
+  std::unordered_set<size_t> allocate_singleton_components(bool avoid_proc_0);
+
   // Return the dir name for the next Charm++ checkpoint as well as the pieces
   // from which the name is built up: the basename and the padding. This is a
   // "detail" function so that these pieces can be defined in one place only.
@@ -576,48 +581,117 @@ void Main<Metavariables>::pup(PUP::er& p) {  // NOLINT
 }
 
 template <typename Metavariables>
+std::unordered_set<size_t> Main<Metavariables>::allocate_singleton_components(
+    const bool avoid_proc_0) {
+  ASSERT(current_phase_ == Metavariables::Phase::Initialization,
+         "Must be in the Initialization phase.");
+  using singleton_component_list = tmpl::filter<
+      component_list,
+      tmpl::bind<Parallel::is_chare_type,
+                 tmpl::pin<Parallel::Algorithms::Singleton>, tmpl::_1>>;
+
+  const size_t number_of_procs = static_cast<size_t>(sys::number_of_procs());
+  const auto increment_proc = [&number_of_procs](size_t this_proc) {
+    return this_proc + 1 == number_of_procs ? 0 : this_proc + 1;
+  };
+
+  std::unordered_set<size_t> procs_to_ignore{};
+
+  size_t singleton_which_proc = 0;
+
+  // If we should avoid proc 0, add it to the procs_to_ignore and increment the
+  // starting proc number for other singletons
+  if (avoid_proc_0) {
+    procs_to_ignore.insert(0);
+    ++singleton_which_proc;
+  }
+
+  tmpl::for_each<singleton_component_list>(
+      [this, &procs_to_ignore, &singleton_which_proc,
+       &increment_proc](auto singleton_component_v) {
+        using singleton_component =
+            tmpl::type_from<decltype(singleton_component_v)>;
+        auto& local_cache = *Parallel::local_branch(global_cache_proxy_);
+        auto& array_proxy =
+            Parallel::get_parallel_component<singleton_component>(local_cache);
+        auto options = Parallel::create_from_options<Metavariables>(
+            options_, typename singleton_component::initialization_tags{});
+        // If there is resource info for this singleton, use it to allocate the
+        // singleton
+        if constexpr (tmpl::list_contains_v<option_list,
+                                            Parallel::OptionTags::SingletonInfo<
+                                                singleton_component>>) {
+          const auto& singleton_info =
+              get<Parallel::Tags::SingletonInfo<singleton_component>>(options);
+          int proc = singleton_info.proc();
+          const bool exclusive = singleton_info.exclusive();
+          // -1 is a sentinal value indicating that the proc should be chosen
+          // automatically
+          if (proc == -1) {
+            while (procs_to_ignore.find(singleton_which_proc) !=
+                   procs_to_ignore.end()) {
+              singleton_which_proc = increment_proc(singleton_which_proc);
+            }
+            proc = singleton_which_proc;
+          }
+          // Reserve this proc so no DG elements are placed on this proc
+          if (exclusive) {
+            procs_to_ignore.insert(static_cast<size_t>(proc));
+          }
+          array_proxy[0].insert(global_cache_proxy_, std::move(options), proc);
+        } else {
+          // otherwise just place singletons on different procs, even if they
+          // are cheap
+          while (procs_to_ignore.find(singleton_which_proc) !=
+                 procs_to_ignore.end()) {
+            singleton_which_proc = increment_proc(singleton_which_proc);
+          }
+          array_proxy[0].insert(global_cache_proxy_, std::move(options),
+                                singleton_which_proc);
+        }
+        array_proxy.doneInserting();
+        singleton_which_proc = increment_proc(singleton_which_proc);
+      });
+
+  return procs_to_ignore;
+}
+
+template <typename Metavariables>
 void Main<Metavariables>::
     allocate_array_components_and_execute_initialization_phase() {
   ASSERT(current_phase_ == Metavariables::Phase::Initialization,
          "Must be in the Initialization phase.");
-  using array_component_list =
-      tmpl::filter<component_list,
-                   Parallel::is_array_proxy<tmpl::bind<
-                       Parallel::proxy_from_parallel_component, tmpl::_1>>>;
-  // Put each singleton on a different proc. In the future, this should be
-  // changed so that no DG elements get placed on these procs so singletons have
-  // their own procs.
-  int singleton_which_proc = 0;
-  const int number_of_procs = sys::number_of_procs();
-  tmpl::for_each<array_component_list>([this, &singleton_which_proc,
-                                        &number_of_procs](
+  using array_component_list = tmpl::filter<
+      component_list,
+      tmpl::bind<Parallel::is_chare_type,
+                 tmpl::pin<Parallel::Algorithms::Array>, tmpl::_1>>;
+
+  bool avoid_proc_0 = false;
+  // Check options to see if a component added the Parallel::Tags::AvoidProc0
+  // tag to its initialization tags. If one did, get the value.
+  if constexpr (tmpl::list_contains_v<option_list,
+                                      Parallel::OptionTags::AvoidProc0>) {
+    const auto avoid_proc_0_input =
+        Parallel::create_from_options<Metavariables>(
+            options_, tmpl::list<Parallel::Tags::AvoidProc0>{});
+    avoid_proc_0 = get<Parallel::Tags::AvoidProc0>(avoid_proc_0_input);
+  }
+
+  // Allocate all singleton components, specifying if proc 0 should be avoided
+  std::unordered_set<size_t> procs_to_ignore =
+      allocate_singleton_components(avoid_proc_0);
+
+  tmpl::for_each<array_component_list>([this, &procs_to_ignore](
                                            auto parallel_component_v) {
     using parallel_component = tmpl::type_from<decltype(parallel_component_v)>;
-    if constexpr (std::is_same<typename parallel_component::chare_type,
-                               Parallel::Algorithms::Singleton>::value) {
-      // This is a Spectre singleton component built on a Charm++ array chare,
-      // so we allocate a single element.
-      auto& local_cache = *Parallel::local_branch(global_cache_proxy_);
-      auto& array_proxy =
-          Parallel::get_parallel_component<parallel_component>(local_cache);
-      array_proxy[0].insert(
-          global_cache_proxy_,
-          Parallel::create_from_options<Metavariables>(
-              options_, typename parallel_component::initialization_tags{}),
-          singleton_which_proc);
-      array_proxy.doneInserting();
-      singleton_which_proc = singleton_which_proc + 1 == number_of_procs
-                                 ? 0
-                                 : singleton_which_proc + 1;
-    } else {
-      // This is a Spectre array component built on a Charm++ array chare. The
-      // component is in charge of allocating and distributing its elements over
-      // the computing system.
-      parallel_component::allocate_array(
-          global_cache_proxy_,
-          Parallel::create_from_options<Metavariables>(
-              options_, typename parallel_component::initialization_tags{}));
-    }
+    // This is a Spectre array component built on a Charm++ array chare. The
+    // component is in charge of allocating and distributing its elements over
+    // the computing system.
+    parallel_component::allocate_array(
+        global_cache_proxy_,
+        Parallel::create_from_options<Metavariables>(
+            options_, typename parallel_component::initialization_tags{}),
+        procs_to_ignore);
   });
 
   // Free any resources from the initial option parsing.
