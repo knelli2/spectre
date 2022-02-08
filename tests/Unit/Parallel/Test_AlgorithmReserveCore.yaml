@@ -1,0 +1,9 @@
+# Distributed under the MIT License.
+# See LICENSE.txt for details.
+
+# We are running on 4 procs
+ResourceInfo:
+  AvoidProc0: true
+  SingletonParallelComponentExclusive:
+    Proc: 3
+    Exclusive: true

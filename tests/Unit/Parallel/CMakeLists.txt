@@ -97,8 +97,26 @@ endfunction()
 
 function(add_algorithm_test BASE_NAME)
   add_standalone_test("Unit.Parallel.${BASE_NAME}" ${ARGN})
+  cmake_parse_arguments(
+    ARG
+    ""
+    "REGEX_TO_MATCH;EXECUTABLE;INPUT_FILE;PROCS"
+    ""
+    ${ARGN})
+  # If EXECUTABLE argument given, use that in target_link_libraries, otherwise
+  # just use BASE_NAME
+  if(DEFINED ARG_EXECUTABLE)
+    if(NOT ARG_EXECUTABLE MATCHES "^Test_")
+      message(
+        FATAL_ERROR
+        "Test executable name '${ARG_EXECUTABLE}' must begin with 'Test_'")
+    endif()
+    set(EXECUTABLE_NAME "${ARG_EXECUTABLE}")
+  else()
+    set(EXECUTABLE_NAME "Test_${BASE_NAME}")
+  endif()
   target_link_libraries(
-    "Test_${BASE_NAME}"
+    "${EXECUTABLE_NAME}"
     PRIVATE
     "${ALGORITHM_TEST_LINK_LIBRARIES}")
 endfunction()
@@ -160,6 +178,16 @@ add_algorithm_test(
 add_algorithm_test(
   "AlgorithmPhaseControl"
   INPUT_FILE "Test_AlgorithmPhaseControl.yaml")
+add_algorithm_test(
+  "AlgorithmReserveCore"
+  INPUT_FILE "Test_AlgorithmReserveCore.yaml"
+  PROCS "4")
+add_algorithm_test(
+  "AlgorithmReserveCoreBadBeyondLast"
+  REGEX_TO_MATCH "is beyond the last proc"
+  EXECUTABLE "Test_AlgorithmReserveCore"
+  INPUT_FILE "Test_AlgorithmReserveCore.yaml"
+  PROCS "2")
 
 add_algorithm_test_with_restart_from_checkpoint("CheckpointRestart")
 
