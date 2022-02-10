@@ -6,6 +6,12 @@
 
 ResourceInfo:
   AvoidProc0: false
+  AhA:
+    Proc: Auto
+    Exclusive: true
+  AhB:
+    Proc: Auto
+    Exclusive: true
 
 Evolution:
   InitialTime: 0.0
