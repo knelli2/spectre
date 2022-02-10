@@ -6,6 +6,9 @@
 # Timeout: 5
 # Check: parse;execute
 
+ResourceInfo:
+  AvoidProc0: false
+
 AnalyticSolution:
   Step:
     LeftValue: 2.
