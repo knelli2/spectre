@@ -13,6 +13,9 @@
 #     FileGlob: "GhKerrSchildReductions.h5"
 #     AbsoluteTolerance: 1e2
 
+ResourceInfo:
+  AvoidProc0: false
+
 Evolution:
   InitialTime: 0.0
   InitialTimeStep: 0.01
