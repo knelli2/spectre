@@ -13,6 +13,9 @@
 #     SkipColumns: [0, 1]
 #     AbsoluteTolerance: 0.007
 
+ResourceInfo:
+  AvoidProc0: false
+
 Background:
   ProductOfSinusoids:
     WaveNumbers: [1, 1]

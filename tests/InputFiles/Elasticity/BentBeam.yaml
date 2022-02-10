@@ -13,6 +13,9 @@
 #     SkipColumns: [0, 1]
 #     AbsoluteTolerance: 1.e-8
 
+ResourceInfo:
+  AvoidProc0: false
+
 Background:
   BentBeam:
     Length: 2.
