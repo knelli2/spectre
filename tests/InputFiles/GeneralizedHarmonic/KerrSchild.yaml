@@ -15,6 +15,9 @@
 
 ResourceInfo:
   AvoidProc0: false
+  AhA:
+    Proc: Auto
+    Exclusive: false
 
 Evolution:
   InitialTime: 0.0

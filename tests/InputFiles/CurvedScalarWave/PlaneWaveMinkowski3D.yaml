@@ -16,6 +16,9 @@
 
 ResourceInfo:
   AvoidProc0: false
+  SphericalSurface:
+    Proc: Auto
+    Exclusive: false
 
 AnalyticData:
   ScalarWaveGr:

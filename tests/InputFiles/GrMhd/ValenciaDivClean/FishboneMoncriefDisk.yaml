@@ -6,6 +6,9 @@
 
 ResourceInfo:
   AvoidProc0: false
+  KerrHorizon:
+    Proc: Auto
+    Exclusive: false
 
 Evolution:
   InitialTime: 0.0
