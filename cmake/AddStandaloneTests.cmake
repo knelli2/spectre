@@ -58,11 +58,14 @@ endif()
 #
 # An INPUT_FILE named argument can be passed to pass an input file to
 # the executable.
+#
+# A PROCS named argument may be passed, which will tell the executable
+# how many cores to run on.
 function(add_standalone_test TEST_NAME)
   cmake_parse_arguments(
     ARG
     ""
-    "REGEX_TO_MATCH;EXECUTABLE;INPUT_FILE"
+    "REGEX_TO_MATCH;EXECUTABLE;INPUT_FILE;PROCS"
     ""
     ${ARGN})
 
@@ -86,12 +89,19 @@ function(add_standalone_test TEST_NAME)
   else()
     set(INPUT_FILE_ARGS "")
   endif()
+
+  if(DEFINED ARG_PROCS)
+    set(PROC_ARG "+p${ARG_PROCS}")
+  else()
+    set(PROC_ARG "")
+  endif()
+
   add_test(
     NAME "${TEST_NAME}"
     COMMAND
     ${SHELL_EXECUTABLE}
     -c
-    "${SPECTRE_TEST_RUNNER} ${CMAKE_BINARY_DIR}/bin/${EXECUTABLE_NAME} ${INPUT_FILE_ARGS} 2>&1"
+    "${SPECTRE_TEST_RUNNER} ${CMAKE_BINARY_DIR}/bin/${EXECUTABLE_NAME} ${PROC_ARG} ${INPUT_FILE_ARGS} 2>&1"
     )
 
   set_standalone_test_properties("${TEST_NAME}")
