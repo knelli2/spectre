@@ -7,7 +7,10 @@
 
 #include "ControlSystem/Actions/Initialization.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/WriteData.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "IO/Observer/Actions/RegisterSingleton.hpp"
+#include "IO/Observer/Helpers.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
 #include "Parallel/Actions/TerminatePhase.hpp"
 #include "Parallel/Algorithms/AlgorithmSingleton.hpp"
@@ -37,12 +40,17 @@ struct ControlComponent {
 
   using system = ControlSystem;
 
-  using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
-      typename metavariables::Phase, metavariables::Phase::Initialization,
-      tmpl::list<
-          Actions::SetupDataBox,
-          control_system::Actions::Initialize<Metavariables, ControlSystem>,
-          Initialization::Actions::RemoveOptionsAndTerminatePhase>>>;
+  using phase_dependent_action_list = tmpl::list<
+      Parallel::PhaseActions<
+          typename metavariables::Phase, metavariables::Phase::Initialization,
+          tmpl::list<
+              Actions::SetupDataBox,
+              control_system::Actions::Initialize<Metavariables, ControlSystem>,
+              Initialization::Actions::RemoveOptionsAndTerminatePhase>>,
+      Parallel::PhaseActions<
+          typename Metavariables::Phase, Metavariables::Phase::Register,
+          tmpl::list<observers::Actions::RegisterSingletonWithObserverWriter<
+              control_system::detail::Registration<ControlSystem>>>>>;
 
   using initialization_tags = Parallel::get_initialization_tags<
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
