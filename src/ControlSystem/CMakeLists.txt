@@ -31,6 +31,7 @@ spectre_target_headers(
   TimescaleTuner.hpp
   Trigger.hpp
   UpdateFunctionOfTime.hpp
+  WriteData.hpp
   )
 
 target_link_libraries(
