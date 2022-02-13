@@ -50,7 +50,7 @@ struct Initialize {
       tmpl::list<control_system::Tags::ControlSystemInputs<ControlSystem>>;
 
   using tags_to_be_initialized =
-      tmpl::list<control_system::Tags::Averager<deriv_order>,
+      tmpl::list<control_system::Tags::Averager<deriv_order - 1>,
                  control_system::Tags::Controller<deriv_order>,
                  control_system::Tags::TimescaleTuner,
                  control_system::Tags::ControlError<ControlSystem>,
