@@ -28,6 +28,7 @@ spectre_unload_modules() {
     module unload charm/6.10.2-mpi-smp
     module unload python/anaconda3-2019.10
     module unload pybind11/2.6.1
+    module unload hdf5/1.8.17
 }
 
 spectre_load_modules() {
@@ -51,6 +52,7 @@ spectre_load_modules() {
     module load charm/6.10.2-mpi-smp
     module load python/anaconda3-2019.10
     module load pybind11/2.6.1
+    module load hdf5/1.8.17
 }
 
 spectre_run_cmake() {
@@ -71,6 +73,7 @@ spectre_run_cmake() {
           -D MEMORY_ALLOCATOR=SYSTEM \
           -D BUILD_PYTHON_BINDINGS=OFF \
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
+          -D HDF5_ROOT=/usr/local/HDF5/1.8.17 \
           "$@" \
           $SPECTRE_HOME
 }
