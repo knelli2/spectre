@@ -144,7 +144,7 @@ struct OptionHolder {
   using control_system = ControlSystem;
   static constexpr size_t deriv_order = control_system::deriv_order;
   struct Averager {
-    using type = ::Averager<deriv_order>;
+    using type = ::Averager<deriv_order - 1>;
     static constexpr Options::String help = {
         "Averages the derivatives of the control error and possibly the "
         "control error itself."};
@@ -175,7 +175,7 @@ struct OptionHolder {
       tmpl::list<Averager, Controller, TimescaleTuner, ControlError>;
   static constexpr Options::String help = {"Options for a control system."};
 
-  OptionHolder(::Averager<deriv_order> input_averager,
+  OptionHolder(::Averager<deriv_order - 1> input_averager,
                ::Controller<deriv_order> input_controller,
                ::TimescaleTuner input_tuner,
                typename ControlSystem::control_error input_control_error)
@@ -201,7 +201,7 @@ struct OptionHolder {
 
   // These members are specifically made public for easy access during
   // initialization
-  ::Averager<deriv_order> averager{};
+  ::Averager<deriv_order - 1> averager{};
   ::Controller<deriv_order> controller{};
   ::TimescaleTuner tuner{};
   typename ControlSystem::control_error control_error{};
