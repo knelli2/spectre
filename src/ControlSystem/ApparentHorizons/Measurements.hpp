@@ -86,10 +86,16 @@ struct BothHorizons : tt::ConformsTo<protocols::Measurement> {
           control_system::RunCallbacks<FindHorizon, ControlSystems>;
     };
 
-    using source_tensors =
-        tmpl::list<gr::Tags::SpacetimeMetric<3, ::Frame::Inertial>,
-                   GeneralizedHarmonic::Tags::Pi<3, ::Frame::Inertial>,
-                   GeneralizedHarmonic::Tags::Phi<3, ::Frame::Inertial>>;
+    // This type alias has to match the `interpolator_source_vars` type alias in
+    // the metavariables. This is because the `InterpolatorReceiveVolumeData`
+    // action pulls the source tensors from the `interpolator_source_vars` type
+    // alias in the metavariables. This should be changed in the future.
+    using source_tensors = tmpl::list<
+        gr::Tags::SpacetimeMetric<3, ::Frame::Inertial>,
+        GeneralizedHarmonic::Tags::Pi<3, ::Frame::Inertial>,
+        GeneralizedHarmonic::Tags::Phi<3, ::Frame::Inertial>,
+        Tags::deriv<GeneralizedHarmonic::Tags::Phi<volume_dim, Frame::Inertial>,
+                    tmpl::size_t<3>, Frame::Inertial>>;
 
    public:
     template <typename ControlSystems>
@@ -105,13 +111,15 @@ struct BothHorizons : tt::ConformsTo<protocols::Measurement> {
         const tnsr::aa<DataVector, 3, ::Frame::Inertial>& spacetime_metric,
         const tnsr::aa<DataVector, 3, ::Frame::Inertial>& pi,
         const tnsr::iaa<DataVector, 3, ::Frame::Inertial>& phi,
+        const tnsr::ijaa<DataVector, 3, ::Frame::Inertial>& deriv_phi,
         const LinkedMessageId<double>& measurement_id,
         Parallel::GlobalCache<Metavariables>& cache,
         const ElementId<3>& array_index,
         const ParallelComponent* const /*meta*/, ControlSystems /*meta*/) {
       intrp::interpolate<interpolation_target_tag<ControlSystems>,
-                         source_tensors>(
-          measurement_id, mesh, cache, array_index, spacetime_metric, pi, phi);
+                         source_tensors>(measurement_id, mesh, cache,
+                                         array_index, spacetime_metric, pi, phi,
+                                         deriv_phi);
     }
   };
 
