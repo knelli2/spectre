@@ -218,15 +218,15 @@ struct UpdateControlSystem {
                                         *opt_avg_values, control_signal);
 
       Parallel::printf(
-          "Node: %i, Proc: %i, Reason: %s, Time: %.17e, Update now: %s, Q: "
-          "%.17e, Expr time: %.17e, Min measure time: %.17e, New expr time: "
-          "%.17e, New min measure time: %.17e, Q and derivs: (%.17e, %.17e),"
-          " Control signal: %.17e, Wall time: %.10e\n",
-          sys::my_node(), sys::my_proc(), "Update", time,
-          need_to_update_now ? "Yes" : "No", Q[0], current_expiration_time,
+          "Node: %i, Proc: %i, Name: %s, Time: %.17e, Update now: %s, Q: "
+          "%s, Expr time: %.17e, Min measure time: %.17e, New expr time: "
+          "%.17e, New min measure time: %.17e, Q and derivs: %s,"
+          " Control signal: %s, Wall time: %.10e\n",
+          sys::my_node(), sys::my_proc(), function_of_time_name, time,
+          need_to_update_now ? "Yes" : "No", Q, current_expiration_time,
           current_min_time_between_measurements, new_expiration_time,
-          min(new_measurement_timescale), opt_avg_values.value()[0][0],
-          opt_avg_values.value()[1][0], control_signal[0], sys::wall_time());
+          min(new_measurement_timescale), opt_avg_values.value(),
+          control_signal, sys::wall_time());
     } else {
       (void)(box);
       (void)(cache);

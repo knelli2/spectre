@@ -31,6 +31,9 @@ namespace tuples {
 template <class... Tags>
 class TaggedTuple;
 }  // namespace tuples
+namespace control_system::Tags {
+struct MeasurementTimescales;
+}  // namespace control_system::Tags
 /// \endcond
 
 namespace domain {
@@ -99,11 +102,16 @@ struct CheckFunctionsOfTimeAreReady {
       Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& array_index, ActionList /*meta*/,
       const ParallelComponent* component) {
-    const bool ready =
+    const bool ready_fot =
         functions_of_time_are_ready<domain::Tags::FunctionsOfTime>(
             cache, array_index, component, db::get<::Tags::Time>(box));
-    return {std::move(box), ready ? Parallel::AlgorithmExecution::Continue
-                                  : Parallel::AlgorithmExecution::Retry};
+    const bool ready_measurement =
+        functions_of_time_are_ready<
+          control_system::Tags::MeasurementTimescales>(
+            cache, array_index, component, db::get<::Tags::Time>(box));
+    return {std::move(box), (ready_fot and ready_measurement)
+                            ? Parallel::AlgorithmExecution::Continue
+                            : Parallel::AlgorithmExecution::Retry};
   }
 };
 }  // namespace Actions
