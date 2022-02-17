@@ -143,6 +143,9 @@
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include <csignal>
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace Frame {
 // IWYU pragma: no_forward_declare MathFunction
@@ -155,6 +158,24 @@ namespace Parallel {
 template <typename Metavariables>
 class CProxy_GlobalCache;
 }  // namespace Parallel
+
+void holding_pattern(int signal) {
+  Parallel::printf(
+      "Caught signal %d on node: %d proc: %d. Erroring now. Going into while() "
+      "loop\nI'm waiting...",
+      signal, sys::my_node(), sys::my_proc());
+  while(true) {};
+}
+
+void catch_all_the_signals() {
+  std::signal(SIGTERM, holding_pattern);
+  std::signal(SIGSEGV, holding_pattern);
+  std::signal(SIGINT, holding_pattern);
+  std::signal(SIGILL, holding_pattern);
+  std::signal(SIGABRT, holding_pattern);
+  std::signal(SIGFPE, holding_pattern);
+}
+
 /// \endcond
 
 // Note: this executable does not use GeneralizedHarmonicBase.hpp, because
@@ -464,4 +485,4 @@ static const std::vector<void (*)()> charm_init_node_funcs{
     &Parallel::register_factory_classes_with_charm<metavariables>};
 
 static const std::vector<void (*)()> charm_init_proc_funcs{
-    &enable_floating_point_exceptions};
+    &enable_floating_point_exceptions, &catch_all_the_signals};
