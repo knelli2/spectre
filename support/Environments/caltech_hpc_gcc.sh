@@ -332,6 +332,7 @@ spectre_run_cmake() {
         return 1
     fi
     spectre_load_modules
+    CHARM_ROOT="/home/knelli/tools/charm/verbs-linux-x86_64-smp"
     cmake -D CHARM_ROOT=$CHARM_ROOT \
           -D CMAKE_BUILD_TYPE=Release \
           -D CMAKE_Fortran_COMPILER=gfortran \
@@ -339,6 +340,26 @@ spectre_run_cmake() {
           -D BUILD_PYTHON_BINDINGS=off \
           -D Python_EXECUTABLE=`which python3` \
           -D USE_SCOTCH_LB=ON \
+          -D ASAN=ON \
+          "$@" \
+          $SPECTRE_HOME
+}
+
+spectre_run_cmake_charm7() {
+    if [ -z ${SPECTRE_HOME} ]; then
+        echo "You must set SPECTRE_HOME to the cloned SpECTRE directory"
+        return 1
+    fi
+    spectre_load_modules
+    CHARM_ROOT="/home/knelli/tools/charm_7/verbs-linux-x86_64-smp"
+    cmake -D CHARM_ROOT=$CHARM_ROOT \
+          -D CMAKE_BUILD_TYPE=Release \
+          -D CMAKE_Fortran_COMPILER=gfortran \
+          -D MEMORY_ALLOCATOR=JEMALLOC \
+          -D BUILD_PYTHON_BINDINGS=off \
+          -D Python_EXECUTABLE=`which python3` \
+          -D USE_SCOTCH_LB=ON \
+          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
