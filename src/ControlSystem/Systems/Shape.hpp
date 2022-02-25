@@ -22,6 +22,7 @@
 #include "DataStructures/LinkedMessageQueue.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "ParallelAlgorithms/Actions/UpdateMessageQueue.hpp"
+#include "Utilities/GetOutput.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -56,6 +57,8 @@ struct Shape : tt::ConformsTo<protocols::ControlSystem> {
     return Horizon == control_system::ah::HorizonLabel::AhA ? "ShapeA"
                                                             : "ShapeB";
   }
+
+  static std::string component_name(const size_t i) { return get_outout(i); }
 
   using measurement = ah::BothHorizons;
   static_assert(tt::assert_conforms_to<measurement,
