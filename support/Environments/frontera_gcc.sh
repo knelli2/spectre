@@ -72,6 +72,7 @@ spectre_run_cmake() {
         return 1
     fi
     spectre_load_modules
+    CHARM_ROOT="/home1/08330/knelli/work/tools/charm/ucx-linux-x86_64-smp"
     # -D USE_LD=ld - ld.gold seems to hang linking the main executables
     cmake -D CHARM_ROOT=$CHARM_ROOT \
           -D CMAKE_BUILD_TYPE=Release \
@@ -81,6 +82,28 @@ spectre_run_cmake() {
           -D Python_EXECUTABLE=`which python3` \
           -D USE_LD=ld \
           -D SPECTRE_TEST_RUNNER="$(pwd)/bin/charmrun" \
+          -D ASAN=ON \
+          "$@" \
+          $SPECTRE_HOME
+}
+
+spectre_run_cmake_charm7() {
+    if [ -z ${SPECTRE_HOME} ]; then
+        echo "You must set SPECTRE_HOME to the cloned SpECTRE directory"
+        return 1
+    fi
+    spectre_load_modules
+    CHARM_ROOT="/home1/08330/knelli/work/tools/charm_7/ucx-linux-x86_64-smp"
+    # -D USE_LD=ld - ld.gold seems to hang linking the main executables
+    cmake -D CHARM_ROOT=$CHARM_ROOT \
+          -D CMAKE_BUILD_TYPE=Release \
+          -D CMAKE_Fortran_COMPILER=gfortran \
+          -D MEMORY_ALLOCATOR=SYSTEM \
+          -D BUILD_PYTHON_BINDINGS=off \
+          -D Python_EXECUTABLE=`which python3` \
+          -D USE_LD=ld \
+          -D SPECTRE_TEST_RUNNER="$(pwd)/bin/charmrun" \
+          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
