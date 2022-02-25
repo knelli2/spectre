@@ -63,6 +63,10 @@ struct Rotation : tt::ConformsTo<protocols::ControlSystem> {
     return pretty_type::short_name<Rotation<DerivOrder>>();
   }
 
+  static std::string component_name(const size_t i) {
+    return i == 0 ? "X" : (i == 1 ? "Y" : "Z");
+  }
+
   using measurement = ah::BothHorizons;
   static_assert(tt::assert_conforms_to<measurement,
                                        control_system::protocols::Measurement>);
