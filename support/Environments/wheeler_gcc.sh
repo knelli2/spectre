@@ -59,6 +59,7 @@ spectre_run_cmake() {
         return 1
     fi
     spectre_load_modules
+    CHARM_ROOT="/home/knelli/tools/charm/mpi-linux-x86_64-smp"
     # Notes:
     # - Set CMAKE_PREFIX_PATH to pick up packages consistent with the anaconda
     #   module, such as zlib. The anaconda module on Wheeler does not set this
@@ -69,6 +70,29 @@ spectre_run_cmake() {
           -D MEMORY_ALLOCATOR=SYSTEM \
           -D BUILD_PYTHON_BINDINGS=on \
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
+          -D ASAN=ON \
+          "$@" \
+          $SPECTRE_HOME
+}
+
+spectre_run_cmake_charm7() {
+    if [ -z ${SPECTRE_HOME} ]; then
+        echo "You must set SPECTRE_HOME to the cloned SpECTRE directory"
+        return 1
+    fi
+    spectre_load_modules
+    CHARM_ROOT="/home/knelli/tools/charm_7/mpi-linux-x86_64-smp"
+    # Notes:
+    # - Set CMAKE_PREFIX_PATH to pick up packages consistent with the anaconda
+    #   module, such as zlib. The anaconda module on Wheeler does not set this
+    #   automatically.
+    cmake -D CHARM_ROOT=$CHARM_ROOT \
+          -D CMAKE_BUILD_TYPE=Release \
+          -D CMAKE_Fortran_COMPILER=gfortran \
+          -D MEMORY_ALLOCATOR=SYSTEM \
+          -D BUILD_PYTHON_BINDINGS=on \
+          -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
+          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
