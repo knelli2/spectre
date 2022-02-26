@@ -191,7 +191,7 @@ struct EvolutionMetavars {
 
   // using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
   //                                    control_system::Systems::Expansion<2>>;
-  using control_systems = tmpl::list<control_system::Systems::Expansion<2>>;
+  using control_systems = tmpl::list<control_system::Systems::ExpansionFake<2>>;
 
   using interpolation_target_tags =
       control_system::metafunctions::interpolation_target_tags<control_systems>;

@@ -683,6 +683,12 @@ BinaryCompactObject::functions_of_time(
           std::array<DataVector, 3>{
               {{initial_expansion_}, {initial_expansion_velocity_}, {0.0}}},
           expiration_times.at(expansion_function_of_time_name_));
+  result["ExpansionFake"] =
+      std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
+          initial_time_,
+          std::array<DataVector, 3>{
+              {{initial_expansion_}, {initial_expansion_velocity_}, {0.0}}},
+          expiration_times.at(expansion_function_of_time_name_));
 
   // ExpansionMap FunctionOfTime for the function \f$b(t)\f$ in the
   // domain::CoordinateMaps::TimeDependent::CubicScale map
