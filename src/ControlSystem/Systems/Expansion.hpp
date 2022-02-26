@@ -55,11 +55,11 @@ namespace control_system::Systems {
  *   control_system::ControlErrors::Expansion Expansion \endlink control error
  */
 template <size_t DerivOrder>
-struct Expansion : tt::ConformsTo<protocols::ControlSystem> {
+struct ExpansionFake : tt::ConformsTo<protocols::ControlSystem> {
   static constexpr size_t deriv_order = DerivOrder;
 
   static std::string name() {
-    return pretty_type::short_name<Expansion<DerivOrder>>();
+    return pretty_type::short_name<ExpansionFake<DerivOrder>>();
   }
 
   // Expansion only has one component
@@ -82,7 +82,7 @@ struct Expansion : tt::ConformsTo<protocols::ControlSystem> {
   };
 
   using simple_tags = tmpl::list<MeasurementQueue, Tags::ControlSystemName,
-                                 Tags::ControlError<Expansion>>;
+                                 Tags::ControlError<ExpansionFake>>;
 
   struct process_measurement {
     template <typename Submeasurement>
@@ -95,15 +95,15 @@ struct Expansion : tt::ConformsTo<protocols::ControlSystem> {
                       Parallel::GlobalCache<Metavariables>& cache,
                       const LinkedMessageId<double>& measurement_id) {
       auto& control_sys_proxy = Parallel::get_parallel_component<
-          ControlComponent<Metavariables, Expansion<DerivOrder>>>(cache);
+          ControlComponent<Metavariables, ExpansionFake<DerivOrder>>>(cache);
 
       const DataVector center =
           array_to_datavector(strahlkorper.physical_center());
 
       Parallel::simple_action<::Actions::UpdateMessageQueue<
           QueueTags::Center<Horizon>, MeasurementQueue,
-          UpdateControlSystem<Expansion>>>(control_sys_proxy, measurement_id,
-                                           center);
+          UpdateControlSystem<ExpansionFake>>>(control_sys_proxy,
+                                               measurement_id, center);
     }
   };
 };
