@@ -9,9 +9,19 @@
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.hpp"
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.tpp"
 #include "ApparentHorizons/ComputeItems.hpp"
+#include "ApparentHorizons/ObjectLabel.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/ApparentHorizons/Measurements.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Protocols/ControlSystem.hpp"
+#include "ControlSystem/Systems/Shape.hpp"
+#include "ControlSystem/Trigger.hpp"
+#include "ControlSystem/WriteData.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/RegisterDerived.hpp"
@@ -65,67 +75,16 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
       "formulation,\n"
       "on a domain with a single horizon and corresponding excised region"};
 
-  struct AhA {
-    using temporal_id = ::Tags::Time;
-    using tags_to_observe = tmpl::list<
-        StrahlkorperGr::Tags::AreaCompute<frame>,
-        StrahlkorperGr::Tags::IrreducibleMassCompute<frame>,
-        StrahlkorperTags::MaxRicciScalarCompute,
-        StrahlkorperTags::MinRicciScalarCompute,
-        StrahlkorperGr::Tags::ChristodoulouMassCompute<frame>,
-        StrahlkorperGr::Tags::DimensionlessSpinMagnitudeCompute<frame>>;
-    using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
-    using vars_to_interpolate_to_target =
-        tmpl::list<gr::Tags::SpatialMetric<volume_dim, frame, DataVector>,
-                   gr::Tags::InverseSpatialMetric<volume_dim, frame>,
-                   gr::Tags::ExtrinsicCurvature<volume_dim, frame>,
-                   gr::Tags::SpatialChristoffelSecondKind<volume_dim, frame>,
-                   gr::Tags::SpatialRicci<volume_dim, frame>>;
-    using compute_items_on_target = tmpl::append<
-        tmpl::list<
-            StrahlkorperGr::Tags::AreaElementCompute<frame>,
-            StrahlkorperTags::ThetaPhiCompute<frame>,
-            StrahlkorperTags::RadiusCompute<frame>,
-            StrahlkorperTags::RhatCompute<frame>,
-            StrahlkorperTags::TangentsCompute<frame>,
-            StrahlkorperTags::InvJacobianCompute<frame>,
-            StrahlkorperTags::DxRadiusCompute<frame>,
-            StrahlkorperTags::OneOverOneFormMagnitudeCompute<volume_dim, frame,
-                                                             DataVector>,
-            StrahlkorperTags::NormalOneFormCompute<frame>,
-            StrahlkorperTags::UnitNormalOneFormCompute<frame>,
-            StrahlkorperTags::UnitNormalVectorCompute<frame>,
-            StrahlkorperTags::GradUnitNormalOneFormCompute<frame>,
-            StrahlkorperTags::ExtrinsicCurvatureCompute<frame>,
-            StrahlkorperGr::Tags::SpinFunctionCompute<frame>,
-            StrahlkorperTags::RicciScalarCompute<frame>,
-            StrahlkorperGr::Tags::DimensionfulSpinMagnitudeCompute<frame>>,
-        tags_to_observe>;
-    using compute_target_points =
-        intrp::TargetPoints::ApparentHorizon<AhA, ::Frame::Inertial>;
-    using post_interpolation_callback =
-        intrp::callbacks::FindApparentHorizon<AhA, ::Frame::Inertial>;
-    using horizon_find_failure_callback =
-        intrp::callbacks::ErrorOnFailedApparentHorizon;
-    using post_horizon_find_callback =
-        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhA, AhA>;
-  };
+  using typename gh_base::control_systems;
 
-  using interpolation_target_tags = tmpl::list<AhA>;
+  using interpolation_target_tags =
+      control_system::metafunctions::interpolation_target_tags<control_systems>;
   using interpolator_source_vars = tmpl::list<
       gr::Tags::SpacetimeMetric<volume_dim, Frame::Inertial>,
       GeneralizedHarmonic::Tags::Pi<volume_dim, Frame::Inertial>,
-      GeneralizedHarmonic::Tags::Phi<volume_dim, Frame::Inertial>,
-      Tags::deriv<GeneralizedHarmonic::Tags::Phi<volume_dim, Frame::Inertial>,
-                  tmpl::size_t<3>, Frame::Inertial>>;
+      GeneralizedHarmonic::Tags::Phi<volume_dim, Frame::Inertial>>;
 
-  struct factory_creation
-      : tt::ConformsTo<Options::protocols::FactoryCreation> {
-    using factory_classes = Options::add_factory_classes<
-        typename gh_base::factory_creation::factory_classes,
-        tmpl::pair<Event, tmpl::list<intrp::Events::Interpolate<
-                              3, AhA, interpolator_source_vars>>>>;
-  };
+  using typename gh_base::factory_creation;
 
   using typename gh_base::phase_changes;
 
@@ -140,9 +99,9 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
       PhaseControl::Tags::PhaseChangeAndTriggers<phase_changes>>;
 
   using observed_reduction_data_tags =
-      observers::collect_reduction_data_tags<tmpl::push_back<
+      observers::collect_reduction_data_tags<tmpl::flatten<tmpl::list<
           tmpl::at<typename factory_creation::factory_classes, Event>,
-          typename AhA::post_horizon_find_callback>>;
+          control_system::detail::WriterHelper>>>;
 
   using dg_registration_list =
       tmpl::push_back<typename gh_base::dg_registration_list,
@@ -189,6 +148,7 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
           Parallel::PhaseActions<
               Phase, Phase::Evolve,
               tmpl::list<
+                  ::domain::Actions::CheckFunctionsOfTimeAreReady,
                   Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                   step_actions, Actions::AdvanceTime,
                   PhaseControl::Actions::ExecutePhaseChange<phase_changes>>>>>>;
@@ -207,7 +167,10 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
                          importers::ElementDataReader<EvolutionMetavars>,
                          tmpl::list<>>,
       gh_dg_element_array, intrp::Interpolator<EvolutionMetavars>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhA>>>;
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
+      control_system::control_components<EvolutionMetavars, control_systems>>>;
 };
 
 static const std::vector<void (*)()> charm_init_node_funcs{

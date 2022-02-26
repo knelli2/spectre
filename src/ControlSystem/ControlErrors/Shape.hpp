@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <pup.h>
 
+#include "ApparentHorizons/ObjectLabel.hpp"
 #include "ControlSystem/ApparentHorizons/Measurements.hpp"
 #include "ControlSystem/Protocols/ControlError.hpp"
 #include "ControlSystem/Tags.hpp"
@@ -27,22 +28,22 @@ struct FunctionsOfTime;
 }  // namespace domain::Tags
 namespace Frame {
 struct Distorted;
+struct Grid;
 }  // namespace Frame
 /// \endcond
 
 namespace control_system {
 namespace ControlErrors {
 namespace detail {
-template <control_system::ah::HorizonLabel Horizon>
+template <::ah::ObjectLabel Horizon>
 std::string excision_sphere_name() {
-  return Horizon == control_system::ah::HorizonLabel::AhA
-             ? "ObjectAExcisionSphere"
-             : "ObjectBExcisionSphere";
+  return Horizon == ::ah::ObjectLabel::A ? "ObjectAExcisionSphere"
+                                         : "ObjectBExcisionSphere";
 }
 
-template <control_system::ah::HorizonLabel Horizon>
+template <::ah::ObjectLabel Horizon>
 std::string size_name() {
-  return Horizon == control_system::ah::HorizonLabel::AhA ? "SizeA" : "SizeB";
+  return Horizon == ::ah::ObjectLabel::A ? "SizeA" : "SizeB";
 }
 
 // This is the Y00 shperical harmonic expressed in terms of SPHEREPACK
@@ -90,7 +91,7 @@ SPECTRE_ALWAYS_INLINE double y00_coef() { return sqrt(0.5) / M_PI; }
  * l=0 \f$ and \f$ l=1 \f$ coefficients be zero, the \f$ l=0 \f$ and \f$ l=1 \f$
  * modes of the control error are ecforced to be zero as well.
  */
-template <control_system::ah::HorizonLabel Horizon>
+template <::ah::ObjectLabel Horizon>
 struct Shape : tt::ConformsTo<protocols::ControlError> {
   using options = tmpl::list<>;
   static constexpr Options::String help{
@@ -112,8 +113,7 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
         functions_of_time.at(detail::size_name<Horizon>())->func(time)[0][0];
 
     const auto& ah =
-        get<control_system::QueueTags::Strahlkorper<Frame::Distorted>>(
-            measurements);
+        get<control_system::QueueTags::Strahlkorper<Frame::Grid>>(measurements);
     const auto ah_coefs = ah.coefficients();
 
     ASSERT(lambda_lm_coefs.size() == ah_coefs.size(),

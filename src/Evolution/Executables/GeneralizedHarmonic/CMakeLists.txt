@@ -52,7 +52,7 @@ add_generalized_harmonic_executable_with_horizon(
   KerrSchild
   GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
   GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
-  "${LIBS_TO_LINK};ApparentHorizons;GeneralRelativitySolutions"
+  "${LIBS_TO_LINK};ApparentHorizons;ControlSystem;GeneralRelativitySolutions"
 )
 
 add_generalized_harmonic_executable_with_horizon(

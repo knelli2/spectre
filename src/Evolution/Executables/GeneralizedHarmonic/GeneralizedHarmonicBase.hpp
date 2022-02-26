@@ -7,7 +7,12 @@
 #include <vector>
 
 #include "ApparentHorizons/ComputeItems.hpp"
+#include "ApparentHorizons/ObjectLabel.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Systems/Shape.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Creators/Factory1D.hpp"
@@ -165,14 +170,17 @@ struct GeneralizedHarmonicTemplateBase<
   // `read_spec_piecewise_polynomial()`
   static constexpr bool override_functions_of_time = false;
 
+  using control_systems =
+      tmpl::list<control_system::Systems::Shape<::ah::ObjectLabel::A, 2>>;
+
   using time_stepper_tag = Tags::TimeStepper<
       std::conditional_t<local_time_stepping, LtsTimeStepper, TimeStepper>>;
   using analytic_solution_fields = typename system::variables_tag::tags_list;
 
-  using initialize_initial_data_dependent_quantities_actions = tmpl::list<
-      GeneralizedHarmonic::gauges::Actions::InitializeDampedHarmonic<
-          volume_dim, use_damped_harmonic_rollon>,
-      Parallel::Actions::TerminatePhase>;
+  using initialize_initial_data_dependent_quantities_actions =
+      tmpl::list<GeneralizedHarmonic::gauges::Actions::InitializeDampedHarmonic<
+                     volume_dim, use_damped_harmonic_rollon>,
+                 Parallel::Actions::TerminatePhase>;
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& /*p*/) {}
@@ -213,18 +221,24 @@ struct GeneralizedHarmonicTemplateBase<
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<
+            DenseTrigger,
+            tmpl::flatten<tmpl::list<
+                DenseTriggers::standard_dense_triggers,
+                control_system::control_system_triggers<control_systems>>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
-        tmpl::pair<Event, tmpl::flatten<tmpl::list<
-                              Events::Completion,
-                              Events::ObserveNorms<
-                                  ::Tags::Time, observe_fields,
-                                  tmpl::list<analytic_compute, error_compute>>,
-                              dg::Events::field_observations<
-                                  volume_dim, Tags::Time, observe_fields,
-                                  analytic_solution_fields,
-                                  tmpl::list<analytic_compute, error_compute>>,
-                              Events::time_events<system>>>>,
+        tmpl::pair<Event,
+                   tmpl::flatten<tmpl::list<
+                       Events::Completion,
+                       Events::ObserveNorms<
+                           ::Tags::Time, observe_fields,
+                           tmpl::list<analytic_compute, error_compute>>,
+                       dg::Events::field_observations<
+                           volume_dim, Tags::Time, observe_fields,
+                           analytic_solution_fields,
+                           tmpl::list<analytic_compute, error_compute>>,
+                       control_system::control_system_events<control_systems>,
+                       Events::time_events<system>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
                    GeneralizedHarmonic::BoundaryConditions::
@@ -381,6 +395,7 @@ struct GeneralizedHarmonicTemplateBase<
               GeneralizedHarmonicTemplateBase>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using gh_dg_element_array = DgElementArray<
