@@ -5,6 +5,7 @@
 # Ignore build dirs named similarly to the example in the installation notes;
 # in general arbitrary names are possible and cannot all be ignored.
 /build*
+/debug_mem_error/
 
 # Editor configurations
 .vscode
