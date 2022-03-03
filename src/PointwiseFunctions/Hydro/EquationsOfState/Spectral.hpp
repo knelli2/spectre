@@ -135,6 +135,8 @@ class Spectral : public EquationOfState<true, 1> {
 
  private:
   EQUATION_OF_STATE_FORWARD_DECLARE_MEMBER_IMPLS(1)
+  // is this a bad idea?
+  friend class Enthalpy;
 
   double gamma(const double x) const;
   double integral_of_gamma(const double x) const;
