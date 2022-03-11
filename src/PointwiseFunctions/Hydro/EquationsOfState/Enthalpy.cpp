@@ -13,18 +13,131 @@
 #include "Parallel/Printf.hpp"
 #include "Utilities/MakeWithValue.hpp"
 
+// namespace{
+// // Is there an actual factorial function somewhere?
+// size_t factorial(size_t n){
+//   if (n == 0){return static_cast<size_t>(1);}
+//   else{
+//     return n * factorial(n - 1);
+//   }
+// }
+// }
+
 namespace EquationsOfState {
+Enthalpy::Coefficients::Coefficients(
+    std::vector<double> in_polynomial_coefficients,
+    std::vector<double> in_sin_coefficients,
+    std::vector<double> in_cos_coefficients, double in_trig_scale,
+    double in_reference_density, double in_exponential_constant)
+    : polynomial_coefficients(in_polynomial_coefficients),
+      sin_coefficients(in_sin_coefficients),
+      cos_coefficients(in_cos_coefficients),
+      trig_scale(in_trig_scale),
+      reference_density(in_reference_density) {
+  if (std::isnan(in_exponential_constant)) {
+    // In practice we should always know this at compile time,
+    // it should probably be templated on
+    has_exponential_prefactor = true;
+    exponential_external_constant = in_exponential_constant;
+  } else {
+    has_exponential_prefactor = false;
+    // Maybe this should be a signaling nan?
+    exponential_external_constant = std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
 // Given an expansion h(x) = sum_i f_i(x) , compute int_a^x sum_i f_i(x) e^x +
 // F(a)
 Enthalpy::Coefficients Enthalpy::Coefficients::compute_exponential_integral(
     std::pair<double, double> initial_condition) {
   // Not yet implemented
+  // Doing the exponential integral of something already with an expoenetial
+  // prefactor shouldn't be happening
+  if (has_exponential_prefactor) {
+    ERROR(
+        "Attempting to exponentially integrate an EoS decomposition series "
+        "with an exponential prefactor!");
+  }
+  std::vector<double> integral_poly_coeffs(polynomial_coefficients.size() + 1);
+  std::vector<double> integral_sin_coeffs(sin_coefficients.size());
+  std::vector<double> integral_cos_coeffs(cos_coefficients.size());
   Enthalpy::Coefficients exponential_integral_coefficients = *this;
+  // Preprocessing to put coefficients in better basis c_i z^i  = c_i' z^i/i!
+  std::vector<double> taylor_series_coefficients(
+      polynomial_coefficients.size());
+  for (size_t i = 0; i < integral_poly_coeffs.size(); i++) {
+    taylor_series_coefficients[i] =
+        polynomial_coefficients[i] * static_cast<double>(factorial(i + 1));
+  }
+
+  // i indexes elements of the derivative, r sum over lower degree terms
+  for (size_t i = 0; i < integral_poly_coeffs.size(); i++) {
+    for (size_t r = 0; r <= i; r++) {
+      integral_poly_coeffs[i] +=
+          ((i - r) % 2 == 0 ? 1 : -1) * taylor_series_coefficients[r];
+    }
+    // restore the default normalization for the coefficient
+    integral_poly_coeffs[i] /= static_cast<double>(factorial(i + 1));
+  }
+  for (size_t j = 0; j < sin_coefficients.size(); j++) {
+    // contribution from the sine terms
+    double k = trig_scale;
+    integral_sin_coeffs[j] += 1.0 / (square(j) * square(k) + 1.0);
+    integral_cos_coeffs[j] -= (j * k) / (square(j) * square(k) + 1.0);
+    // contribution from the cosine terms
+    integral_cos_coeffs[j] += 1.0 / (square(j) * square(k) + 1.0);
+    integral_sin_coeffs[j] += (j * k) / (square(j) * square(k) + 1.0);
+  }
+  exponential_integral_coefficients.has_exponential_prefactor = true;
+  exponential_integral_coefficients.exponential_external_constant = 0.0;
+  exponential_integral_coefficients.polynomial_coefficients =
+      integral_poly_coeffs;
+  exponential_integral_coefficients.sin_coefficients = integral_sin_coeffs;
+  exponential_integral_coefficients.cos_coefficients = integral_cos_coeffs;
+  double new_constant = std::get<1>(initial_condition) -
+                        evaluate_coefficients(exponential_integral_coefficients,
+                                              std::get<0>(initial_condition));
+  exponential_integral_coefficients.exponential_external_constant =
+      new_constant;
   return exponential_integral_coefficients;
 }
 Enthalpy::Coefficients Enthalpy::Coefficients::compute_derivative() {
-  // Not yet implemeted
+  // Slow/Bad?
+  std::vector<double> derivative_poly_coeffs(polynomial_coefficients.size());
+  std::vector<double> derivative_sin_coeffs(sin_coefficients.size());
+  std::vector<double> derivative_cos_coeffs(cos_coefficients.size());
   Enthalpy::Coefficients derivative_coefficients = *this;
+  // d/dz e^z \sum_i a_i f(z) = e^z \sum_i a_i f_i(z)  + e^z \sum_i a_i f_i'(z)
+  if (has_exponential_prefactor) {
+    derivative_poly_coeffs = polynomial_coefficients;
+    derivative_sin_coeffs = sin_coefficients;
+    derivative_cos_coeffs = cos_coefficients;
+    derivative_poly_coeffs[polynomial_coefficients.size() - 1] = 0.0;
+    for (size_t i = 0; i < polynomial_coefficients.size() - 1; i++) {
+      derivative_poly_coeffs[i] +=
+          polynomial_coefficients[i + 1] * static_cast<double>(i + 1);
+    }
+    for (size_t j = 0; j < sin_coefficients.size(); j++) {
+      derivative_cos_coeffs[j] +=
+          -sin_coefficients[j] * (static_cast<double>(j + 1) * trig_scale);
+      derivative_sin_coeffs[j] +=
+          cos_coefficients[j] * (static_cast<double>(j + 1) * trig_scale);
+    }
+  } else {
+    // The final coefficient will be zero because nothing differentiates to it
+    derivative_poly_coeffs[polynomial_coefficients.size() - 1] = 0.0;
+    for (size_t i = 0; i < polynomial_coefficients.size() - 1; i++) {
+      derivative_poly_coeffs[i] =
+          polynomial_coefficients[i + 1] * static_cast<double>(i + 1);
+    }
+    for (size_t j = 0; j < sin_coefficients.size(); j++) {
+      derivative_cos_coeffs[j] =
+          -sin_coefficients[j] * (static_cast<double>(j + 1) * trig_scale);
+      derivative_sin_coeffs[j] =
+          cos_coefficients[j] * (static_cast<double>(j + 1) * trig_scale);
+    }
+  }
+
   return derivative_coefficients;
 }
 void Enthalpy::Coefficients::pup(PUP::er& p) {
@@ -41,16 +154,11 @@ Enthalpy::Enthalpy(const double reference_density, const double max_density,
                    const std::vector<double> polynomial_coefficients,
                    const std::vector<double> sin_coefficients,
                    const std::vector<double> cos_coefficients,
-                   double lower_spectral_reference_density,
-                   double lower_spectral_reference_pressure,
-                   std::vector<double> lower_spectral_coefficients,
-                   double lower_spectral_upper_density)
+                   const EquationsOfState::Spectral& lower_spectral)
     : reference_density_(reference_density),
       minimum_density_(min_density),
       maximum_density_(max_density),
-      lower_spectral_(
-          lower_spectral_reference_density, lower_spectral_reference_pressure,
-          lower_spectral_coefficients, lower_spectral_upper_density),
+      lower_spectral_(lower_spectral),
       coefficients_(polynomial_coefficients, sin_coefficients, cos_coefficients,
                     trig_scale, reference_density)
 
@@ -80,20 +188,22 @@ void Enthalpy::pup(PUP::er& p) {
 
 double Enthalpy::x_from_density(const double density) const {
   return log(density / reference_density_);
-};
+}
 double Enthalpy::density_from_x(const double x) const {
   return reference_density_ * exp(x);
-};
+}
 
 double Enthalpy::energy_density_from_log_density(const double x) const {
-  reference_density_* evaluate_coefficients(exponential_integral_coefficients_,
-                                            x);
+  return reference_density_ *
+         evaluate_coefficients(exponential_integral_coefficients_, x);
 }
 
 // Evaluate the function represented by the coefficinets at x  = log(rho)
 double Enthalpy::evaluate_coefficients(
     const Enthalpy::Coefficients& coefficients, const double x) {
   // Not as good as Horner's rule, so don't use for polynomials
+  // The basis_function should be a family of functions indexed by
+  // an integer
   auto evaluate_with_function_basis =
       +[](const std::function<double(double, int)>& basis_function,
           double evaluation_point,
@@ -108,19 +218,19 @@ double Enthalpy::evaluate_coefficients(
   const double polynomial_contribution =
       evaluate_polynomial(coefficients.polynomial_coefficients, x);
   const double sin_contribution = evaluate_with_function_basis(
-      +[](double x, int n) { return sin((n + 1) * x); }, x,
+      +[](double z, int n) { return sin((n + 1) * z); }, x,
       coefficients.sin_coefficients, 0.0);
   const double cos_contribution = evaluate_with_function_basis(
-      +[](double x, int n) { return cos((n + 1) * x); }, x,
+      +[](double z, int n) { return cos((n + 1) * z); }, x,
       coefficients.sin_coefficients, 0.0);
   double value =
       polynomial_contribution + (sin_contribution + cos_contribution);
-  if (coefficients.exponential_prefactor) {
+  if (coefficients.has_exponential_prefactor) {
     value *= exp(x);
-    value += coefficients.exponential_constant;
+    value += coefficients.exponential_external_constant;
   }
   return value;
-};
+}
 
 template <typename DataType>
 Scalar<DataType> Spectral::pressure_from_density_impl(
@@ -211,7 +321,6 @@ double Enthalpy::chi_from_density(const double rest_mass_density) const {
 
 double Enthalpy::specific_internal_energy_from_density(
     const double rest_mass_density) const {
-  const double x = log(rest_mass_density / reference_density_);
   if (Enthalpy::in_spectral_domain(rest_mass_density)) {
     return lower_spectral_.specific_internal_energy_from_density(
         rest_mass_density);

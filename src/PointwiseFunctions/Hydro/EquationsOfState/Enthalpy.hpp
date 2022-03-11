@@ -18,6 +18,7 @@
 #include "Options/Options.hpp"
 #include "Parallel/CharmPupable.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/EquationOfState.hpp"  // IWYU pragma: keep
+//#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
 #include "Utilities/Math.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -63,20 +64,16 @@ class Enthalpy : public EquationOfState<true, 1> {
     std::vector<double> cos_coefficients;
     double trig_scale;
     double reference_density;
-    bool exponential_prefactor;
-    double exponential_constant;
+    bool has_exponential_prefactor;
+    double exponential_external_constant;
     Coefficients() = default;
+    Coefficients(const Coefficients& coefficients) = default;
     Coefficients(std::vector<double> in_polynomial_coefficients,
                  std::vector<double> in_sin_coefficients,
                  std::vector<double> in_cos_coefficients, double in_trig_scale,
-                 double in_reference_density, bool in_is_exponential = false,
-                 bool in_exponential_constant =
-                     std::numeric_limits<double>::signaling_NaN())
-        : polynomial_coefficients(in_polynomial_coefficients),
-          sin_coefficients(in_sin_coefficients),
-          cos_coefficients(in_cos_coefficients),
-          trig_scale(in_trig_scale),
-          reference_density(in_reference_density){};
+                 double in_reference_density,
+                 double in_exponential_constant =
+                     std::numeric_limits<double>::quiet_NaN());
 
     Enthalpy::Coefficients compute_exponential_integral(
         std::pair<double, double> initial_condition);
@@ -128,22 +125,26 @@ class Enthalpy : public EquationOfState<true, 1> {
     using type = std::vector<double>;
     static constexpr Options::String help = {"Cosine coefficients c_j"};
   };
+  struct LowDensitySpectral {
+    using type = EquationsOfState::Spectral;
+    static constexpr Options::String help = {
+        "Low density EoS stitched at the MinimumDensity"};
+  };
 
   static constexpr Options::String help = {
-      "An EoS with a parametrized value h(log(rho)) with h the specific "
+      "An EoS with a parametrized value h(log(rho/rho_0)) with h the specific "
       "enthalpy and rho the baryon rest mass density.  The enthalpy is "
       "expanded as a sum of polynomial terms and trigonometric corrections. "
       "let x = log(rho/rho_0) in"
-      "h(x) = \sum_i a_ix^i + \sum_j b_jsin(k * j * x) + c_jcos(k * j * x) "
+      "h(x) = \\sum_i a_ix^i + \\sum_j b_jsin(k * j * x) + c_jcos(k * j * x) "
       "Note that rho(x)(1+epsilon(x)) = int_0^x e^x' h((x') dx' can be "
       "computed "
       "analytically, and therefore so can "
       "P(x) = rho(x) * (h(x) - (1 + epsilon(x))) "};
 
-  using options = tmpl::append<
-      tmpl::list<ReferenceDensity, MinimumDensity, MaximumDensity,
-                 PolynomialCoefficients, SinCoefficients, CosCoefficients>,
-      EquationsOfState::Spectral::options>;
+  using options = tmpl::list<ReferenceDensity, MaximumDensity, MinimumDensity,
+                             PolynomialCoefficients, SinCoefficients,
+                             CosCoefficients, LowDensitySpectral>;
 
   Enthalpy() = default;
   Enthalpy(const Enthalpy&) = default;
@@ -157,10 +158,7 @@ class Enthalpy : public EquationOfState<true, 1> {
            std::vector<double> polynomial_coefficients,
            std::vector<double> sin_coefficients,
            std::vector<double> cos_coefficients,
-           double lower_spectral_reference_density,
-           double lower_spectral_reference_pressure,
-           std::vector<double> lower_spectral_coefficients,
-           double lower_spectral_upper_density);
+           const EquationsOfState::Spectral& lower_spectral);
 
   EQUATION_OF_STATE_FORWARD_DECLARE_MEMBERS(Enthalpy, 1)
 
