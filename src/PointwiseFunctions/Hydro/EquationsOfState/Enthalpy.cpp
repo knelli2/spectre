@@ -233,7 +233,7 @@ double Enthalpy::evaluate_coefficients(
 }
 
 template <typename DataType>
-Scalar<DataType> Spectral::pressure_from_density_impl(
+Scalar<DataType> Enthalpy::pressure_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{pressure_from_density(get(rest_mass_density))};
@@ -247,7 +247,7 @@ Scalar<DataType> Spectral::pressure_from_density_impl(
 }
 
 template <class DataType>
-Scalar<DataType> Spectral::rest_mass_density_from_enthalpy_impl(
+Scalar<DataType> Enthalpy::rest_mass_density_from_enthalpy_impl(
     const Scalar<DataType>& specific_enthalpy) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -263,7 +263,7 @@ Scalar<DataType> Spectral::rest_mass_density_from_enthalpy_impl(
 }
 
 template <class DataType>
-Scalar<DataType> Spectral::specific_enthalpy_from_density_impl(
+Scalar<DataType> Enthalpy::specific_enthalpy_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -279,7 +279,7 @@ Scalar<DataType> Spectral::specific_enthalpy_from_density_impl(
 }
 
 template <class DataType>
-Scalar<DataType> Spectral::specific_internal_energy_from_density_impl(
+Scalar<DataType> Enthalpy::specific_internal_energy_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -295,7 +295,7 @@ Scalar<DataType> Spectral::specific_internal_energy_from_density_impl(
 }
 
 template <class DataType>
-Scalar<DataType> Spectral::chi_from_density_impl(
+Scalar<DataType> Enthalpy::chi_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{chi_from_density(get(rest_mass_density))};
@@ -309,7 +309,7 @@ Scalar<DataType> Spectral::chi_from_density_impl(
 }
 
 template <class DataType>
-Scalar<DataType> Spectral::kappa_times_p_over_rho_squared_from_density_impl(
+Scalar<DataType> Enthalpy::kappa_times_p_over_rho_squared_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   return make_with_value<Scalar<DataType>>(get(rest_mass_density), 0.0);
 }

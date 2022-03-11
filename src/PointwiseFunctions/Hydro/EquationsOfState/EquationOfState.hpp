@@ -38,10 +38,8 @@ struct DerivedClasses {};
 
 template <>
 struct DerivedClasses<true, 1> {
-  using type = tmpl::list<Spectral, Enthalpy,  PolytropicFluid<true>>;
+  using type = tmpl::list<Spectral, Enthalpy, PolytropicFluid<true>>;
 };
-
-
 
 template <>
 struct DerivedClasses<false, 1> {
@@ -81,8 +79,7 @@ class EquationOfState;
  * of state and `false` for non-relativistic equations of state.
  */
 template <bool IsRelativistic>
-class EquationOfState<IsRelativistic, 1>
-    : public PUP::able {
+class EquationOfState<IsRelativistic, 1> : public PUP::able {
  public:
   static constexpr bool is_relativistic = IsRelativistic;
   static constexpr size_t thermodynamic_dim = 1;
@@ -197,8 +194,7 @@ class EquationOfState<IsRelativistic, 1>
  * of state and `false` for non-relativistic equations of state.
  */
 template <bool IsRelativistic>
-class EquationOfState<IsRelativistic, 2>
-    : public PUP::able {
+class EquationOfState<IsRelativistic, 2> : public PUP::able {
  public:
   static constexpr bool is_relativistic = IsRelativistic;
   static constexpr size_t thermodynamic_dim = 2;
@@ -414,5 +410,5 @@ class EquationOfState<IsRelativistic, 2>
 #include "PointwiseFunctions/Hydro/EquationsOfState/DarkEnergyFluid.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/IdealFluid.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/PolytropicFluid.hpp"
-#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
-#include "PointwiseFunctions/Hydro/EquationsOfState/Enthalpy.hpp"
+//#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
+//#include "PointwiseFunctions/Hydro/EquationsOfState/Enthalpy.hpp"

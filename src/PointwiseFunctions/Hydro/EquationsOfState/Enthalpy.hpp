@@ -18,12 +18,13 @@
 #include "Options/Options.hpp"
 #include "Parallel/CharmPupable.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/EquationOfState.hpp"  // IWYU pragma: keep
-//#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
+#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
 #include "Utilities/Math.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
 class DataVector;
+
 /// \endcond
 
 // IWYU pragma: no_forward_declare Tensor
@@ -214,7 +215,8 @@ class Enthalpy : public EquationOfState<true, 1> {
   double minimum_density_ = std::numeric_limits<double>::signaling_NaN();
   double maximum_density_ = std::numeric_limits<double>::signaling_NaN();
   double minimum_enthalpy_ = std::numeric_limits<double>::signaling_NaN();
-  Spectral lower_spectral_;
+
+  EquationsOfState::Spectral lower_spectral_;
   Coefficients coefficients_;
   Coefficients exponential_integral_coefficients_;
   Coefficients derivative_coefficients_;

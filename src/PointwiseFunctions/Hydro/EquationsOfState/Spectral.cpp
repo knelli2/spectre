@@ -2,8 +2,8 @@
 // See LICENSE.txt for details.
 
 #include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
-
 #include <cmath>
+#include "PointwiseFunctions/Hydro/EquationsOfState/EquationOfState.hpp"
 
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
