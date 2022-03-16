@@ -38,21 +38,22 @@ void check_exact() {
   TestHelpers::test_creation<std::unique_ptr<EoS::EquationOfState<true, 1>>>(
       {"Enthalpy:\n"
        "  ReferenceDensity: 2.0\n"
-       "  MinimumDensity: 4.0  \n"
-       "  MaximumDensity: 100.0  \n"
-       "  PolynomialCoefficients: [1, 0.2, 0, 0, 0.0001]\n"
+       "  MaximumDensity: 4.0  \n"
+       "  MinimumDensity: 100.0  \n"
+       "  MinimumEnergyDensity: 4.448303974107519 \n"
        "  TrigScaling: 1.5\n"
+       "  PolynomialCoefficients: [1.0, 0.2, 0.0, 0.0, 0.0001]\n"
        "  SinCoefficients: [0.01, 0.003, -0.0001,.0001]\n"
        "  CosCoefficients: [0.01, 0.003, 0.0001, 0.00001]\n"
-       "  Spectral:\n"
+       "  StitchedLowDensityEoS:\n"
        "    ReferenceDensity: 0.8 \n"
        "    ReferencePressure: 0.3727074036491289 \n"
        "    Coefficients: [0.30255164] \n"
        "    UpperDensity: 4.0 \n"});
 
-  EquationsOfState::Enthalpy eos(reference_density, max_density, min_density,
-                                 min_energy_density, trig_scaling, poly_coefs,
-                                 sin_coefs, cos_coefs, lower_spectral);
+  EquationsOfState::Enthalpy<EquationsOfState::Spectral> eos(
+      reference_density, max_density, min_density, min_energy_density,
+      trig_scaling, poly_coefs, sin_coefs, cos_coefs, lower_spectral);
   // Test DataVector functions
   {
     const Scalar<DataVector> rho{DataVector{1.5 * exp(1.0), 1.5 * exp(2.0),
@@ -71,11 +72,11 @@ void check_exact() {
     const auto h_c = eos.specific_enthalpy_from_density(rho);
     const auto h_expected =
         get(eps_expected) + 1.0 + get(p_expected) / get(rho);
-    CHECK_ITERABLE_APPROX(h_c, h_expected);
+    CHECK_ITERABLE_APPROX(get(h_c), h_expected);
     const auto chi_c = eos.chi_from_density(rho);
     const Scalar<DataVector> chi_expected{
         DataVector{0.18455972, 0.22974621, 0.19239659, 0.24820221}};
-    CHECK_ITERABLE_APPROX(chi_expected, get(chi_c));
+    CHECK_ITERABLE_APPROX(get(chi_expected), get(chi_c));
     const Scalar<DataVector> p_c_kappa_c_over_rho_sq_expected{
         DataVector{0.0, 0.0, 0.0, 0.0}};
     const auto p_c_kappa_c_over_rho_sq =

@@ -25,6 +25,7 @@ class IdealFluid;
 template <bool IsRelativistic>
 class PolytropicFluid;
 class Spectral;
+template <typename LowDensityEoS>
 class Enthalpy;
 }  // namespace EquationsOfState
 /// \endcond
@@ -38,7 +39,7 @@ struct DerivedClasses {};
 
 template <>
 struct DerivedClasses<true, 1> {
-  using type = tmpl::list<Spectral, Enthalpy, PolytropicFluid<true>>;
+  using type = tmpl::list<Spectral, Enthalpy<Spectral>, PolytropicFluid<true>>;
 };
 
 template <>
@@ -410,5 +411,5 @@ class EquationOfState<IsRelativistic, 2> : public PUP::able {
 #include "PointwiseFunctions/Hydro/EquationsOfState/DarkEnergyFluid.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/IdealFluid.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/PolytropicFluid.hpp"
-//#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
-//#include "PointwiseFunctions/Hydro/EquationsOfState/Enthalpy.hpp"
+#include "PointwiseFunctions/Hydro/EquationsOfState/Spectral.hpp"
+#include "PointwiseFunctions/Hydro/EquationsOfState/Enthalpy.hpp"

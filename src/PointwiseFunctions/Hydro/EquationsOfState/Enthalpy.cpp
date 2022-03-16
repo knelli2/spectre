@@ -23,8 +23,18 @@
 // }
 // }
 
+namespace {
+auto pass_to_low_density =
+    +[](double rest_mass_density,
+        std::function<Scalar<double>(Scalar<double>)> to_evaluate) {
+      Scalar<double> rest_mass_scalar{rest_mass_density};
+      return get(to_evaluate(rest_mass_scalar));
+    };
+}  // namespace
+
 namespace EquationsOfState {
-Enthalpy::Coefficients::Coefficients(
+template <typename LowDensityEoS>
+Enthalpy<LowDensityEoS>::Coefficients::Coefficients(
     std::vector<double> in_polynomial_coefficients,
     std::vector<double> in_sin_coefficients,
     std::vector<double> in_cos_coefficients, double in_trig_scale,
@@ -34,7 +44,7 @@ Enthalpy::Coefficients::Coefficients(
       cos_coefficients(in_cos_coefficients),
       trig_scale(in_trig_scale),
       reference_density(in_reference_density) {
-  if (std::isnan(in_exponential_constant)) {
+  if (not std::isnan(in_exponential_constant)) {
     // In practice we should always know this at compile time,
     // it should probably be templated on
     has_exponential_prefactor = true;
@@ -48,7 +58,9 @@ Enthalpy::Coefficients::Coefficients(
 
 // Given an expansion h(x) = sum_i f_i(x) , compute int_a^x sum_i f_i(x) e^x +
 // F(a)
-Enthalpy::Coefficients Enthalpy::Coefficients::compute_exponential_integral(
+template <typename LowDensityEoS>
+typename Enthalpy<LowDensityEoS>::Coefficients
+Enthalpy<LowDensityEoS>::Coefficients::compute_exponential_integral(
     std::pair<double, double> initial_condition) {
   // Not yet implemented
   // Doing the exponential integral of something already with an expoenetial
@@ -101,7 +113,9 @@ Enthalpy::Coefficients Enthalpy::Coefficients::compute_exponential_integral(
       new_constant;
   return exponential_integral_coefficients;
 }
-Enthalpy::Coefficients Enthalpy::Coefficients::compute_derivative() {
+template <typename LowDensityEoS>
+typename Enthalpy<LowDensityEoS>::Coefficients
+Enthalpy<LowDensityEoS>::Coefficients::compute_derivative() {
   // Slow/Bad?
   std::vector<double> derivative_poly_coeffs(polynomial_coefficients.size());
   std::vector<double> derivative_sin_coeffs(sin_coefficients.size());
@@ -140,29 +154,32 @@ Enthalpy::Coefficients Enthalpy::Coefficients::compute_derivative() {
 
   return derivative_coefficients;
 }
-void Enthalpy::Coefficients::pup(PUP::er& p) {
+template <typename LowDensityEoS>
+void Enthalpy<LowDensityEoS>::Coefficients::pup(PUP::er& p) {
   p | polynomial_coefficients;
   p | sin_coefficients;
   p | cos_coefficients;
   p | reference_density;
   p | trig_scale;
 }
-
-Enthalpy::Enthalpy(const double reference_density, const double max_density,
-                   const double min_density, const double min_energy_density,
-                   const double trig_scale,
-                   const std::vector<double> polynomial_coefficients,
-                   const std::vector<double> sin_coefficients,
-                   const std::vector<double> cos_coefficients,
-                   const EquationsOfState::Spectral& lower_spectral)
+template <typename LowDensityEoS>
+Enthalpy<LowDensityEoS>::Enthalpy(
+    const double reference_density, const double max_density,
+    const double min_density, const double min_energy_density,
+    const double trig_scale, const std::vector<double> polynomial_coefficients,
+    const std::vector<double> sin_coefficients,
+    const std::vector<double> cos_coefficients,
+    const LowDensityEoS& low_density_eos)
     : reference_density_(reference_density),
       minimum_density_(min_density),
       maximum_density_(max_density),
-      lower_spectral_(lower_spectral),
+      low_density_eos_(low_density_eos),
       coefficients_(polynomial_coefficients, sin_coefficients, cos_coefficients,
                     trig_scale, reference_density)
 
 {
+  Parallel::printf("coefficients are not expd? : %d ",
+                   std::isnan(coefficients_.exponential_external_constant));
   minimum_enthalpy_ = specific_enthalpy_from_density(minimum_density_);
   exponential_integral_coefficients_ =
       coefficients_.compute_exponential_integral(
@@ -170,15 +187,19 @@ Enthalpy::Enthalpy(const double reference_density, const double max_density,
   derivative_coefficients_ = coefficients_.compute_derivative();
 }
 
-EQUATION_OF_STATE_MEMBER_DEFINITIONS(, Enthalpy, double, 1)
-EQUATION_OF_STATE_MEMBER_DEFINITIONS(, Enthalpy, DataVector, 1)
+EQUATION_OF_STATE_MEMBER_DEFINITIONS(template <typename LowDensityEoS>,
+                                     Enthalpy<LowDensityEoS>, double, 1)
+EQUATION_OF_STATE_MEMBER_DEFINITIONS(template <typename LowDensityEoS>,
+                                     Enthalpy<LowDensityEoS>, DataVector, 1)
 
-Enthalpy::Enthalpy(CkMigrateMessage* /*unused*/) {}
+template <typename LowDensityEoS>
+Enthalpy<LowDensityEoS>::Enthalpy(CkMigrateMessage* /*unused*/) {}
 
-void Enthalpy::pup(PUP::er& p) {
+template <typename LowDensityEoS>
+void Enthalpy<LowDensityEoS>::pup(PUP::er& p) {
   EquationOfState<true, 1>::pup(p);
   p | reference_density_;
-  p | lower_spectral_;
+  p | low_density_eos_;
   p | maximum_density_;
   p | minimum_density_;
   p | coefficients_;
@@ -186,21 +207,25 @@ void Enthalpy::pup(PUP::er& p) {
   p | derivative_coefficients_;
 }
 
-double Enthalpy::x_from_density(const double density) const {
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::x_from_density(const double density) const {
   return log(density / reference_density_);
 }
-double Enthalpy::density_from_x(const double x) const {
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::density_from_x(const double x) const {
   return reference_density_ * exp(x);
 }
-
-double Enthalpy::energy_density_from_log_density(const double x) const {
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::energy_density_from_log_density(
+    const double x) const {
   return reference_density_ *
          evaluate_coefficients(exponential_integral_coefficients_, x);
 }
 
 // Evaluate the function represented by the coefficinets at x  = log(rho)
-double Enthalpy::evaluate_coefficients(
-    const Enthalpy::Coefficients& coefficients, const double x) {
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::evaluate_coefficients(
+    const Enthalpy<LowDensityEoS>::Coefficients& coefficients, const double x) {
   // Not as good as Horner's rule, so don't use for polynomials
   // The basis_function should be a family of functions indexed by
   // an integer
@@ -231,9 +256,9 @@ double Enthalpy::evaluate_coefficients(
   }
   return value;
 }
-
+template <typename LowDensityEoS>
 template <typename DataType>
-Scalar<DataType> Enthalpy::pressure_from_density_impl(
+Scalar<DataType> Enthalpy<LowDensityEoS>::pressure_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{pressure_from_density(get(rest_mass_density))};
@@ -245,9 +270,9 @@ Scalar<DataType> Enthalpy::pressure_from_density_impl(
     return result;
   }
 }
-
+template <typename LowDensityEoS>
 template <class DataType>
-Scalar<DataType> Enthalpy::rest_mass_density_from_enthalpy_impl(
+Scalar<DataType> Enthalpy<LowDensityEoS>::rest_mass_density_from_enthalpy_impl(
     const Scalar<DataType>& specific_enthalpy) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -262,8 +287,9 @@ Scalar<DataType> Enthalpy::rest_mass_density_from_enthalpy_impl(
   }
 }
 
+template <typename LowDensityEoS>
 template <class DataType>
-Scalar<DataType> Enthalpy::specific_enthalpy_from_density_impl(
+Scalar<DataType> Enthalpy<LowDensityEoS>::specific_enthalpy_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -278,8 +304,10 @@ Scalar<DataType> Enthalpy::specific_enthalpy_from_density_impl(
   }
 }
 
+template <typename LowDensityEoS>
 template <class DataType>
-Scalar<DataType> Enthalpy::specific_internal_energy_from_density_impl(
+Scalar<DataType>
+Enthalpy<LowDensityEoS>::specific_internal_energy_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{
@@ -294,8 +322,9 @@ Scalar<DataType> Enthalpy::specific_internal_energy_from_density_impl(
   }
 }
 
+template <typename LowDensityEoS>
 template <class DataType>
-Scalar<DataType> Enthalpy::chi_from_density_impl(
+Scalar<DataType> Enthalpy<LowDensityEoS>::chi_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   if constexpr (std::is_same_v<DataType, double>) {
     return Scalar<double>{chi_from_density(get(rest_mass_density))};
@@ -308,80 +337,107 @@ Scalar<DataType> Enthalpy::chi_from_density_impl(
   }
 }
 
+template <typename LowDensityEoS>
 template <class DataType>
-Scalar<DataType> Enthalpy::kappa_times_p_over_rho_squared_from_density_impl(
+Scalar<DataType>
+Enthalpy<LowDensityEoS>::kappa_times_p_over_rho_squared_from_density_impl(
     const Scalar<DataType>& rest_mass_density) const {
   return make_with_value<Scalar<DataType>>(get(rest_mass_density), 0.0);
 }
-
-double Enthalpy::chi_from_density(const double rest_mass_density) const {
-  const double x = log(rest_mass_density / reference_density_);
-  return evaluate_coefficients(derivative_coefficients_, x);
-}
-
-double Enthalpy::specific_internal_energy_from_density(
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::chi_from_density(
     const double rest_mass_density) const {
-  if (Enthalpy::in_spectral_domain(rest_mass_density)) {
-    return lower_spectral_.specific_internal_energy_from_density(
-        rest_mass_density);
+  if (Enthalpy::in_low_density_domain(rest_mass_density)) {
+    return pass_to_low_density(rest_mass_density,
+                               low_density_eos_.chi_from_density);
   } else {
-    return energy_density_from_log_density(x_from_density(rest_mass_density)) -
-           rest_mass_density;
+    const double x = x_from_density(rest_mass_density);
+    return evaluate_coefficients(derivative_coefficients_, x);
   }
 }
 
-double Enthalpy::specific_enthalpy_from_density(
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::specific_internal_energy_from_density(
     const double rest_mass_density) const {
-  return evaluate_coefficients(coefficients_,
-                               x_from_density(rest_mass_density));
-}
-
-// P(x) = rho(x)h(x) - e(x) with h the specific enthalpy, and e
-// the energy density.
-double Enthalpy::pressure_from_log_density(const double x) const {
-  if (Enthalpy::in_spectral_domain(density_from_x(x))) {
-    return lower_spectral_.pressure_from_log_density(x);
+  if (Enthalpy::in_low_density_domain(rest_mass_density)) {
+    return pass_to_low_density(
+        rest_mass_density,
+        low_density_eos_.specific_internal_energy_from_density);
   } else {
-    return density_from_x(x) * evaluate_coefficients(coefficients_, x) -
-           energy_density_from_log_density(x);
+    return 1 / rest_mass_density *
+               energy_density_from_log_density(
+                   x_from_density(rest_mass_density)) -
+           1.0;
   }
 }
-
-double Enthalpy::pressure_from_density(const double rest_mass_density) const {
-  if (Enthalpy::in_spectral_domain(rest_mass_density)) {
-    return lower_spectral_.pressure_from_density(rest_mass_density);
-  } else {
-    const double x = log(rest_mass_density / reference_density_);
-    return pressure_from_log_density(x);
+template <typename LowDensityEoS>
+double Enthalpy<LowDensityEoS>::specific_enthalpy_from_density(
+    const double rest_mass_density) const {
+  if (Enthalpy::in_low_density_domain(rest_mass_density)) {
+    return pass_to_low_density(rest_mass_density,
+                               low_density_eos_.specific_enthalpy_from_density);
+    return evaluate_coefficients(coefficients_,
+                                 x_from_density(rest_mass_density));
   }
-}
 
-// Solve for h(rho)=h0, which requires rootfinding for this EoS
-double Enthalpy::rest_mass_density_from_enthalpy(
-    const double specific_enthalpy) const {
-  if (specific_enthalpy <= minimum_enthalpy_) {
-    return lower_spectral_.rest_mass_density_from_enthalpy(specific_enthalpy);
-  } else {
-    // Root-finding appropriate between reference density and maximum density
-    // We can use x=0 and x=x_max as bounds
-    const auto f_df_lambda = [this, &specific_enthalpy](const double density) {
-      const auto x = x_from_density(density);
-      const double f =
-          evaluate_coefficients(coefficients_, x) - specific_enthalpy;
-
-      const double df = 1 / evaluate_coefficients(derivative_coefficients_, x);
-      ;
-      return std::make_pair(f, df);
-    };
-    const size_t digits = 14;
-    const double intial_guess = 0.5 * (minimum_density_ + maximum_density_);
-    const auto root_from_lambda = RootFinder::newton_raphson(
-        f_df_lambda, intial_guess, reference_density_, maximum_density_,
-        digits);
-    return root_from_lambda;
+  // P(x) = rho(x)h(x) - e(x) with h the specific enthalpy, and e
+  // the energy density.
+  template <typename LowDensityEoS>
+  double Enthalpy<LowDensityEoS>::pressure_from_log_density(const double x)
+      const {
+    auto rest_mass_density = density_from_x(x);
+    if (in_low_density_domain(rest_mass_density)) {
+      return pass_to_low_density(rest_mass_density,
+                                 low_density_eos_.pressure_from_density);
+    } else {
+      return rest_mass_density * evaluate_coefficients(coefficients_, x) -
+             energy_density_from_log_density(x);
+    }
   }
-}
+  template <typename LowDensityEoS>
+  double Enthalpy<LowDensityEoS>::pressure_from_density(
+      const double rest_mass_density) const {
+    if (in_low_density_domain(rest_mass_density)) {
+      return pass_to_low_density(rest_mass_density,
+                                 low_density_eos_.pressure_from_density);
+    } else {
+      const double x = x_from_density(rest_mass_density);
+      return pressure_from_log_density(x);
+    }
+  }
 
-PUP::able::PUP_ID EquationsOfState::Enthalpy::my_PUP_ID = 0;
+  // Solve for h(rho)=h0, which requires rootfinding for this EoS
+  template <typename LowDensityEoS>
+  double Enthalpy<LowDensityEoS>::rest_mass_density_from_enthalpy(
+      const double specific_enthalpy) const {
+    if (specific_enthalpy <= minimum_enthalpy_) {
+      return get(low_density_eos_.rest_mass_density_from_enthalpy(
+          Scalar<double>(specific_enthalpy)));
+    } else {
+      // Root-finding appropriate between reference density and maximum density
+      // We can use x=0 and x=x_max as bounds
+      const auto f_df_lambda = [this,
+                                &specific_enthalpy](const double density) {
+        const auto x = x_from_density(density);
+        const double f =
+            evaluate_coefficients(coefficients_, x) - specific_enthalpy;
+
+        const double df =
+            1 / evaluate_coefficients(derivative_coefficients_, x);
+        ;
+        return std::make_pair(f, df);
+      };
+      const size_t digits = 14;
+      const double intial_guess = 0.5 * (minimum_density_ + maximum_density_);
+      const auto root_from_lambda = RootFinder::newton_raphson(
+          f_df_lambda, intial_guess, reference_density_, maximum_density_,
+          digits);
+      return root_from_lambda;
+    }
+  }
+  template <typename LowDensityEoS>
+  PUP::able::PUP_ID EquationsOfState::Enthalpy<LowDensityEoS>::my_PUP_ID = 0;
+
+  template class EquationsOfState::Enthalpy<Spectral>;
 
 }  // namespace EquationsOfState

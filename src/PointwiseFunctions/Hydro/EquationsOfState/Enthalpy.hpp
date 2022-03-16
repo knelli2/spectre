@@ -57,6 +57,7 @@ namespace EquationsOfState {
  *
  *
  */
+template <typename LowDensityEoS>
 class Enthalpy : public EquationOfState<true, 1> {
  private:
   struct Coefficients {
@@ -76,9 +77,9 @@ class Enthalpy : public EquationOfState<true, 1> {
                  double in_exponential_constant =
                      std::numeric_limits<double>::quiet_NaN());
 
-    Enthalpy::Coefficients compute_exponential_integral(
+    Enthalpy<LowDensityEoS>::Coefficients compute_exponential_integral(
         std::pair<double, double> initial_condition);
-    Enthalpy::Coefficients compute_derivative();
+    Enthalpy<LowDensityEoS>::Coefficients compute_derivative();
     void pup(PUP::er& p);
   };
 
@@ -101,7 +102,14 @@ class Enthalpy : public EquationOfState<true, 1> {
   };
   struct MaximumDensity {
     using type = double;
-    static constexpr Options::String help = {"Upper density rho_u"};
+    static constexpr Options::String help = {"Maximum density for this EoS"};
+    static double lower_bound() { return 0.0; }
+  };
+  struct MinimumEnergyDensity {
+    using type = double;
+    static constexpr Options::String help = {
+        "The total energy density at the minimum"
+        "baryon density for this paametirzation"};
     static double lower_bound() { return 0.0; }
   };
 
@@ -126,8 +134,8 @@ class Enthalpy : public EquationOfState<true, 1> {
     using type = std::vector<double>;
     static constexpr Options::String help = {"Cosine coefficients c_j"};
   };
-  struct LowDensitySpectral {
-    using type = EquationsOfState::Spectral;
+  struct StitchedLowDensityEoS {
+    using type = LowDensityEoS;
     static constexpr Options::String help = {
         "Low density EoS stitched at the MinimumDensity"};
   };
@@ -143,9 +151,10 @@ class Enthalpy : public EquationOfState<true, 1> {
       "analytically, and therefore so can "
       "P(x) = rho(x) * (h(x) - (1 + epsilon(x))) "};
 
-  using options = tmpl::list<ReferenceDensity, MaximumDensity, MinimumDensity,
-                             PolynomialCoefficients, SinCoefficients,
-                             CosCoefficients, LowDensitySpectral>;
+  using options =
+      tmpl::list<ReferenceDensity, MaximumDensity, MinimumDensity,
+                 MinimumEnergyDensity, TrigScaling, PolynomialCoefficients,
+                 SinCoefficients, CosCoefficients, StitchedLowDensityEoS>;
 
   Enthalpy() = default;
   Enthalpy(const Enthalpy&) = default;
@@ -159,7 +168,7 @@ class Enthalpy : public EquationOfState<true, 1> {
            std::vector<double> polynomial_coefficients,
            std::vector<double> sin_coefficients,
            std::vector<double> cos_coefficients,
-           const EquationsOfState::Spectral& lower_spectral);
+           const LowDensityEoS& lower_density_eos);
 
   EQUATION_OF_STATE_FORWARD_DECLARE_MEMBERS(Enthalpy, 1)
 
@@ -194,7 +203,8 @@ class Enthalpy : public EquationOfState<true, 1> {
  private:
   EQUATION_OF_STATE_FORWARD_DECLARE_MEMBER_IMPLS(1)
 
-  bool in_spectral_domain(const double density) const {
+  SPECTRE_ALWAYS_INLINE
+  bool in_low_density_domain(const double density) const {
     return density < minimum_density_;
   }
 
@@ -216,7 +226,7 @@ class Enthalpy : public EquationOfState<true, 1> {
   double maximum_density_ = std::numeric_limits<double>::signaling_NaN();
   double minimum_enthalpy_ = std::numeric_limits<double>::signaling_NaN();
 
-  EquationsOfState::Spectral lower_spectral_;
+  LowDensityEoS low_density_eos_;
   Coefficients coefficients_;
   Coefficients exponential_integral_coefficients_;
   Coefficients derivative_coefficients_;
