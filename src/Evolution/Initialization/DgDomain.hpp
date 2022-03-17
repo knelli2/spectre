@@ -55,7 +55,7 @@ namespace Initialization {
  * DataBox:
  * - Uses:
  *   - `domain::Tags::InitialExtents<Dim>`
- *   - `domain::Tags::FunctionsOfTimeSpeCAndSpECTREControlSys`
+ *   - `control_system::Tags::FunctionsOfTimeInitialize`
  * - Adds:
  *   - `domain::Tags::Mesh<Dim>`
  *   - `domain::Tags::Element<Dim>`
@@ -91,8 +91,8 @@ struct Domain {
                  evolution::dg::Tags::Quadrature>;
   using const_global_cache_tags = tmpl::list<::domain::Tags::Domain<Dim>>;
 
-  using mutable_global_cache_tags = tmpl::list<
-      ::control_system::Tags::FunctionsOfTimeSpeCAndSpECTREControlSys>;
+  using mutable_global_cache_tags =
+      tmpl::list<::control_system::Tags::FunctionsOfTimeInitialize>;
 
   using simple_tags =
       tmpl::list<::domain::Tags::Mesh<Dim>, ::domain::Tags::Element<Dim>,
@@ -111,7 +111,7 @@ struct Domain {
           ::domain::Tags::Coordinates<Dim, Frame::ElementLogical>>,
       // Compute tag to retrieve functions of time from global cache.
       Parallel::Tags::FromGlobalCache<
-          ::control_system::Tags::FunctionsOfTimeSpeCAndSpECTREControlSys>,
+          ::control_system::Tags::FunctionsOfTimeInitialize>,
       // Compute tags for Frame::Inertial quantities
       ::domain::Tags::CoordinatesMeshVelocityAndJacobiansCompute<
           ::domain::CoordinateMaps::Tags::CoordinateMap<Dim, Frame::Grid,
