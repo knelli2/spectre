@@ -67,6 +67,9 @@ struct Initialize {
 
   using compute_tags = tmpl::list<>;
 
+  using const_global_cache_tags =
+      tmpl::list<control_system::Tags::RestrictToRotationAboutZAxis>;
+
   template <typename DbTagsList, typename... InboxTags, typename ArrayIndex,
             typename ActionList, typename ParallelComponent>
   static auto apply(db::DataBox<DbTagsList>& box,
@@ -85,12 +88,12 @@ struct Initialize {
 
     // Set the initial time between updates and measurements
     const auto& measurement_timescales =
-      get<control_system::Tags::MeasurementTimescales>(cache);
-    const auto& measurement_timescale_func = *(measurement_timescales.at(
-                              ControlSystem::name()));
+        get<control_system::Tags::MeasurementTimescales>(cache);
+    const auto& measurement_timescale_func =
+        *(measurement_timescales.at(ControlSystem::name()));
     const double initial_time = measurement_timescale_func.time_bounds()[0];
-    const double measurement_timescale = min(measurement_timescale_func.func(
-                    initial_time)[0]);
+    const double measurement_timescale =
+        min(measurement_timescale_func.func(initial_time)[0]);
     const auto& tuner = db::get<control_system::Tags::TimescaleTuner>(box);
     const double current_min_damp_timescale = min(tuner.current_timescale());
     db::mutate<control_system::Tags::Controller<deriv_order>,
