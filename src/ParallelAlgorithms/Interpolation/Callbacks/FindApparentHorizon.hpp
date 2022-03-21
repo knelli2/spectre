@@ -17,6 +17,7 @@
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/YlmSpherepack.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/Printf.hpp"
@@ -236,7 +237,7 @@ struct FindApparentHorizon {
         Parallel::printf(
             "%s: t=%.6g: its=%d: %.1e<R<%.0e, |R|=%.1g, "
             "|R_grid|=%.1g, %.4g<r<%.4g\n",
-            pretty_type::short_name<InterpolationTargetTag>(),
+            Options::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id),
             info.iteration, info.min_residual, info.max_residual,
             info.residual_ylm, info.residual_mesh, info.r_min, info.r_max);
