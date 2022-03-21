@@ -89,16 +89,31 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
     const double grid_dot_current = dot(grid_diff, current_diff);
     const DataVector grid_cross_current = cross(grid_diff, current_diff);
 
-    return grid_cross_current / grid_dot_current;
+    DataVector error = grid_cross_current / grid_dot_current;
+    if (get<control_system::Tags::RestrictToRotationAboutZAxis>(cache)) {
+      // Force x,y components to be 0 because we are only controlling
+      // z-component
+      error[0] = 0.0;
+      error[1] = 0.0;
+    }
+
+    return error;
   }
 };
 
-struct Rotation2D {
-  template <size_t DerivOrder, typename Metavariables, typename... TupleTags>
-  static DataVector apply(
-      const Parallel::GlobalCache<Metavariables>& cache, const double /*time*/,
-      const std::string& /*function_of_time_name*/,
-      const tuples::TaggedTuple<TupleTags...>& measurements) {
+struct Rotation2D : tt::ConformsTo<protocols::ControlError> {
+  using options = tmpl::list<>;
+  static constexpr Options::String help{
+      "Computes the control error for rotation control only about the z-axis. "
+      "This should not take any options."};
+
+  void pup(PUP::er& /*p*/) {}
+
+  template <typename Metavariables, typename... TupleTags>
+  DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
+                        const double /*time*/,
+                        const std::string& /*function_of_time_name*/,
+                        const tuples::TaggedTuple<TupleTags...>& measurements) {
     const auto& domain = get<domain::Tags::Domain<3>>(cache);
 
     using horizon_label = ::ah::ObjectLabel;
@@ -118,10 +133,15 @@ struct Rotation2D {
     const DataVector current_diff =
         current_position_of_B - current_position_of_A;
 
-    const double current_dot_grid = dot(current_diff, grid_diff);
-    const DataVector current_cross_grid = cross(current_diff, grid_diff);
+    const double grid_dot_current = dot(grid_diff, current_diff);
+    const DataVector grid_cross_current = cross(grid_diff, current_diff);
 
-    return {-current_cross_grid[2] / current_dot_grid};
+    DataVector error = grid_cross_current / grid_dot_current;
+    // Force x,y components to be 0 because we are only controlling z-component
+    error[0] = 0.0;
+    error[1] = 0.0;
+
+    return error;
   }
 };
 }  // namespace ControlErrors

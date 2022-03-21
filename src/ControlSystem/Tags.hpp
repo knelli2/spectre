@@ -74,6 +74,13 @@ struct WriteDataToDisk {
       "Whether control system data should be saved during an evolution."};
   using group = ControlSystemGroup;
 };
+
+struct RestrictToRotationAboutZAxis {
+  using type = bool;
+  static constexpr Options::String help = {
+      "Restrict rotation to be about the Z axis."};
+  using group = ControlSystemGroup;
+};
 }  // namespace OptionTags
 
 /// \ingroup ControlSystemGroup
@@ -93,6 +100,14 @@ namespace Tags {
 /// DataBox tag for the name of a control system
 struct ControlSystemName : db::SimpleTag {
   using type = std::string;
+};
+
+struct RestrictToRotationAboutZAxis : db::SimpleTag {
+  using type = bool;
+  using option_tags = tmpl::list<OptionTags::RestrictToRotationAboutZAxis>;
+
+  static constexpr bool pass_metavariables = false;
+  static type create_from_options(const type& option) { return option; }
 };
 
 /// \ingroup DataBoxTagsGroup
