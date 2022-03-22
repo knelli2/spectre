@@ -18,6 +18,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace domain::Tags {
 template <size_t Dim>
@@ -79,6 +81,14 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
         domain.excision_spheres().at("ObjectBExcisionSphere").center());
     const DataVector current_position_of_A = get<center_A>(measurements);
     const DataVector current_position_of_B = get<center_B>(measurements);
+
+    Parallel::printf(
+        "Grid position A: %s\n"
+        "Grid position B: %s\n"
+        "Cur. position A: %s\n"
+        "Cur. position B: %s\n",
+        grid_position_of_A, grid_position_of_B, current_position_of_A,
+        current_position_of_B);
 
     // A is to the left of B in grid frame. To get positive differences,
     // take B - A
