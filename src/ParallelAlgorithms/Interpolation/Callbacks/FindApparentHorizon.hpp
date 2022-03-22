@@ -59,13 +59,15 @@ namespace callbacks {
 /// type alias called `post_horizon_find_callbacks`, which is a list of
 /// structs, each of which has a function
 ///
-/// \snippet ApparentHorizons/Test_ApparentHorizonFinder.cpp post_horizon_find_callback_example
+/// \snippet ApparentHorizons/Test_ApparentHorizonFinder.cpp
+/// post_horizon_find_callback_example
 ///
 /// that is called if the FastFlow iteration has converged.
 /// InterpolationTargetTag also is assumed to contain an additional
 /// struct called `horizon_find_failure_callback`, which has a function
 ///
-/// \snippet ApparentHorizons/Test_ApparentHorizonFinder.cpp horizon_find_failure_callback_example
+/// \snippet ApparentHorizons/Test_ApparentHorizonFinder.cpp
+/// horizon_find_failure_callback_example
 ///
 /// that is called if the FastFlow iteration or the interpolation has
 /// failed.
@@ -199,6 +201,8 @@ struct FindApparentHorizon {
         db::get<Tags::IndicesOfInvalidInterpPoints<TemporalId>>(*box);
     if (indices_of_invalid_pts.count(temporal_id) > 0 and
         not indices_of_invalid_pts.at(temporal_id).empty()) {
+      Parallel::printf("Horizon finder %s failed.\n",
+                       Options::name<InterpolationTargetTag>());
       InterpolationTargetTag::horizon_find_failure_callback::template apply<
           InterpolationTargetTag>(*box, *cache, temporal_id,
                                   FastFlow::Status::InterpolationFailure);
@@ -259,6 +263,8 @@ struct FindApparentHorizon {
         // (i.e. the simple_action that we just called).
         return false;
       } else if (not has_converged) {
+        Parallel::printf("Horizon finder %s failed.\n",
+                         Options::name<InterpolationTargetTag>());
         InterpolationTargetTag::horizon_find_failure_callback::template apply<
             InterpolationTargetTag>(*box, *cache, temporal_id, status);
         horizon_finder_failed = true;

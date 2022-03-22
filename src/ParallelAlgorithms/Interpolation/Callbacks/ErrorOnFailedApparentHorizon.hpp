@@ -5,6 +5,7 @@
 
 #include "ApparentHorizons/FastFlow.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Options/Options.hpp"
 #include "Utilities/PrettyType.hpp"
 
 /// \cond
