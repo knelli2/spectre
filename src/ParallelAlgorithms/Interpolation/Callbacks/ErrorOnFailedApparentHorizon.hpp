@@ -5,6 +5,7 @@
 
 #include "ApparentHorizons/FastFlow.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Options/Options.hpp"
 #include "Utilities/PrettyType.hpp"
 
 /// \cond
@@ -29,7 +30,7 @@ struct ErrorOnFailedApparentHorizon {
                     const TemporalId& /*temporal_id*/,
                     const FastFlow::Status failure_reason) {
     ERROR("Apparent horizon finder "
-          << pretty_type::short_name<InterpolationTargetTag>()
+          << Options::name<InterpolationTargetTag>()
           << " failed, reason = " << failure_reason);
   }
 };
