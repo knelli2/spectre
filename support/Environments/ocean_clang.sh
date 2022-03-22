@@ -36,7 +36,7 @@ spectre_unload_modules() {
     module unload hdf5-1.12.0-gcc-7.3.0-mknp6xv
     module unload openblas-0.3.4-gcc-7.3.0-tt2coe7
     module unload python/3.9.5
-    module unload charm-6.10.2-libs
+    module unload charm-7.0.0
     module unload doxygen-1.9.1-gcc-7.3.0-nxmwu4a
     module unload zlib-1.2.11-gcc-7.3.0-h3h2oa4
 }
@@ -62,7 +62,7 @@ spectre_load_modules() {
     module load boost-1.68.0-gcc-7.3.0-vgl6ofr
     module load hdf5-1.12.0-gcc-7.3.0-mknp6xv
     module load openblas-0.3.4-gcc-7.3.0-tt2coe7
-    module load charm-6.10.2-libs
+    module load charm-7.0.0
     module load doxygen-1.9.1-gcc-7.3.0-nxmwu4a
     module load zlib-1.2.11-gcc-7.3.0-h3h2oa4
 }
@@ -73,14 +73,12 @@ spectre_run_cmake() {
         return 1
     fi
     spectre_load_modules
-    CHARM_ROOT="/home/knelli/tools/charm/verbs-linux-x86_64-smp"
     export GCC_HOME=/opt/ohpc/pub/compiler/gcc/7.3.0/bin
     cmake -D CHARM_ROOT=$CHARM_ROOT \
           -D CMAKE_BUILD_TYPE=Release \
           -D CMAKE_C_COMPILER=clang \
           -D CMAKE_CXX_COMPILER=clang++ \
           -D CMAKE_Fortran_COMPILER=${GCC_HOME}/gfortran \
-          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
@@ -91,7 +89,6 @@ spectre_run_cmake_charm7() {
         return 1
     fi
     spectre_load_modules
-    CHARM_ROOT="/home/knelli/tools/charm_7/verbs-linux-x86_64-smp"
     export GCC_HOME=/opt/ohpc/pub/compiler/gcc/7.3.0/bin
     cmake -D CHARM_ROOT=$CHARM_ROOT \
           -D CMAKE_BUILD_TYPE=Release \
