@@ -19,13 +19,13 @@ spectre_unload_modules() {
     module unload openblas/0.2.18
     module unload papi/5.5.1
     module unload yaml-cpp/master
-    module unload openmpi/2.0.0
+    module unload impi/2017.1
     module unload cmake/3.18.2
     module unload ninja/1.10.0
     module unload doxygen/1.8.13
     module unload git/2.8.4
     module unload llvm/10.0.0
-    module unload charm/6.10.2-mpi-smp
+    module unload charm/6.10.2-intelmpi-smp
     module unload python/anaconda3-2019.10
     module unload pybind11/2.6.1
 }
@@ -42,13 +42,13 @@ spectre_load_modules() {
     module load openblas/0.2.18
     module load papi/5.5.1
     module load yaml-cpp/master
-    module load openmpi/2.0.0
+    module load impi/2017.1
     module load cmake/3.18.2
     module load ninja/1.10.0
     module load doxygen/1.8.13
     module load git/2.8.4
     module load llvm/10.0.0
-    module load charm/6.10.2-mpi-smp
+    module load charm/6.10.2-intelmpi-smp
     module load python/anaconda3-2019.10
     module load pybind11/2.6.1
 }
@@ -59,7 +59,6 @@ spectre_run_cmake() {
         return 1
     fi
     spectre_load_modules
-    CHARM_ROOT="/home/knelli/tools/charm/mpi-linux-x86_64-smp"
     # Notes:
     # - Set CMAKE_PREFIX_PATH to pick up packages consistent with the anaconda
     #   module, such as zlib. The anaconda module on Wheeler does not set this
@@ -72,7 +71,6 @@ spectre_run_cmake() {
           -D MEMORY_ALLOCATOR=SYSTEM \
           -D BUILD_PYTHON_BINDINGS=OFF \
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
-          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
