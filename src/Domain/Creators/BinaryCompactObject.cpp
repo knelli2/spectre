@@ -657,11 +657,13 @@ BinaryCompactObject::functions_of_time(
     return result;
   }
 
+  const std::string translation_name{"Translation"};
   // Get existing function of time names that are used for the maps and assign
   // their initial expiration time to infinity (i.e. not expiring)
   std::unordered_map<std::string, double> expiration_times{
       {expansion_function_of_time_name_,
        std::numeric_limits<double>::infinity()},
+      {translation_name, std::numeric_limits<double>::infinity()},
       {rotation_about_z_axis_function_of_time_name_,
        std::numeric_limits<double>::infinity()},
       {size_map_function_of_time_names_[0],
@@ -674,6 +676,12 @@ BinaryCompactObject::functions_of_time(
   for (auto& [name, expr_time] : initial_expiration_times) {
     expiration_times[name] = expr_time;
   }
+
+  result[translation_name] =
+      std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
+          initial_time_,
+          std::array<DataVector, 4>{{{3, 0.0}, {3, 0.0}, {3, 0.0}, {3, 0.0}}},
+          expiration_times.at(translation_name));
 
   // ExpansionMap FunctionOfTime for the function \f$a(t)\f$ in the
   // domain::CoordinateMaps::TimeDependent::CubicScale map

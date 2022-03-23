@@ -126,8 +126,10 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
            "resulting quaternion should be 0.0, but is " +
                get_output(result_with_four_components[0]) + " instead.");
 
-    return {result_with_four_components[1], result_with_four_components[2],
-            result_with_four_components[3]};
+    // using this as a fake control system
+    return {0.0, 0.0, 0.0};
+    // return {result_with_four_components[1], result_with_four_components[2],
+    //         result_with_four_components[3]};
   }
 
  private:
