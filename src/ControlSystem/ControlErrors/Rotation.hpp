@@ -105,6 +105,8 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
       // z-component
       error[0] = 0.0;
       error[1] = 0.0;
+      error[2] = (current_position_of_B[1] - current_position_of_A[1]) /
+                 (current_position_of_B[0] - current_position_of_A[0]);
     }
 
     return error;
