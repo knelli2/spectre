@@ -16,9 +16,9 @@
 namespace EquationsOfState {
 template <typename LowDensityEoS>
 Enthalpy<LowDensityEoS>::Coefficients::Coefficients(
-    std::vector<double> in_polynomial_coefficients,
-    std::vector<double> in_sin_coefficients,
-    std::vector<double> in_cos_coefficients, double in_trig_scale,
+    const std::vector<double>& in_polynomial_coefficients,
+    const std::vector<double>& in_sin_coefficients,
+    const std::vector<double>& in_cos_coefficients, double in_trig_scale,
     double in_reference_density, double in_exponential_constant)
     : polynomial_coefficients(in_polynomial_coefficients),
       sin_coefficients(in_sin_coefficients),
@@ -42,7 +42,7 @@ Enthalpy<LowDensityEoS>::Coefficients::Coefficients(
 template <typename LowDensityEoS>
 typename Enthalpy<LowDensityEoS>::Coefficients
 Enthalpy<LowDensityEoS>::Coefficients::compute_exponential_integral(
-    std::pair<double, double> initial_condition) {
+    const std::pair<double, double>& initial_condition) {
   // Not yet implemented
   // Doing the exponential integral of something already with an expoenetial
   // prefactor shouldn't be happening
@@ -96,9 +96,9 @@ Enthalpy<LowDensityEoS>::Coefficients::compute_exponential_integral(
       integral_poly_coeffs;
   exponential_integral_coefficients.sin_coefficients = integral_sin_coeffs;
   exponential_integral_coefficients.cos_coefficients = integral_cos_coeffs;
-  double new_constant = std::get<1>(initial_condition) -
+  double new_constant = initial_condition.second -
                         evaluate_coefficients(exponential_integral_coefficients,
-                                              std::get<0>(initial_condition));
+                                              initial_condition.first);
   exponential_integral_coefficients.exponential_external_constant =
       new_constant;
   return exponential_integral_coefficients;
@@ -160,8 +160,9 @@ template <typename LowDensityEoS>
 Enthalpy<LowDensityEoS>::Enthalpy(
     const double reference_density, const double max_density,
     const double min_density, const double min_energy_density,
-    const double trig_scale, std::vector<double> polynomial_coefficients,
-    std::vector<double> sin_coefficients, std::vector<double> cos_coefficients,
+    const double trig_scale, const std::vector<double>& polynomial_coefficients,
+    const std::vector<double>& sin_coefficients,
+    const std::vector<double>& cos_coefficients,
     const LowDensityEoS& low_density_eos)
     : reference_density_(reference_density),
       minimum_density_(min_density),
@@ -176,10 +177,10 @@ Enthalpy<LowDensityEoS>::Enthalpy(
       "name of Spectral is : %s \n",
       static_cast<std::string>(pretty_type::short_name<LowDensityEoS>()));
   minimum_enthalpy_ = specific_enthalpy_from_density(minimum_density_);
+  const std::pair<double, double> blah{
+      x_from_density(min_density), 1 / reference_density * min_energy_density};
   exponential_integral_coefficients_ =
-      coefficients_.compute_exponential_integral(
-          {x_from_density(min_density),
-           1 / reference_density * min_energy_density});
+      coefficients_.compute_exponential_integral(blah);
   Parallel::printf("Got the integral \n");
   derivative_coefficients_ = coefficients_.compute_derivative();
   low_density_eos_ = low_density_eos;

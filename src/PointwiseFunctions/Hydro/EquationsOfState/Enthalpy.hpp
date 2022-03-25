@@ -111,15 +111,15 @@ class Enthalpy : public EquationOfState<true, 1> {
     Coefficients() = default;
     ~Coefficients() = default;
     Coefficients(const Coefficients& coefficients) = default;
-    Coefficients(std::vector<double> in_polynomial_coefficients,
-                 std::vector<double> in_sin_coefficients,
-                 std::vector<double> in_cos_coefficients, double in_trig_scale,
-                 double in_reference_density,
+    Coefficients(const std::vector<double>& in_polynomial_coefficients,
+                 const std::vector<double>& in_sin_coefficients,
+                 const std::vector<double>& in_cos_coefficients,
+                 double in_trig_scale, double in_reference_density,
                  double in_exponential_constant =
                      std::numeric_limits<double>::quiet_NaN());
 
     Enthalpy<LowDensityEoS>::Coefficients compute_exponential_integral(
-        std::pair<double, double> initial_condition);
+        const std::pair<double, double>& initial_condition);
     Enthalpy<LowDensityEoS>::Coefficients compute_derivative();
     void pup(PUP::er& p);
   };
@@ -209,9 +209,9 @@ class Enthalpy : public EquationOfState<true, 1> {
 
   Enthalpy(double reference_density, double max_density, double min_density,
            double min_energy_density, double trig_scale,
-           std::vector<double> polynomial_coefficients,
-           std::vector<double> sin_coefficients,
-           std::vector<double> cos_coefficients,
+           const std::vector<double>& polynomial_coefficients,
+           const std::vector<double>& sin_coefficients,
+           const std::vector<double>& cos_coefficients,
            const LowDensityEoS& lower_density_eos);
 
   EQUATION_OF_STATE_FORWARD_DECLARE_MEMBERS(Enthalpy, 1)

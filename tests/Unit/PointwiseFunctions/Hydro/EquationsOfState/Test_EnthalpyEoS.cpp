@@ -99,7 +99,7 @@ void check_exact() {
     const Scalar<double> rho{1.5 * exp(1.0)};
     const auto p = eos.pressure_from_density(rho);
     const double p_expected = 0.1790434090653277;
-    CHECK(get(p) == p_expected);
+    CHECK(get(p) == approx(p_expected));
     const auto eps = eos.specific_internal_energy_from_density(rho);
     const double eps_expected = 0.11289220759026733;
     CHECK_ITERABLE_APPROX(get(eps), eps_expected);
