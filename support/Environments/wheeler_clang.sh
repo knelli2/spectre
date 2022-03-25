@@ -73,6 +73,7 @@ spectre_run_cmake() {
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
           -D DEBUG_SYMBOLS=ON \
           -D UBSAN_UNDEFINED=ON \
+          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
