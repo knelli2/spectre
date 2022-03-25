@@ -19,6 +19,9 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Utilities/ErrorHandling/Assert.hpp"
+#include "Utilities/PrettyType.hpp"
+
 namespace observers::Actions {
 /*!
  * \brief Registers a singleton with the ObserverWriter.
@@ -57,6 +60,12 @@ struct RegisterSingletonWithObserverWriter {
     // We call only on node 0; the observation call will occur only
     // on node 0.
     auto& my_proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
+    auto* my_ptr = my_proxy.ckLocal();
+    ASSERT(my_ptr != nullptr,
+           "Inside RegisterSingleton. The %s.ckLocal() gave a null pointer and "
+           "it shouldn't have! What "
+           "have you done! Oh the humanity..."
+               << pretty_type::get_name<ParallelComponent>());
     Parallel::simple_action<Actions::RegisterReductionNodeWithWritingNode>(
         Parallel::get_parallel_component<
             observers::ObserverWriter<Metavariables>>(cache)[0],
