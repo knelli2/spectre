@@ -4,6 +4,7 @@
 #pragma once
 
 #include <tuple>
+#include <string>
 
 #include "ControlSystem/Actions/Initialization.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
@@ -17,6 +18,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
+#include "Parallel/Tags/ResourceInfo.hpp"
 #include "ParallelAlgorithms/Initialization/Actions/RemoveOptionsAndTerminatePhase.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
@@ -38,6 +40,8 @@ struct ControlComponent {
 
   using metavariables = Metavariables;
 
+  static std::string name() { return ControlSystem::name(); }
+
   using system = ControlSystem;
 
   using phase_dependent_action_list = tmpl::list<
@@ -52,8 +56,11 @@ struct ControlComponent {
           tmpl::list<observers::Actions::RegisterSingletonWithObserverWriter<
               control_system::Registration<ControlSystem>>>>>;
 
-  using initialization_tags = Parallel::get_initialization_tags<
-      Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
+  using initialization_tags = tmpl::flatten<
+      tmpl::list<Parallel::get_initialization_tags<
+                     Parallel::get_initialization_actions_list<
+                         phase_dependent_action_list>>,
+                 Parallel::Tags::SingletonInfo<ControlComponent>>>;
 
   static void execute_next_phase(
       const typename Metavariables::Phase next_phase,

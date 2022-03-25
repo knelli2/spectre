@@ -24,6 +24,7 @@
 #include "Utilities/Functional.hpp"
 #include "Utilities/MakeString.hpp"
 
+#include "Parallel/Local.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/PrettyType.hpp"
 
@@ -170,19 +171,19 @@ void write_components_to_disk(
         observers::ObservationId(time, ControlSystem::name());
     const auto& legend = WriterHelper::legend;
 
-    auto* control_component_ptr = control_component_proxy.ckLocal();
+    auto* control_component_ptr = Parallel::local(control_component_proxy);
     const std::string comp_name =
         pretty_type::get_name<ControlComponent<Metavariables, ControlSystem>>();
     ASSERT(control_component_ptr != nullptr,
-           "Inside WriteData. The %s.ckLocal() gave a null pointer and "
-           "it shouldn't have! What "
-           "have you done! Oh the humanity...\n"
-               << comp_name);
+           "Inside WriteData. The " << comp_name << "."
+                                    << "ckLocal() gave a null pointer and "
+                                       "it shouldn't have! What "
+                                       "have you done! Oh the humanity...\n");
     Parallel::threaded_action<observers::ThreadedActions::WriteReductionData>(
         // Node 0 is always the writer
         observer_writer_proxy[0], observation_id,
         static_cast<size_t>(
-            Parallel::my_node(*control_component_proxy.ckLocal())),
+            Parallel::my_node(*Parallel::local(control_component_proxy))),
         subfile_name, legend,
         WriterHelper::ReductionData{
             // clang-format off
