@@ -20,6 +20,7 @@ void check_exact() {
   // Test creation
   // TODO : Find an analytic EoS that isn't weird for test case
   namespace EoS = EquationsOfState;
+  Parallel::printf("Failed after entry");
   const std::vector<double> poly_coefs = {1.0, 0.2, 0.0, 0.0, 0.0001};
   const std::vector<double> sin_coefs = {0.01, 0.003, -0.0001, .0001};
   const std::vector<double> cos_coefs = {0.01, 0.003, 0.0001, 0.00001};
@@ -32,30 +33,34 @@ void check_exact() {
   const double lower_spectral_reference_pressure = 0.3727074036491289;
   const double lower_spectral_upper_density = 4;
   const std::vector<double> lower_spectral_gamma_coefficients{.30255164};
-  EquationsOfState::Spectral lower_spectral{
+  EoS::Spectral lower_spectral{
       lower_spectral_reference_density, lower_spectral_reference_pressure,
       lower_spectral_gamma_coefficients, lower_spectral_upper_density};
+  Parallel::printf("Made the Spectral but not the Enthalpy");
+  // Parallel::register_derived_classes_with_charm<
+  //   EoS::EquationOfState<true, 1>>();
   TestHelpers::test_creation<std::unique_ptr<EoS::EquationOfState<true, 1>>>(
       {"Enthalpy:\n"
        "  ReferenceDensity: 2.0\n"
-       "  MaximumDensity: 4.0  \n"
-       "  MinimumDensity: 100.0  \n"
-       "  MinimumEnergyDensity: 4.448303974107519 \n"
+       "  MaximumDensity: 4.0\n"
+       "  MinimumDensity: 100.0\n"
+       "  MinimumEnergyDensity: 4.448303974107519\n"
        "  TrigScaling: 1.5\n"
-       "  PolynomialCoefficients: [1.0, 0.2, 0.0, 0.0, 0.0001]\n"
-       "  SinCoefficients: [0.01, 0.003, -0.0001,.0001]\n"
-       "  CosCoefficients: [0.01, 0.003, 0.0001, 0.00001]\n"
-       "  StitchedLowDensityEoS:\n"
-       "    ReferenceDensity: 0.8 \n"
-       "    ReferencePressure: 0.3727074036491289 \n"
-       "    Coefficients: [0.30255164] \n"
-       "    UpperDensity: 4.0 \n"});
-
-  EquationsOfState::Enthalpy<EquationsOfState::Spectral> eos(
-      reference_density, max_density, min_density, min_energy_density,
-      trig_scaling, poly_coefs, sin_coefs, cos_coefs, lower_spectral);
+       "  PolynomialCoefficients: [1.0,0.2,0.0,0.0,0.0001]\n"
+       "  SinCoefficients: [0.01,0.003,-0.0001,0.0001]\n"
+       "  CosCoefficients: [0.01,0.003,0.0001,0.00001]\n"
+       "  Spectral:\n"
+       "    ReferenceDensity: 0.8\n"
+       "    ReferencePressure: 0.3727074036491289\n"
+       "    Coefficients: [0.30255164]\n"
+       "    UpperDensity: 4.0\n"});
+  Parallel::printf("Initiated test thing");
+  EoS::Enthalpy<EoS::Spectral> eos(reference_density, max_density, min_density,
+                                   min_energy_density, trig_scaling, poly_coefs,
+                                   sin_coefs, cos_coefs, lower_spectral);
   // Test DataVector functions
   {
+    Parallel::printf("Failed after lots of stuff but before any tests");
     const Scalar<DataVector> rho{DataVector{1.5 * exp(1.0), 1.5 * exp(2.0),
                                             1.5 * exp(3.0), 1.5 * exp(4.0)}};
     const Scalar<DataVector> p = eos.pressure_from_density(rho);
@@ -63,11 +68,13 @@ void check_exact() {
     INFO(p);
     // TODO, put the actual right values in here
     const Scalar<DataVector> p_expected{
-        DataVector{0.17904341, 1.46117617, 5.22230183, 17.05980882}};
+        DataVector{0.1790434090653277, 1.46117617057407734, 5.2223018314642724,
+                   17.05980881997609089}};
     CHECK_ITERABLE_APPROX(p, p_expected);
     const auto eps_c = eos.specific_internal_energy_from_density(rho);
     const Scalar<DataVector> eps_expected{
-        DataVector{0.46030925, 2.2926119, 10.92600855, 45.17387733}};
+        DataVector{0.11289220759026733, 0.20684752054286823,
+                   0.36264928982309969, 0.55159228289061324}};
     CHECK_ITERABLE_APPROX(eps_c, eps_expected);
     const auto h_c = eos.specific_enthalpy_from_density(rho);
     const auto h_expected =
@@ -75,7 +82,8 @@ void check_exact() {
     CHECK_ITERABLE_APPROX(get(h_c), h_expected);
     const auto chi_c = eos.chi_from_density(rho);
     const Scalar<DataVector> chi_expected{
-        DataVector{0.18455972, 0.22974621, 0.19239659, 0.24820221}};
+        DataVector{0.18207356789438428, 0.1923165022214991, 0.19908149093638267,
+                   0.25186554704031844}};
     CHECK_ITERABLE_APPROX(get(chi_expected), get(chi_c));
     const Scalar<DataVector> p_c_kappa_c_over_rho_sq_expected{
         DataVector{0.0, 0.0, 0.0, 0.0}};
@@ -90,16 +98,16 @@ void check_exact() {
   {
     const Scalar<double> rho{1.5 * exp(1.0)};
     const auto p = eos.pressure_from_density(rho);
-    const double p_expected = 0.17904341;
+    const double p_expected = 0.1790434090653277;
     CHECK(get(p) == p_expected);
     const auto eps = eos.specific_internal_energy_from_density(rho);
-    const double eps_expected = 0.46030925;
+    const double eps_expected = 0.11289220759026733;
     CHECK_ITERABLE_APPROX(get(eps), eps_expected);
     const auto h = eos.specific_enthalpy_from_density(rho);
     const double h_expected = eps_expected + 1.0 + p_expected / get(rho);
     CHECK_ITERABLE_APPROX(get(h), h_expected);
     const auto chi = eos.chi_from_density(rho);
-    const double chi_expected = 0.18455972;
+    const double chi_expected = 0.18207356789438428;
     CHECK_ITERABLE_APPROX(chi_expected, get(chi));
     const auto p_c_kappa_c_over_rho_sq =
         eos.kappa_times_p_over_rho_squared_from_density(rho);

@@ -31,9 +31,6 @@ class DataVector;
 
 namespace EquationsOfState {
 
-// Convenience from not having to change all of the code everytime the details
-// of the implementation change
-
 /*!
  * \ingroup EquationsOfStateGroup
  * \brief An equation of state given by parametrized enthalpy
@@ -45,15 +42,58 @@ namespace EquationsOfState {
  * is expaded as
  *
  * \f{equation}
- * \h(x) = \sum_i a_i x^i + \sum_j b_j \sin(jkx) + c_j \cos(jkx)
+ * h(x) = \sum_i a_i x^i + \sum_j b_j \sin(jkx) + c_j \cos(jkx)
  * \f}
- * for the set of spectral coefficinets \f$\gamma_n\f$ when
- * \f$0 < x < x_u = \ln(\rho_u/\rho_0)\f$, where \f$\rho_u\f$ is the provided
- * upper density.
  *
- * For \f$ x < 0 \f$, \f$ \Gamma(x) = \gamma_0 \f$.
+ * This form allows for convenient calculation of thermodynamic
+ * quantities for a cold equation of state. For example
  *
- * For \f$ x > x_u \f$, \f$ \Gamma(x) = \Gamma(x_u) \f$
+ * \f{equation}
+ * h(x) = \frac{d e} {d \rho} |_{x = \log(\rho/\rho_0)}
+ * \f}
+ *
+ * where e is the total energy density.  At the same time \f$ dx = d\rho/\rho
+ * \f$ so \f$ \rho_0 e^x dx = d \rho \f$ Therefore,
+ *
+ * \f{equation}
+ * e(x) - e(x_0) = \int_{x_0}^x h(x') e^{x'} dx '
+ * \f}
+ *
+ * This can be computed analytically because
+ *
+ * \f{equation}
+ *  \int a_i \frac{x^i}{i!} e^{x} dx = \sum_{j \leq i} a_i \frac{(-x)^{j-i}}{j!}
+ * + C \f}
+ *
+ * and
+ *
+ * \f{equation}
+ * \int b_j \sin(j k x) e^x dx = b_j e^x \frac{\sin(jkx) - j k \cos(jkx)}{j^2
+ * k^2 + 1} \f}
+ *
+ *  \f{equation}
+ * \int c_j \cos(j k x) e^x dx = b_j e^x \frac{\cos(jkx) + j k \sin(jkx)}{j^2
+ * k^2 + 1} \f} From this most other thermodynamic quantities can be computed
+ * analytically
+ *
+ * The internal energy density
+ * \f{equation}
+ * \epsilon(x) = e(x)  - \rho(x)
+ * \f}
+ *
+ * The pressure
+ * \f{equation}
+ * p(x) = \rho(x) h(x) - e(x)
+ * \f}
+ *
+ * The derivative of the pressure with respect to the rest mass density
+ * \f{equation}
+ * \chi(x) = \frac{dp}{d\rho} |_{x = x(\rho)} = \frac{dh}{dx}
+ * \f}
+ *
+ * Below the minimum density, a spectral parameterization
+ * is used.
+ *
  *
  *
  */
@@ -69,6 +109,7 @@ class Enthalpy : public EquationOfState<true, 1> {
     bool has_exponential_prefactor;
     double exponential_external_constant;
     Coefficients() = default;
+    ~Coefficients() = default;
     Coefficients(const Coefficients& coefficients) = default;
     Coefficients(std::vector<double> in_polynomial_coefficients,
                  std::vector<double> in_sin_coefficients,
@@ -136,6 +177,9 @@ class Enthalpy : public EquationOfState<true, 1> {
   };
   struct StitchedLowDensityEoS {
     using type = LowDensityEoS;
+    static std::string name() {
+      return pretty_type::short_name<LowDensityEoS>();
+    }
     static constexpr Options::String help = {
         "Low density EoS stitched at the MinimumDensity"};
   };
