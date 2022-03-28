@@ -141,6 +141,8 @@ struct FindApparentHorizon {
       const gsl::not_null<Parallel::GlobalCache<Metavariables>*> cache,
       const TemporalId& temporal_id) {
     bool horizon_finder_failed = false;
+    const auto& verbosity =
+        db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(*box);
 
     if (get<::ah::Tags::FastFlow>(*box).current_iteration() == 0) {
       // If we get here, we are in a new apparent horizon search, as
@@ -210,8 +212,6 @@ struct FindApparentHorizon {
     }
 
     if (not horizon_finder_failed) {
-      const auto& verbosity =
-          db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(*box);
       const auto& inv_g =
           db::get<::gr::Tags::InverseSpatialMetric<3, Frame>>(*box);
       const auto& ex_curv =
@@ -255,6 +255,14 @@ struct FindApparentHorizon {
         auto& interpolation_target = Parallel::get_parallel_component<
             intrp::InterpolationTarget<Metavariables, InterpolationTargetTag>>(
             *cache);
+        if (verbosity > ::Verbosity::Verbose) {
+          Parallel::printf(
+              "%s: t=%.6g: FindApparentHorizon: "
+              "Calling Actions::SendPointsToInterpolator for next "
+              "Ah iteration, and exiting (which should be without cleanup)\n",
+              pretty_type::short_name<InterpolationTargetTag>(),
+              InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+        }
         Parallel::simple_action<
             Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
             interpolation_target, temporal_ids.front());
@@ -263,10 +271,22 @@ struct FindApparentHorizon {
         // (i.e. the simple_action that we just called).
         return false;
       } else if (not has_converged) {
-        Parallel::printf("Horizon finder %s failed.\n",
-                         Options::name<InterpolationTargetTag>());
+        if (verbosity > ::Verbosity::Verbose) {
+          Parallel::printf(
+              "%s: t=%.6g: FindApparentHorizon: "
+              "FAILED. Calling failure callback (locally)\n",
+              pretty_type::short_name<InterpolationTargetTag>(),
+              InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+        }
         InterpolationTargetTag::horizon_find_failure_callback::template apply<
             InterpolationTargetTag>(*box, *cache, temporal_id, status);
+        if (verbosity > ::Verbosity::Verbose) {
+          Parallel::printf(
+              "%s: t=%.6g: FindApparentHorizon: "
+              "Called failure callback (locally), continuing\n",
+              pretty_type::short_name<InterpolationTargetTag>(),
+              InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+        }
         horizon_finder_failed = true;
       }
     }
@@ -339,12 +359,27 @@ struct FindApparentHorizon {
             },
             box);
       }
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: FindApparentHorizon: "
+            "SUCCESS. Calling post_horizon_find_callbacks (locally)\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
       tmpl::for_each<
           typename InterpolationTargetTag::post_horizon_find_callbacks>(
           [&box, &cache, &temporal_id](auto callback_v) {
             using callback = tmpl::type_from<decltype(callback_v)>;
             callback::apply(*box, *cache, temporal_id);
           });
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: FindApparentHorizon: "
+            "SUCCESS. Called post_horizon_find_callbacks (locally), "
+            "continuing\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
     }
 
     // Prepare for finding horizon at a new time.
@@ -382,6 +417,13 @@ struct FindApparentHorizon {
         });
     // We return true because we are now done with all the volume data
     // at this temporal_id, so we want it cleaned up.
+    if (verbosity > ::Verbosity::Verbose) {
+      Parallel::printf(
+          "%s: t=%.6g: FindApparentHorizon: Exiting, which should "
+          "trigger cleaning up data at this temporal_id\n",
+          pretty_type::short_name<InterpolationTargetTag>(),
+          InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+    }
     return true;
   }
 };

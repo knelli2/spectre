@@ -21,6 +21,7 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Tags.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
 #include "ParallelAlgorithms/Interpolation/Actions/AddTemporalIdsToInterpolationTarget.hpp"  // IWYU pragma: keep
@@ -100,10 +101,14 @@ struct mock_interpolation_target {
   using with_these_simple_actions = tmpl::list<MockSendPointsToInterpolator>;
 };
 
-template <typename IsSequential>
+template <typename IsSequential, typename InterpolationTargetTag>
 struct MockComputeTargetPoints {
   using is_sequential = IsSequential;
   using frame = ::Frame::Inertial;
+  using simple_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
+  using const_global_cache_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
 };
 
 template <typename IsSequential, typename IsTimeDependent>
@@ -113,7 +118,8 @@ struct MockMetavariables {
     using vars_to_interpolate_to_target =
         tmpl::list<gr::Tags::Lapse<DataVector>>;
     using compute_items_on_target = tmpl::list<>;
-    using compute_target_points = MockComputeTargetPoints<IsSequential>;
+    using compute_target_points =
+        MockComputeTargetPoints<IsSequential, InterpolationTargetA>;
   };
   static constexpr bool use_time_dependent_maps = IsTimeDependent::value;
   static constexpr size_t volume_dim = 3;
