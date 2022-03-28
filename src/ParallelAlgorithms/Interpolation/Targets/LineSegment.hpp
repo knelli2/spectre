@@ -8,6 +8,8 @@
 
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Options/Options.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
@@ -29,6 +31,7 @@ namespace intrp {
 namespace Tags {
 template <typename TemporalId>
 struct TemporalIds;
+struct Verbosity;
 }  // namespace Tags
 }  // namespace intrp
 /// \endcond
@@ -56,13 +59,18 @@ struct LineSegment {
         "Number of points including endpoints"};
     static type lower_bound() { return 2; }
   };
-  using options = tmpl::list<Begin, End, NumberOfPoints>;
+  struct Verbosity {
+    static constexpr Options::String help = {"Verbosity"};
+    using type = ::Verbosity;
+  };
+  using options = tmpl::list<Begin, End, NumberOfPoints, Verbosity>;
   static constexpr Options::String help = {
       "A line segment extending from Begin to End, containing NumberOfPoints"
       " uniformly-spaced points including the endpoints."};
 
   LineSegment(std::array<double, VolumeDim> begin_in,
-              std::array<double, VolumeDim> end_in, size_t number_of_points_in);
+              std::array<double, VolumeDim> end_in,
+              size_t number_of_points_in, ::Verbosity verbosity_in);
 
   LineSegment() = default;
   LineSegment(const LineSegment& /*rhs*/) = delete;
@@ -77,6 +85,7 @@ struct LineSegment {
   std::array<double, VolumeDim> begin{};
   std::array<double, VolumeDim> end{};
   size_t number_of_points{};
+  ::Verbosity verbosity{::Verbosity::Quiet};
 };
 
 template <size_t VolumeDim>
@@ -123,6 +132,8 @@ struct LineSegment {
       tmpl::list<Tags::LineSegment<InterpolationTargetTag, VolumeDim>>;
   using is_sequential = std::false_type;
   using frame = Frame::Inertial;
+  using simple_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
 
   template <typename Metavariables, typename DbTags>
   static tnsr::I<DataVector, VolumeDim, Frame::Inertial> points(

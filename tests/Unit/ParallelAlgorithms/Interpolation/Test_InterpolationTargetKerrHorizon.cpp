@@ -18,6 +18,7 @@
 #include "Framework/TestCreation.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 #include "Helpers/ParallelAlgorithms/Interpolation/InterpolationTargetTestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/KerrHorizon.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Tags.hpp"
@@ -62,7 +63,8 @@ void test_interpolation_target_kerr_horizon(const bool theta_varies_fastest) {
 
   // Options for KerrHorizon
   intrp::OptionHolders::KerrHorizon kerr_horizon_opts(
-      l_max, center, mass, dimless_spin, theta_varies_fastest);
+      l_max, center, mass, dimless_spin, Verbosity::Quiet,
+      theta_varies_fastest);
 
   // Test creation of options
   const auto created_opts =
@@ -71,6 +73,7 @@ void test_interpolation_target_kerr_horizon(const bool theta_varies_fastest) {
           "DimensionlessSpin: [0.2, 0.3, 0.4]\n"
           "Lmax: 18\n"
           "Mass: 1.8\n"
+          "Verbosity: Quiet\n"
           "ThetaVariesFastest: " +
           std::string(theta_varies_fastest ? "true" : "false"));
   CHECK(created_opts == kerr_horizon_opts);

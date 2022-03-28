@@ -15,6 +15,7 @@
 #include "Domain/Domain.hpp"
 #include "Evolution/DiscontinuousGalerkin/DgElementArray.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
@@ -120,10 +121,10 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.ElementReceivePoints",
   // Options
   const auto domain_creator =
       domain::creators::Shell(0.9, 4.9, 1, {{5, 5}}, false);
-  intrp::OptionHolders::LineSegment<3> line_segment_opts_a({{1.0, 1.0, 1.0}},
-                                                         {{2.4, 2.4, 2.4}}, 15);
+  intrp::OptionHolders::LineSegment<3> line_segment_opts_a(
+      {{1.0, 1.0, 1.0}}, {{2.4, 2.4, 2.4}}, 15, Verbosity::Quiet);
   intrp::OptionHolders::LineSegment<3> line_segment_opts_b(
-      {{1.0, 1.0, 1.0}}, {{2.1, 2.1, 2.1}}, 12);
+      {{1.0, 1.0, 1.0}}, {{2.1, 2.1, 2.1}}, 12, Verbosity::Quiet);
   tuples::TaggedTuple<intrp::Tags::LineSegment<metavars::InterpolationTargetA,
                                                metavars::volume_dim>,
                       intrp::Tags::LineSegment<metavars::InterpolationTargetB,

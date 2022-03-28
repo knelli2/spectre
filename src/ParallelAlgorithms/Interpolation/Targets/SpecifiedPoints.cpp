@@ -12,18 +12,20 @@ namespace intrp::OptionHolders {
 
 template <size_t VolumeDim>
 SpecifiedPoints<VolumeDim>::SpecifiedPoints(
-    std::vector<std::array<double, VolumeDim>> points_in)
-    : points(std::move(points_in)) {}
+    std::vector<std::array<double, VolumeDim>> points_in,
+    ::Verbosity verbosity_in)
+    : points(std::move(points_in)), verbosity(verbosity_in) {}
 
 template <size_t VolumeDim>
 void SpecifiedPoints<VolumeDim>::pup(PUP::er& p) {
   p | points;
+  p | verbosity;
 }
 
 template <size_t VolumeDim>
 bool operator==(const SpecifiedPoints<VolumeDim>& lhs,
                 const SpecifiedPoints<VolumeDim>& rhs) {
-  return lhs.points == rhs.points;
+  return lhs.points == rhs.points and lhs.verbosity == rhs.verbosity;
 }
 
 template <size_t VolumeDim>
