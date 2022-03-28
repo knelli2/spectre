@@ -10,6 +10,8 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Tags.hpp"
 #include "Domain/TagsTimeDependent.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
@@ -148,6 +150,11 @@ void try_to_interpolate(
     const gsl::not_null<db::DataBox<DbTags>*> box,
     const gsl::not_null<Parallel::GlobalCache<Metavariables>*> cache,
     const typename InterpolationTargetTag::temporal_id::type& temporal_id) {
+
+  // Hardcode this, until we have a way to get verbosity into the
+  // Interpolator's DataBox.
+  const auto verbosity = Verbosity::Debug;
+
   const auto& holders =
       db::get<Tags::InterpolatedVarsHolders<Metavariables>>(*box);
   const auto& vars_infos =
@@ -174,9 +181,25 @@ void try_to_interpolate(
       const auto& info = vars_infos.at(temporal_id);
       auto& receiver_proxy = Parallel::get_parallel_component<
           InterpolationTarget<Metavariables, InterpolationTargetTag>>(*cache);
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: TryToInterpolate: "
+            "Calling Actions::InterpolationTargetReceiveVars\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
       Parallel::simple_action<
           Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
           receiver_proxy, info.vars, info.global_offsets, temporal_id);
+    } else {
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: TryToInterpolate: "
+            "NOT calling Actions::InterpolationTargetReceiveVars because I "
+            "have no points\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
     }
 
     // Clear interpolated data, since we don't need it anymore.
@@ -190,6 +213,18 @@ void try_to_interpolate(
               *holders_l)
               .infos.erase(temporal_id);
         });
+  } else {
+    if (verbosity > ::Verbosity::Verbose) {
+      Parallel::printf(
+          "%s: t=%.6g: TryToInterpolate: "
+          "NOT calling Actions::InterpolationTargetReceiveVars because "
+          "interpolation is done only for %d out of %d elements\n",
+          pretty_type::short_name<InterpolationTargetTag>(),
+          InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+          vars_infos.at(temporal_id)
+              .interpolation_is_done_for_these_elements.size(),
+          num_elements);
+    }
   }
 }
 
