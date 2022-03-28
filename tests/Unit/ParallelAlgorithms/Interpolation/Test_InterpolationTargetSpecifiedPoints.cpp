@@ -19,6 +19,7 @@
 #include "Framework/TestCreation.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 #include "Helpers/ParallelAlgorithms/Interpolation/InterpolationTargetTestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/SpecifiedPoints.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Tags.hpp"
@@ -50,12 +51,14 @@ void test_1d() {
   // Options for SpecifiedPoints
   intrp::OptionHolders::SpecifiedPoints<1> points_opts(
       std::vector<std::array<double, 1>>{
-          {std::array<double, 1>{{1.0}}, std::array<double, 1>{{0.3}}}});
+          {std::array<double, 1>{{1.0}}, std::array<double, 1>{{0.3}}}},
+      Verbosity::Quiet);
 
   // Test creation of options
   const auto created_opts =
       TestHelpers::test_creation<intrp::OptionHolders::SpecifiedPoints<1>>(
-          "Points: [[1.0], [0.3]]");
+          "Points: [[1.0], [0.3]]\n"
+          "Verbosity: Quiet");
   CHECK(created_opts == points_opts);
 
   const auto domain_creator = domain::creators::Interval(
@@ -81,12 +84,14 @@ void test_2d() {
   intrp::OptionHolders::SpecifiedPoints<2> points_opts(
       std::vector<std::array<double, 2>>{{std::array<double, 2>{{0.0, 1.0}},
                                           std::array<double, 2>{{-0.2, 0.1}},
-                                          std::array<double, 2>{{0.3, 1.9}}}});
+                                          std::array<double, 2>{{0.3, 1.9}}}},
+      Verbosity::Quiet);
 
   // Test creation of options
   const auto created_opts =
       TestHelpers::test_creation<intrp::OptionHolders::SpecifiedPoints<2>>(
-          "Points: [[0.0, 1.0], [-0.2, 0.1], [0.3, 1.9]]");
+          "Points: [[0.0, 1.0], [-0.2, 0.1], [0.3, 1.9]]\n"
+          "Verbosity: Quiet");
   CHECK(created_opts == points_opts);
 
   const auto domain_creator = domain::creators::Rectangle(
@@ -115,13 +120,15 @@ void test_3d() {
           {std::array<double, 3>{{0.0, 0.0, 0.0}},
            std::array<double, 3>{{1.0, -0.3, 0.2}},
            std::array<double, 3>{{-0.8, 1.6, 2.4}},
-           std::array<double, 3>{{0.0, 1.0, 0.0}}}});
+           std::array<double, 3>{{0.0, 1.0, 0.0}}}},
+      Verbosity::Quiet);
 
   // Test creation of options
   const auto created_opts =
       TestHelpers::test_creation<intrp::OptionHolders::SpecifiedPoints<3>>(
           "Points: [[0.0, 0.0, 0.0], [1.0, -0.3, 0.2], "
-          "[-0.8, 1.6, 2.4], [0.0, 1.0, 0.0]]");
+          "[-0.8, 1.6, 2.4], [0.0, 1.0, 0.0]]\n"
+          "Verbosity: Quiet");
   CHECK(created_opts == points_opts);
 
   const auto domain_creator = domain::creators::Brick(

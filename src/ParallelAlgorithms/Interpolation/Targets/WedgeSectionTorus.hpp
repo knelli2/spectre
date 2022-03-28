@@ -9,6 +9,8 @@
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Spectral/Spectral.hpp"
 #include "Options/Options.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
@@ -28,6 +30,7 @@ namespace intrp {
 namespace Tags {
 template <typename TemporalId>
 struct TemporalIds;
+struct Verbosity;
 }  // namespace Tags
 }  // namespace intrp
 /// \endcond
@@ -109,11 +112,15 @@ struct WedgeSectionTorus {
     using type = bool;
     static constexpr Options::String help = {"Use uniform theta grid"};
   };
+  struct Verbosity {
+    static constexpr Options::String help = {"Verbosity"};
+    using type = ::Verbosity;
+  };
 
   using options =
       tmpl::list<MinRadius, MaxRadius, MinTheta, MaxTheta, NumberRadialPoints,
                  NumberThetaPoints, NumberPhiPoints, UniformRadialGrid,
-                 UniformThetaGrid>;
+                 UniformThetaGrid, Verbosity>;
   static constexpr Options::String help = {
       "A torus extending from MinRadius to MaxRadius in r, MinTheta to MaxTheta"
       " in theta, and 2pi in phi."};
@@ -124,7 +131,7 @@ struct WedgeSectionTorus {
                     size_t number_of_theta_points_in,
                     size_t number_of_phi_points_in,
                     bool use_uniform_radial_grid_in,
-                    bool use_uniform_theta_grid_in,
+                    bool use_uniform_theta_grid_in, ::Verbosity verbosity_in,
                     const Options::Context& context = {});
 
   WedgeSectionTorus() = default;
@@ -146,6 +153,7 @@ struct WedgeSectionTorus {
   size_t number_of_phi_points;
   bool use_uniform_radial_grid;
   bool use_uniform_theta_grid;
+  ::Verbosity verbosity{::Verbosity::Quiet};
 };
 
 bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs);
@@ -186,6 +194,9 @@ struct WedgeSectionTorus {
       tmpl::list<Tags::WedgeSectionTorus<InterpolationTargetTag>>;
   using is_sequential = std::false_type;
   using frame = Frame::Inertial;
+
+  using simple_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
 
   template <typename Metavariables, typename DbTags>
   static tnsr::I<DataVector, 3, Frame::Inertial> points(

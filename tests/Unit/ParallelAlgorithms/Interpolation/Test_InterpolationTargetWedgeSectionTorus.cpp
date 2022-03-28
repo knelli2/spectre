@@ -18,6 +18,7 @@
 #include "Framework/TestCreation.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 #include "Helpers/ParallelAlgorithms/Interpolation/InterpolationTargetTestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Spectral/Spectral.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/WedgeSectionTorus.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
@@ -52,7 +53,7 @@ void test_r_theta_lgl() {
   // Test with a torus that is not symmetric above/below the equator.
   intrp::OptionHolders::WedgeSectionTorus wedge_section_torus_opts(
       1.2, 4.0, 0.35 * M_PI, 0.55 * M_PI, num_radial, num_theta, num_phi, false,
-      false);
+      false,::Verbosity::Quiet);
 
   const auto domain_creator =
       domain::creators::Shell(0.9, 4.9, 1, {{5, 5}}, false);
@@ -99,7 +100,7 @@ void test_r_theta_uniform() {
   // Test with a torus that is symmetric above/below the equator.
   intrp::OptionHolders::WedgeSectionTorus wedge_section_torus_opts(
       1.8, 3.6, 0.25 * M_PI, 0.75 * M_PI, num_radial, num_theta, num_phi, true,
-      true);
+      true, ::Verbosity::Quiet);
 
   const auto domain_creator =
       domain::creators::Shell(0.9, 4.9, 1, {{5, 5}}, false);
@@ -150,9 +151,11 @@ SPECTRE_TEST_CASE(
           "NumberThetaPoints: 10\n"
           "NumberPhiPoints: 20\n"
           "UniformRadialGrid: false\n"
-          "UniformThetaGrid: true\n");
+          "UniformThetaGrid: true\n"
+          "Verbosity: Quiet\n");
   CHECK(created_torus == intrp::OptionHolders::WedgeSectionTorus(
-                             1.8, 20., 0.785, 2.356, 20, 10, 20, false, true));
+                             1.8, 20., 0.785, 2.356, 20, 10, 20, false, true,
+                             ::Verbosity::Quiet));
 
   // Check computing the points
   test_r_theta_lgl();

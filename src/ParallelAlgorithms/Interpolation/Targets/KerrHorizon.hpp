@@ -10,6 +10,8 @@
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "DataStructures/Transpose.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Tags.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/YlmSpherepack.hpp"
@@ -35,6 +37,7 @@ namespace intrp {
 namespace Tags {
 template <typename TemporalId>
 struct TemporalIds;
+struct Verbosity;
 }  // namespace Tags
 }  // namespace intrp
 /// \endcond
@@ -75,15 +78,19 @@ struct KerrHorizon {
     static constexpr Options::String help = {
         "Chooses theta,phi ordering in 2d array"};
   };
-  using options =
-      tmpl::list<Lmax, Center, Mass, DimensionlessSpin, ThetaVariesFastest>;
+  struct Verbosity {
+    static constexpr Options::String help = {"Verbosity"};
+    using type = ::Verbosity;
+  };
+  using options = tmpl::list<Lmax, Center, Mass, DimensionlessSpin, Verbosity,
+                             ThetaVariesFastest>;
   static constexpr Options::String help = {
       "A Strahlkorper conforming to the horizon (in Kerr-Schild coordinates)"
       " of a Kerr black hole with a specified center, mass, and spin."};
 
   KerrHorizon(size_t l_max_in, std::array<double, 3> center_in, double mass_in,
               std::array<double, 3> dimensionless_spin_in,
-              bool theta_varies_fastest_in = true,
+              ::Verbosity verbosity_in, bool theta_varies_fastest_in = true,
               const Options::Context& context = {});
 
   KerrHorizon() = default;
@@ -101,6 +108,7 @@ struct KerrHorizon {
   double mass{};
   std::array<double, 3> dimensionless_spin{};
   bool theta_varies_fastest_memory_layout{};
+  ::Verbosity verbosity{::Verbosity::Quiet};
 };
 
 bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs);
@@ -153,7 +161,9 @@ struct KerrHorizon {
   using is_sequential = std::false_type;
   using frame = Frame;
 
-  using simple_tags = typename StrahlkorperTags::items_tags<Frame>;
+  using simple_tags =
+      tmpl::push_back<typename StrahlkorperTags::items_tags<Frame>,
+                      logging::Tags::Verbosity<InterpolationTargetTag>>;
   using compute_tags = typename StrahlkorperTags::compute_items_tags<Frame>;
 
   template <typename DbTags, typename Metavariables>
@@ -170,7 +180,8 @@ struct KerrHorizon {
                 .theta_phi_points(),
             kerr_horizon.mass, kerr_horizon.dimensionless_spin)),
         kerr_horizon.center);
-    Initialization::mutate_assign<simple_tags>(box, std::move(strahlkorper));
+    Initialization::mutate_assign<simple_tags>(box, std::move(strahlkorper),
+                                               kerr_horizon.verbosity);
   }
 
   template <typename Metavariables, typename DbTags, typename TemporalId>

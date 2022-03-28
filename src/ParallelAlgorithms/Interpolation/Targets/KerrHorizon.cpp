@@ -12,13 +12,15 @@ namespace intrp::OptionHolders {
 KerrHorizon::KerrHorizon(size_t l_max_in, std::array<double, 3> center_in,
                          double mass_in,
                          std::array<double, 3> dimensionless_spin_in,
+                         ::Verbosity verbosity_in,
                          const bool theta_varies_fastest_in,
                          const Options::Context& context)
     : l_max(l_max_in),
       center(center_in),
       mass(mass_in),
       dimensionless_spin(dimensionless_spin_in),
-      theta_varies_fastest_memory_layout{theta_varies_fastest_in} {
+      theta_varies_fastest_memory_layout{theta_varies_fastest_in},
+      verbosity(verbosity_in) {
   // above NOLINTs for std::move of trivially copyable type.
   if (mass <= 0.0) {
     // Check here, rather than put a lower_bound on the Tag, because
@@ -37,6 +39,7 @@ void KerrHorizon::pup(PUP::er& p) {
   p | mass;
   p | dimensionless_spin;
   p | theta_varies_fastest_memory_layout;
+  p | verbosity;
 }
 
 bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
@@ -44,7 +47,8 @@ bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
          lhs.mass == rhs.mass and
          lhs.dimensionless_spin == rhs.dimensionless_spin and
          lhs.theta_varies_fastest_memory_layout ==
-             rhs.theta_varies_fastest_memory_layout;
+             rhs.theta_varies_fastest_memory_layout and
+         lhs.verbosity == rhs.verbosity;
 }
 
 bool operator!=(const KerrHorizon& lhs, const KerrHorizon& rhs) {

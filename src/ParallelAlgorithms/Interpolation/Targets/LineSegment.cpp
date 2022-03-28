@@ -10,10 +10,12 @@ namespace intrp::OptionHolders {
 template <size_t VolumeDim>
 LineSegment<VolumeDim>::LineSegment(std::array<double, VolumeDim> begin_in,
                                     std::array<double, VolumeDim> end_in,
-                                    size_t number_of_points_in)
+                                    size_t number_of_points_in,
+                                    ::Verbosity verbosity_in)
     : begin(std::move(begin_in)),  // NOLINT
       end(std::move(end_in)),      // NOLINT
-      number_of_points(number_of_points_in) {}
+      number_of_points(number_of_points_in),
+      verbosity(std::move(verbosity_in)) {}  // NOLINT
 // above NOLINT for std::move of trivially copyable type.
 
 template <size_t VolumeDim>
@@ -21,13 +23,15 @@ void LineSegment<VolumeDim>::pup(PUP::er& p) {
   p | begin;
   p | end;
   p | number_of_points;
+  p | verbosity;
 }
 
 template <size_t VolumeDim>
 bool operator==(const LineSegment<VolumeDim>& lhs,
                 const LineSegment<VolumeDim>& rhs) {
   return lhs.begin == rhs.begin and lhs.end == rhs.end and
-         lhs.number_of_points == rhs.number_of_points;
+         lhs.number_of_points == rhs.number_of_points and
+         lhs.verbosity == rhs.verbosity;
 }
 
 template <size_t VolumeDim>

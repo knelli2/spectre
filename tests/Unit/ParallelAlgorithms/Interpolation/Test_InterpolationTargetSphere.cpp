@@ -18,6 +18,7 @@
 #include "Framework/TestCreation.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 #include "Helpers/ParallelAlgorithms/Interpolation/InterpolationTargetTestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/Sphere.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Tags.hpp"
@@ -53,14 +54,16 @@ void test_interpolation_target_sphere() {
   const std::array<double, 3> center = {{0.05, 0.06, 0.07}};
 
   // Options for Sphere
-  intrp::OptionHolders::Sphere sphere_opts(l_max, center, radius);
+  intrp::OptionHolders::Sphere sphere_opts(l_max, center, radius,
+                                           Verbosity::Quiet);
 
   // Test creation of options
   const auto created_opts =
       TestHelpers::test_creation<intrp::OptionHolders::Sphere>(
           "Center: [0.05, 0.06, 0.07]\n"
           "Radius: 3.6\n"
-          "Lmax: 18");
+          "Lmax: 18\n"
+          "Verbosity: Quiet");
   CHECK(created_opts == sphere_opts);
 
   const auto domain_creator =
