@@ -64,7 +64,7 @@ spectre_run_cmake() {
     #   module, such as zlib. The anaconda module on Wheeler does not set this
     #   automatically.
     cmake -D CHARM_ROOT=$CHARM_ROOT \
-          -D CMAKE_BUILD_TYPE=Debug \
+          -D CMAKE_BUILD_TYPE=Release \
           -D CMAKE_C_COMPILER=clang \
           -D CMAKE_CXX_COMPILER=clang++ \
           -D CMAKE_Fortran_COMPILER=gfortran \
@@ -72,8 +72,6 @@ spectre_run_cmake() {
           -D BUILD_PYTHON_BINDINGS=OFF \
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
           -D DEBUG_SYMBOLS=ON \
-          -D UBSAN_UNDEFINED=ON \
-          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
