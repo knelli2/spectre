@@ -66,7 +66,7 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
 
   template <typename Metavariables, typename... TupleTags>
   DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
-                        const double /*time*/,
+                        const double time,
                         const std::string& /*function_of_time_name*/,
                         const tuples::TaggedTuple<TupleTags...>& measurements) {
     const auto& domain = get<domain::Tags::Domain<3>>(cache);
@@ -83,12 +83,12 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
     const DataVector current_position_of_B = get<center_B>(measurements);
 
     Parallel::printf(
-        "Grid position A: %s\n"
-        "Grid position B: %s\n"
-        "Cur. position A: %s\n"
-        "Cur. position B: %s\n",
-        grid_position_of_A, grid_position_of_B, current_position_of_A,
-        current_position_of_B);
+        "t=%.6g, Grid position A: %s\n"
+        "t=%.6g, Grid position B: %s\n"
+        "t=%.6g, Cur. position A: %s\n"
+        "t=%.6g, Cur. position B: %s\n",
+        time, grid_position_of_A, time, grid_position_of_B, time,
+        current_position_of_A, time, current_position_of_B);
 
     // A is to the left of B in grid frame. To get positive differences,
     // take B - A
