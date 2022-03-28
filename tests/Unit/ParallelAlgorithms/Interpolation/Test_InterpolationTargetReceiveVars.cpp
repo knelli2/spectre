@@ -24,6 +24,7 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Tags.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
@@ -159,9 +160,14 @@ struct MockCleanUpInterpolator {
 // In the test, MockComputeTargetPoints is used only for the
 // type aliases; normally compute_target_points has a
 // points() function, but that function isn't called or needed in the test.
+template <typename InterpolationTargetTag>
 struct MockComputeTargetPoints {
   using is_sequential = std::true_type;
   using frame = ::Frame::Inertial;
+  using simple_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
+  using const_global_cache_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
 };
 
 // Simple DataBoxItems to test.
@@ -275,7 +281,7 @@ struct MockMetavariables {
     using temporal_id = ::Tags::Time;
     using vars_to_interpolate_to_target =
         tmpl::list<gr::Tags::Lapse<DataVector>>;
-    using compute_target_points = MockComputeTargetPoints;
+    using compute_target_points = MockComputeTargetPoints<InterpolationTargetA>;
     using post_interpolation_callback = MockCallBackType;
     using compute_items_on_target = tmpl::list<Tags::SquareCompute>;
   };
@@ -367,7 +373,7 @@ void test_interpolation_target_receive_vars() {
            {first_time, vars_type{num_points + NumberOfInvalidPointsToAdd}}},
        // Default-constructed Variables cause problems, so below
        // we construct the Variables with a single point.
-       vars_type{1}});
+       vars_type{1}, Verbosity::Quiet});
   ActionTesting::set_phase(make_not_null(&runner), metavars::Phase::Testing);
 
   // Now set up the vars.
