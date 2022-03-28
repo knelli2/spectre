@@ -29,6 +29,7 @@
 #include "Domain/Tags.hpp"
 #include "Framework/ActionTesting.hpp"
 #include "Framework/TestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "NumericalAlgorithms/Spectral/Spectral.hpp"
 #include "Parallel/Actions/SetupDataBox.hpp"
@@ -292,11 +293,11 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.Integration",
 
   // Options for all InterpolationTargets.
   intrp::OptionHolders::LineSegment<3> line_segment_opts_A(
-      {{1.0, 1.0, 1.0}}, {{2.4, 2.4, 2.4}}, 15);
+      {{1.0, 1.0, 1.0}}, {{2.4, 2.4, 2.4}}, 15, Verbosity::Quiet);
   intrp::OptionHolders::LineSegment<3> line_segment_opts_B(
-      {{1.1, 1.1, 1.1}}, {{2.5, 2.5, 2.5}}, 17);
-  intrp::OptionHolders::KerrHorizon kerr_horizon_opts_C(10, {{0.0, 0.0, 0.0}},
-                                                        1.0, {{0.0, 0.0, 0.0}});
+      {{1.1, 1.1, 1.1}}, {{2.5, 2.5, 2.5}}, 17, Verbosity::Quiet);
+  intrp::OptionHolders::KerrHorizon kerr_horizon_opts_C(
+      10, {{0.0, 0.0, 0.0}}, 1.0, {{0.0, 0.0, 0.0}}, Verbosity::Quiet);
   const auto domain_creator =
       domain::creators::Shell(0.9, 4.9, 1, {{5, 5}}, false);
   tuples::TaggedTuple<

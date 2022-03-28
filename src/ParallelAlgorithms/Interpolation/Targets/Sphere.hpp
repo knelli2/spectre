@@ -8,6 +8,8 @@
 #include <limits>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Tags.hpp"
 #include "Options/Options.hpp"
@@ -29,6 +31,7 @@ namespace intrp {
 namespace Tags {
 template <typename TemporalId>
 struct TemporalIds;
+struct Verbosity;
 }  // namespace Tags
 }  // namespace intrp
 /// \endcond
@@ -56,10 +59,14 @@ struct Sphere {
     static constexpr Options::String help = {"Radius of the sphere"};
     static constexpr double lower_bound() { return 0.; }
   };
-  using options = tmpl::list<Lmax, Center, Radius>;
+  struct Verbosity {
+    static constexpr Options::String help = {"Verbosity"};
+    using type = ::Verbosity;
+  };
+  using options = tmpl::list<Lmax, Center, Radius, Verbosity>;
   static constexpr Options::String help = {"A spherical surface."};
   Sphere(const size_t l_max_in, const std::array<double, 3> center_in,
-         const double radius_in);
+         const double radius_in, ::Verbosity verbosity_in);
 
   Sphere() = default;
 
@@ -69,6 +76,7 @@ struct Sphere {
   size_t l_max{0};
   std::array<double, 3> center{std::numeric_limits<double>::signaling_NaN()};
   double radius{std::numeric_limits<double>::signaling_NaN()};
+  ::Verbosity verbosity{::Verbosity::Quiet};
 };
 
 bool operator==(const Sphere& lhs, const Sphere& rhs);
@@ -114,7 +122,9 @@ struct Sphere {
   using is_sequential = std::false_type;
   using frame = Frame;
 
-  using simple_tags = typename StrahlkorperTags::items_tags<Frame>;
+  using simple_tags =
+      tmpl::push_back<typename StrahlkorperTags::items_tags<Frame>,
+                      logging::Tags::Verbosity<InterpolationTargetTag>>;
   using compute_tags = typename StrahlkorperTags::compute_items_tags<Frame>;
 
   template <typename DbTags, typename Metavariables>
@@ -127,7 +137,8 @@ struct Sphere {
     ::Strahlkorper<Frame> strahlkorper(
         l_max, l_max, DataVector{(l_max + 1) * (2 * l_max + 1), sphere.radius},
         sphere.center);
-    Initialization::mutate_assign<simple_tags>(box, std::move(strahlkorper));
+    Initialization::mutate_assign<simple_tags>(box, std::move(strahlkorper),
+                                               sphere.verbosity);
   }
 
   template <typename Metavariables, typename DbTags, typename TemporalId>

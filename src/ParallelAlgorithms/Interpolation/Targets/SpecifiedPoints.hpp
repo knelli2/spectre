@@ -9,6 +9,8 @@
 
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Options/Options.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
@@ -28,6 +30,7 @@ namespace intrp {
 namespace Tags {
 template <typename TemporalId>
 struct TemporalIds;
+struct Verbosity;
 }  // namespace Tags
 }  // namespace intrp
 /// \endcond
@@ -44,11 +47,15 @@ struct SpecifiedPoints {
     using type = std::vector<std::array<double, VolumeDim>>;
     static constexpr Options::String help = {"Coordinates of each point"};
   };
-  using options = tmpl::list<Points>;
+  struct Verbosity {
+    static constexpr Options::String help = {"Verbosity"};
+    using type = ::Verbosity;
+  };
+  using options = tmpl::list<Points, Verbosity>;
   static constexpr Options::String help = {"A list of specified points"};
 
-  explicit SpecifiedPoints(
-      std::vector<std::array<double, VolumeDim>> points_in);
+  SpecifiedPoints(std::vector<std::array<double, VolumeDim>> points_in,
+                  ::Verbosity verbosity_in);
 
   SpecifiedPoints() = default;
   SpecifiedPoints(const SpecifiedPoints& /*rhs*/) = default;
@@ -61,6 +68,7 @@ struct SpecifiedPoints {
   void pup(PUP::er& p);
 
   std::vector<std::array<double, VolumeDim>> points{};
+  ::Verbosity verbosity{::Verbosity::Quiet};
 };
 
 template <size_t VolumeDim>
@@ -107,6 +115,8 @@ struct SpecifiedPoints {
       tmpl::list<Tags::SpecifiedPoints<InterpolationTargetTag, VolumeDim>>;
   using is_sequential = std::false_type;
   using frame = Frame::Inertial;
+  using simple_tags =
+      tmpl::list<logging::Tags::Verbosity<InterpolationTargetTag>>;
 
   template <typename Metavariables, typename DbTags>
   static tnsr::I<DataVector, VolumeDim, Frame::Inertial> points(

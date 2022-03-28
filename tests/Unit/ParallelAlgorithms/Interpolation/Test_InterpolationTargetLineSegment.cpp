@@ -17,6 +17,7 @@
 #include "Framework/TestCreation.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 #include "Helpers/ParallelAlgorithms/Interpolation/InterpolationTargetTestHelpers.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/LineSegment.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Tags.hpp"
@@ -48,15 +49,16 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.InterpolationTarget.LineSegment",
                   "[Unit]") {
   domain::creators::register_derived_with_charm();
   // Options for LineSegment
-  intrp::OptionHolders::LineSegment<3> line_segment_opts({{1.0, 1.0, 1.0}},
-                                                         {{2.4, 2.4, 2.4}}, 15);
+  intrp::OptionHolders::LineSegment<3> line_segment_opts(
+      {{1.0, 1.0, 1.0}}, {{2.4, 2.4, 2.4}}, 15, Verbosity::Quiet);
 
   // Test creation of options
   const auto created_opts =
       TestHelpers::test_creation<intrp::OptionHolders::LineSegment<3>>(
           "Begin: [1.0, 1.0, 1.0]\n"
           "End: [2.4, 2.4, 2.4]\n"
-          "NumberOfPoints: 15");
+          "NumberOfPoints: 15\n"
+          "Verbosity: Quiet");
   CHECK(created_opts == line_segment_opts);
 
   const auto domain_creator =

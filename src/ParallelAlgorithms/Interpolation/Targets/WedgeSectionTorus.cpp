@@ -13,7 +13,8 @@ WedgeSectionTorus::WedgeSectionTorus(
     const size_t number_of_radial_points_in,
     const size_t number_of_theta_points_in,
     const size_t number_of_phi_points_in, const bool use_uniform_radial_grid_in,
-    const bool use_uniform_theta_grid_in, const Options::Context& context)
+    const bool use_uniform_theta_grid_in, ::Verbosity verbosity_in,
+    const Options::Context& context)
     : min_radius(min_radius_in),
       max_radius(max_radius_in),
       min_theta(min_theta_in),
@@ -22,7 +23,8 @@ WedgeSectionTorus::WedgeSectionTorus(
       number_of_theta_points(number_of_theta_points_in),
       number_of_phi_points(number_of_phi_points_in),
       use_uniform_radial_grid(use_uniform_radial_grid_in),
-      use_uniform_theta_grid(use_uniform_theta_grid_in) {
+      use_uniform_theta_grid(use_uniform_theta_grid_in),
+      verbosity(verbosity_in) {
   if (min_radius >= max_radius) {
     PARSE_ERROR(context, "WedgeSectionTorus expects min_radius < max_radius");
   }
@@ -41,6 +43,7 @@ void WedgeSectionTorus::pup(PUP::er& p) {
   p | number_of_phi_points;
   p | use_uniform_radial_grid;
   p | use_uniform_theta_grid;
+  p | verbosity;
 }
 
 bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
@@ -51,7 +54,8 @@ bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
          lhs.number_of_theta_points == rhs.number_of_theta_points and
          lhs.number_of_phi_points == rhs.number_of_phi_points and
          lhs.use_uniform_radial_grid == rhs.use_uniform_radial_grid and
-         lhs.use_uniform_theta_grid == rhs.use_uniform_theta_grid;
+         lhs.use_uniform_theta_grid == rhs.use_uniform_theta_grid and
+         lhs.verbosity == rhs.verbosity;
 }
 
 bool operator!=(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
