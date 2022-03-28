@@ -4,6 +4,8 @@
 #pragma once
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
@@ -24,6 +26,9 @@ void verify_temporal_ids_and_send_points_time_independent(
     const gsl::not_null<db::DataBox<DbTags>*> box,
     Parallel::GlobalCache<Metavariables>& cache) {
   using TemporalId = typename InterpolationTargetTag::temporal_id::type;
+
+  const auto& verbosity =
+      db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(*box);
 
   // Move all PendingTemporalIds to TemporalIds, provided
   // that they are not already there, and fill new_temporal_ids
@@ -52,6 +57,15 @@ void verify_temporal_ids_and_send_points_time_independent(
     if (not new_temporal_ids.empty()) {
       auto& my_proxy =
           Parallel::get_parallel_component<ParallelComponent>(cache);
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: VerifyTemporalIdsAndSendPoints (time-independent): "
+            "Calling SendPointsToInterpolator to start sequential "
+            "interpolation at the given time.\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(
+                new_temporal_ids.front()));
+      }
       Parallel::simple_action<
           Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
           my_proxy, new_temporal_ids.front());
@@ -60,6 +74,14 @@ void verify_temporal_ids_and_send_points_time_independent(
     // Non-sequential: start interpolation for all new_temporal_ids.
     auto& my_proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
     for (const auto& id : new_temporal_ids) {
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: VerifyTemporalIdsAndSendPoints (time-independent): "
+            "Calling SendPointsToInterpolator to start non-sequential "
+            "interpolation at the given time.\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(id));
+      }
       Parallel::simple_action<
           Actions::SendPointsToInterpolator<InterpolationTargetTag>>(my_proxy,
                                                                      id);
@@ -74,6 +96,9 @@ void verify_temporal_ids_and_send_points_time_dependent(
     Parallel::GlobalCache<Metavariables>& cache) {
   using TemporalId = typename InterpolationTargetTag::temporal_id::type;
 
+  const auto& verbosity =
+      db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(*box);
+
   const auto& pending_temporal_ids =
       db::get<Tags::PendingTemporalIds<TemporalId>>(*box);
   if (pending_temporal_ids.empty()) {
@@ -85,7 +110,8 @@ void verify_temporal_ids_and_send_points_time_dependent(
   const bool at_least_one_pending_temporal_id_is_ready =
       ::Parallel::mutable_cache_item_is_ready<domain::Tags::FunctionsOfTime>(
           cache,
-          [&this_proxy, &pending_temporal_ids, &min_expiration_time](
+          [&this_proxy, &pending_temporal_ids, &min_expiration_time,
+           &verbosity](
               const std::unordered_map<
                   std::string,
                   std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
@@ -107,6 +133,16 @@ void verify_temporal_ids_and_send_points_time_dependent(
               }
             }
             // Failure: none of the pending_temporal_ids are ok.
+            if (verbosity > ::Verbosity::Verbose) {
+              Parallel::printf(
+                  "%s: pending_temporal_ids_front=%.6g: "
+                  "VerifyTemporalIdsAndSendPoints: None of the pending "
+                  "temporal_ids is ready, so I am setting myself as a callback "
+                  "for when the FunctionsOfTime are mutated.\n",
+                  pretty_type::short_name<InterpolationTargetTag>(),
+                  InterpolationTarget_detail::get_temporal_id_value(
+                      pending_temporal_ids.front()));
+            }
             return std::unique_ptr<Parallel::Callback>(
                 new Parallel::SimpleActionCallback<
                     VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>,
@@ -152,6 +188,15 @@ void verify_temporal_ids_and_send_points_time_dependent(
     if (not new_temporal_ids.empty()) {
       auto& my_proxy =
           Parallel::get_parallel_component<ParallelComponent>(cache);
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: VerifyTemporalIdsAndSendPoints: Calling "
+            "SendPointsToInterpolator to start sequential interpolation at the "
+            "given time.\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(
+                new_temporal_ids.front()));
+      }
       Parallel::simple_action<
           Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
           my_proxy, new_temporal_ids.front());
@@ -160,6 +205,14 @@ void verify_temporal_ids_and_send_points_time_dependent(
     // Non-sequential: start interpolation for all new_temporal_ids.
     auto& my_proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
     for (const auto& id : new_temporal_ids) {
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: VerifyTemporalIdsAndSendPoints: Calling "
+            "SendPointsToInterpolator to start non-sequential interpolation at "
+            "the given time.\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(id));
+      }
       Parallel::simple_action<
           Actions::SendPointsToInterpolator<InterpolationTargetTag>>(my_proxy,
                                                                      id);
@@ -168,6 +221,13 @@ void verify_temporal_ids_and_send_points_time_dependent(
     // VerifyTemporalIdsAndSendPoints again, so that those pending
     // temporal_ids can be waited for.
     if (not db::get<Tags::PendingTemporalIds<TemporalId>>(*box).empty()) {
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: VerifyTemporalIdsAndSendPoints: There are still pending "
+            "temporal_ids, so I am calling myself so that those temporal_ids "
+            "can be waited for.\n",
+            pretty_type::short_name<InterpolationTargetTag>());
+      }
       Parallel::simple_action<
           VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>>(my_proxy);
     }

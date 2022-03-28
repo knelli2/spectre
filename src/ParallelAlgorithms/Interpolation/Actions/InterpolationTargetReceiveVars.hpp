@@ -11,6 +11,8 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/VariablesTag.hpp"
+#include "IO/Logging/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/SendPointsToInterpolator.hpp"
@@ -88,6 +90,9 @@ struct InterpolationTargetReceiveVars {
           vars_src,
       const std::vector<std::vector<size_t>>& global_offsets,
       const TemporalId& temporal_id) {
+    const auto& verbosity =
+        db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(box);
+
     // Check if we already have completed interpolation at this
     // temporal_id.
     const auto& completed_ids =
@@ -124,6 +129,15 @@ struct InterpolationTargetReceiveVars {
       // at this temporal_id.  Note that if there were extra work to
       // do at this temporal_id, then CompletedTemporalIds would not
       // have an entry for this temporal_id.
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: InterpolationTargetReceiveVars: "
+            "I was called for a duplicate point after all work has already "
+            "been done for this InterpolationTarget, so I am returning.  This "
+            "situation is expected and does not indicate an error.\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
       return;
     }
 
@@ -132,13 +146,36 @@ struct InterpolationTargetReceiveVars {
     if (InterpolationTarget_detail::have_data_at_all_points<
             InterpolationTargetTag>(box, temporal_id)) {
       // All the valid points have been interpolated.
+      if (verbosity > ::Verbosity::Verbose) {
+        Parallel::printf(
+            "%s: t=%.6g: InterpolationTargetReceiveVars:  All the valid points "
+            "have been interpolated, so I am calling the "
+            "post_interpolation_callback (locally)\n",
+            pretty_type::short_name<InterpolationTargetTag>(),
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+      }
       if (InterpolationTarget_detail::call_callback<InterpolationTargetTag>(
               make_not_null(&box), make_not_null(&cache), temporal_id)) {
+        if (verbosity > ::Verbosity::Verbose) {
+          Parallel::printf(
+              "%s: t=%.6g: InterpolationTargetReceiveVars: The "
+              "post_interpolation_callback told me to clean up the "
+              "InterpolationTarget (locally) so I will do so.\n",
+              pretty_type::short_name<InterpolationTargetTag>(),
+              InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+        }
         InterpolationTarget_detail::clean_up_interpolation_target<
             InterpolationTargetTag>(make_not_null(&box), temporal_id);
         auto& interpolator_proxy =
             Parallel::get_parallel_component<Interpolator<Metavariables>>(
                 cache);
+        if (verbosity > ::Verbosity::Verbose) {
+          Parallel::printf(
+              "%s: t=%.6g: InterpolationTargetReceiveVars: Calling "
+              "Actions::CleanUpInterpolator\n",
+              pretty_type::short_name<InterpolationTargetTag>(),
+              InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+        }
         Parallel::simple_action<
             Actions::CleanUpInterpolator<InterpolationTargetTag>>(
             interpolator_proxy, temporal_id);
@@ -153,6 +190,18 @@ struct InterpolationTargetReceiveVars {
             auto& my_proxy = Parallel::get_parallel_component<
                 InterpolationTarget<Metavariables, InterpolationTargetTag>>(
                 cache);
+            if (verbosity > ::Verbosity::Verbose) {
+              Parallel::printf(
+                  "%s: t=%.6g: InterpolationTargetReceiveVars: We have a "
+                  "sequential interpolation, so I am now calling "
+                  "Actions::SendPointsToInterpolator for a new "
+                  "temporal_id=%.6g \n",
+                  pretty_type::short_name<InterpolationTargetTag>(),
+                  InterpolationTarget_detail::get_temporal_id_value(
+                      temporal_id),
+                  InterpolationTarget_detail::get_temporal_id_value(
+                      temporal_ids.front()));
+            }
             Parallel::simple_action<
                 SendPointsToInterpolator<InterpolationTargetTag>>(
                 my_proxy, temporal_ids.front());
@@ -161,8 +210,25 @@ struct InterpolationTargetReceiveVars {
             auto& my_proxy = Parallel::get_parallel_component<
                 InterpolationTarget<Metavariables, InterpolationTargetTag>>(
                 cache);
+            if (verbosity > ::Verbosity::Verbose) {
+              Parallel::printf(
+                  "%s: t=%.6g: InterpolationTargetReceiveVars: We have a "
+                  "sequential interpolation, but no more temporal_ids. So I am "
+                  "now calling Actions::VerifyTemporalIdsAndSendPoints.\n",
+                  pretty_type::short_name<InterpolationTargetTag>(),
+                  InterpolationTarget_detail::get_temporal_id_value(
+                      temporal_id));
+            }
             Parallel::simple_action<Actions::VerifyTemporalIdsAndSendPoints<
                 InterpolationTargetTag>>(my_proxy);
+          }
+        } else {
+          if (verbosity > ::Verbosity::Verbose) {
+            Parallel::printf(
+                "%s: t=%.6g: InterpolationTargetReceiveVars: We have a "
+                "non-sequential interpolation, so I am simply exiting.\n",
+                pretty_type::short_name<InterpolationTargetTag>(),
+                InterpolationTarget_detail::get_temporal_id_value(temporal_id));
           }
         }
       }
