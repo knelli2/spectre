@@ -12,6 +12,7 @@
 #include "DataStructures/DataBox/TagName.hpp"
 #include "IO/Observer/Helpers.hpp"
 #include "IO/Observer/ObservationId.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
@@ -117,7 +118,7 @@ struct ObserveTimeSeriesOnSurface {
             InterpolationTarget_detail::get_temporal_id_value(temporal_id),
             pretty_type::get_name<ObservationType>()),
         static_cast<size_t>(Parallel::my_node(*Parallel::local(my_proxy))),
-        std::string{"/" + pretty_type::short_name<InterpolationTargetTag>()},
+        std::string{"/" + Options::name<InterpolationTargetTag>()},
         detail::make_legend(TagsToObserve{}),
         detail::make_reduction_data(
             box, InterpolationTarget_detail::get_temporal_id_value(temporal_id),

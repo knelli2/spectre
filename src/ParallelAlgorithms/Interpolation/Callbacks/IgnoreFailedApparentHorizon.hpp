@@ -6,6 +6,7 @@
 #include "ApparentHorizons/FastFlow.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Informer/Tags.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/Printf.hpp"
 #include "Utilities/PrettyType.hpp"
 
@@ -32,7 +33,7 @@ struct IgnoreFailedApparentHorizon {
         db::get<logging::Tags::Verbosity<InterpolationTargetTag>>(box);
     if (verbosity > ::Verbosity::Quiet) {
       Parallel::printf("Remark: Horizon finder %s failed, reason = %s\n",
-                       pretty_type::short_name<InterpolationTargetTag>(),
+                       Options::name<InterpolationTargetTag>(),
                        failure_reason);
     }
   }
