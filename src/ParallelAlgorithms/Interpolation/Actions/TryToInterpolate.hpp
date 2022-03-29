@@ -13,6 +13,7 @@
 #include "IO/Logging/Tags.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
@@ -150,7 +151,6 @@ void try_to_interpolate(
     const gsl::not_null<db::DataBox<DbTags>*> box,
     const gsl::not_null<Parallel::GlobalCache<Metavariables>*> cache,
     const typename InterpolationTargetTag::temporal_id::type& temporal_id) {
-
   // Hardcode this, until we have a way to get verbosity into the
   // Interpolator's DataBox.
   const auto verbosity = Verbosity::Debug;
@@ -185,7 +185,7 @@ void try_to_interpolate(
         Parallel::printf(
             "%s: t=%.6g: TryToInterpolate: "
             "Calling Actions::InterpolationTargetReceiveVars\n",
-            pretty_type::short_name<InterpolationTargetTag>(),
+            Options::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id));
       }
       Parallel::simple_action<
@@ -197,7 +197,7 @@ void try_to_interpolate(
             "%s: t=%.6g: TryToInterpolate: "
             "NOT calling Actions::InterpolationTargetReceiveVars because I "
             "have no points\n",
-            pretty_type::short_name<InterpolationTargetTag>(),
+            Options::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id));
       }
     }
@@ -219,7 +219,7 @@ void try_to_interpolate(
           "%s: t=%.6g: TryToInterpolate: "
           "NOT calling Actions::InterpolationTargetReceiveVars because "
           "interpolation is done only for %d out of %d elements\n",
-          pretty_type::short_name<InterpolationTargetTag>(),
+          Options::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id),
           vars_infos.at(temporal_id)
               .interpolation_is_done_for_these_elements.size(),

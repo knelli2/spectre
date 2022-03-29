@@ -6,6 +6,7 @@
 #include "ApparentHorizons/FastFlow.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Informer/Tags.hpp"
+#include "Options/Options.hpp"
 #include "Parallel/Printf.hpp"
 #include "Utilities/PrettyType.hpp"
 
