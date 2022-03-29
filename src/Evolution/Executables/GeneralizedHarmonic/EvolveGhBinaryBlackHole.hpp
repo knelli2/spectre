@@ -17,7 +17,6 @@
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "ControlSystem/Systems/Expansion.hpp"
 #include "ControlSystem/Systems/Rotation.hpp"
-#include "ControlSystem/Systems/Translation.hpp"
 #include "ControlSystem/Trigger.hpp"
 #include "ControlSystem/WriteData.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
@@ -187,8 +186,7 @@ struct EvolutionMetavars {
   };
 
   using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
-                                     control_system::Systems::Expansion<2>,
-                                     control_system::Systems::Translation<3>>;
+                                     control_system::Systems::Expansion<2>>;
   // using control_systems = tmpl::list<control_system::Systems::Expansion<2>>;
 
   using interpolation_target_tags =
