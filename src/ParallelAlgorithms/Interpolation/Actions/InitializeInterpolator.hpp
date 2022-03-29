@@ -8,7 +8,7 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/DataBoxTag.hpp"
-#include "Domain/Tags.hpp" // IWYU pragma: keep
+#include "Domain/Tags.hpp"  // IWYU pragma: keep
 #include "ParallelAlgorithms/Initialization/MutateAssign.hpp"
 #include "Utilities/Literals.hpp"
 #include "Utilities/TMPL.hpp"
@@ -57,6 +57,11 @@ struct InitializeInterpolator {
   using return_tag_list =
       tmpl::flatten<tmpl::list<Tags::NumberOfElements, VolumeVarsInfos,
                                InterpolatedVarsHolders>>;
+
+  using initialization_tags =
+      tmpl::list<logging::Tags::Verbosity<intrp::OptionTags::Interpolator>>;
+
+  using initialization_tags_to_keep = initialization_tags;
 
   using simple_tags = return_tag_list;
   using compute_tags = tmpl::list<>;
