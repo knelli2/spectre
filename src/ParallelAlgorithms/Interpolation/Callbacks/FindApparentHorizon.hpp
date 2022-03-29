@@ -260,7 +260,7 @@ struct FindApparentHorizon {
               "%s: t=%.6g: FindApparentHorizon: "
               "Calling Actions::SendPointsToInterpolator for next "
               "Ah iteration, and exiting (which should be without cleanup)\n",
-              pretty_type::short_name<InterpolationTargetTag>(),
+              Options::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         Parallel::simple_action<
@@ -275,7 +275,7 @@ struct FindApparentHorizon {
           Parallel::printf(
               "%s: t=%.6g: FindApparentHorizon: "
               "FAILED. Calling failure callback (locally)\n",
-              pretty_type::short_name<InterpolationTargetTag>(),
+              Options::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         InterpolationTargetTag::horizon_find_failure_callback::template apply<
@@ -284,7 +284,7 @@ struct FindApparentHorizon {
           Parallel::printf(
               "%s: t=%.6g: FindApparentHorizon: "
               "Called failure callback (locally), continuing\n",
-              pretty_type::short_name<InterpolationTargetTag>(),
+              Options::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         horizon_finder_failed = true;
@@ -363,7 +363,7 @@ struct FindApparentHorizon {
         Parallel::printf(
             "%s: t=%.6g: FindApparentHorizon: "
             "SUCCESS. Calling post_horizon_find_callbacks (locally)\n",
-            pretty_type::short_name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id));
       }
       tmpl::for_each<
@@ -377,7 +377,7 @@ struct FindApparentHorizon {
             "%s: t=%.6g: FindApparentHorizon: "
             "SUCCESS. Called post_horizon_find_callbacks (locally), "
             "continuing\n",
-            pretty_type::short_name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id));
       }
     }
@@ -421,7 +421,7 @@ struct FindApparentHorizon {
       Parallel::printf(
           "%s: t=%.6g: FindApparentHorizon: Exiting, which should "
           "trigger cleaning up data at this temporal_id\n",
-          pretty_type::short_name<InterpolationTargetTag>(),
+          Options::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id));
     }
     return true;
