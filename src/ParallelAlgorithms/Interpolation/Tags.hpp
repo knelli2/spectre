@@ -33,6 +33,9 @@ namespace OptionTags {
 struct InterpolationTargets {
   static constexpr Options::String help{"Options for interpolation targets"};
 };
+struct Interpolator {
+  static constexpr Options::String help{"Options for Interpolator."};
+};
 }  // namespace OptionTags
 
 /// Tags for items held in the `DataBox` of `InterpolationTarget` or

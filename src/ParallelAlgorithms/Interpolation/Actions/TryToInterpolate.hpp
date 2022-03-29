@@ -151,9 +151,8 @@ void try_to_interpolate(
     const gsl::not_null<db::DataBox<DbTags>*> box,
     const gsl::not_null<Parallel::GlobalCache<Metavariables>*> cache,
     const typename InterpolationTargetTag::temporal_id::type& temporal_id) {
-  // Hardcode this, until we have a way to get verbosity into the
-  // Interpolator's DataBox.
-  const auto verbosity = Verbosity::Debug;
+  const auto& verbosity =
+      db::get<logging::Tags::Verbosity<intrp::OptionTags::Interpolator>>(*box);
 
   const auto& holders =
       db::get<Tags::InterpolatedVarsHolders<Metavariables>>(*box);
