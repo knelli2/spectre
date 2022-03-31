@@ -195,7 +195,7 @@ struct mock_interpolation_target {
 template <typename Metavariables>
 struct mock_interpolator {
   using metavariables = Metavariables;
-  using chare_type = ActionTesting::MockArrayChare;
+  using chare_type = ActionTesting::MockGroupChare;
   using array_index = size_t;
   using simple_tags = typename intrp::Actions::InitializeInterpolator<
       intrp::Tags::VolumeVarsInfo<Metavariables, ::Tags::TimeStepId>,
@@ -208,7 +208,7 @@ struct mock_interpolator {
                              Metavariables::Phase::Registration, tmpl::list<>>,
       Parallel::PhaseActions<typename Metavariables::Phase,
                              Metavariables::Phase::Testing, tmpl::list<>>>;
-  using component_being_mocked = void;  // not needed.
+  using component_being_mocked = intrp::Interpolator<Metavariables>;
 };
 
 struct MockMetavariables {

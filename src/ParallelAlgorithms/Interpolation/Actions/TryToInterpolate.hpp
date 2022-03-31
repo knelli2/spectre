@@ -14,6 +14,7 @@
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
 #include "Options/Options.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
@@ -181,23 +182,33 @@ void try_to_interpolate(
       auto& receiver_proxy = Parallel::get_parallel_component<
           InterpolationTarget<Metavariables, InterpolationTargetTag>>(*cache);
       if (verbosity > ::Verbosity::Verbose) {
+        auto& my_proxy =
+            Parallel::get_parallel_component<Interpolator<Metavariables>>(
+                *cache);
         Parallel::printf(
-            "%s: t=%.6g: TryToInterpolate: "
-            "Calling Actions::InterpolationTargetReceiveVars\n",
+            "%s: t=%.6g: proc=%d: TryToInterpolate: Calling "
+            "Actions::InterpolationTargetReceiveVars and clearing data because "
+            "all %d elements on this proc are done interpolating.\n",
             Options::name<InterpolationTargetTag>(),
-            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+            Parallel::my_proc(*my_proxy.ckLocalBranch()), num_elements);
       }
       Parallel::simple_action<
           Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
           receiver_proxy, info.vars, info.global_offsets, temporal_id);
     } else {
       if (verbosity > ::Verbosity::Verbose) {
+        auto& my_proxy =
+            Parallel::get_parallel_component<Interpolator<Metavariables>>(
+                *cache);
         Parallel::printf(
-            "%s: t=%.6g: TryToInterpolate: "
-            "NOT calling Actions::InterpolationTargetReceiveVars because I "
-            "have no points\n",
+            "%s: t=%.6g: proc=%d: TryToInterpolate: NOT calling "
+            "Actions::InterpolationTargetReceiveVars.  Simply clearing data "
+            "because all %d elements on this proc have called me but there "
+            "are no interp points on any of those elements\n",
             Options::name<InterpolationTargetTag>(),
-            InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+            InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+            Parallel::my_proc(*my_proxy.ckLocalBranch()), num_elements);
       }
     }
 
@@ -214,12 +225,14 @@ void try_to_interpolate(
         });
   } else {
     if (verbosity > ::Verbosity::Verbose) {
+      auto& my_proxy =
+          Parallel::get_parallel_component<Interpolator<Metavariables>>(*cache);
       Parallel::printf(
-          "%s: t=%.6g: TryToInterpolate: "
-          "NOT calling Actions::InterpolationTargetReceiveVars because "
-          "interpolation is done only for %d out of %d elements\n",
+          "%s: t=%.6g: proc=%d: TryToInterpolate: exiting and waiting again "
+          "because only %d out of %d elements have called me.\n",
           Options::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+          Parallel::my_proc(*my_proxy.ckLocalBranch()),
           vars_infos.at(temporal_id)
               .interpolation_is_done_for_these_elements.size(),
           num_elements);
