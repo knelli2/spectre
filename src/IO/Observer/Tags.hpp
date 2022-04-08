@@ -100,10 +100,9 @@ struct VolumeDataLock : db::SimpleTag {
 
 /// Volume tensor data to be written to disk.
 struct TensorData : db::SimpleTag {
-  using type =
-      std::unordered_map<observers::ObservationId,
-                         std::unordered_map<observers::ArrayComponentId,
-                                            ElementVolumeData>>;
+  using type = std::unordered_map<
+      observers::ObservationId,
+      std::unordered_map<observers::ArrayComponentId, ElementVolumeData>>;
 };
 
 /// \cond
@@ -159,6 +158,9 @@ struct ObservationKey : db::SimpleTag {
   static std::string name() {
     return "ObservationKey(" + pretty_type::name<Tag>() + ")";
   }
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<>;
+  static type create_from_options() { return type{}; }
 };
 
 }  // namespace Tags

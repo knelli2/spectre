@@ -680,11 +680,10 @@ void Main<Metavariables>::
     // This is a Spectre array component built on a Charm++ array chare. The
     // component is in charge of allocating and distributing its elements over
     // the computing system.
-    parallel_component::allocate_array(
-        global_cache_proxy_,
-        Parallel::create_from_options<Metavariables>(
-            options_, typename parallel_component::initialization_tags{}),
-        procs_to_ignore);
+    auto local_options = Parallel::create_from_options<Metavariables>(
+        options_, typename parallel_component::initialization_tags{});
+    parallel_component::allocate_array(global_cache_proxy_, local_options,
+                                       procs_to_ignore);
   });
 
   // Free any resources from the initial option parsing.

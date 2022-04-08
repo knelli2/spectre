@@ -15,11 +15,13 @@
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Structure/InitialElementIds.hpp"
 #include "Domain/Tags.hpp"
+#include "IO/Observer/Tags.hpp"
 #include "Parallel/Algorithms/AlgorithmArray.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Tags/ResourceInfo.hpp"
+#include "ParallelAlgorithms/Events/MemoryMonitor.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/CreateHasStaticMemberVariable.hpp"
@@ -65,7 +67,7 @@ struct DgElementArray {
 
   static void allocate_array(
       Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
-      const tuples::tagged_tuple_from_typelist<initialization_tags>&
+      tuples::tagged_tuple_from_typelist<initialization_tags>&
           initialization_items,
       const std::unordered_set<size_t>& procs_to_ignore = {});
 
@@ -81,7 +83,7 @@ struct DgElementArray {
 template <class Metavariables, class PhaseDepActionList>
 void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
     Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
-    const tuples::tagged_tuple_from_typelist<initialization_tags>&
+    tuples::tagged_tuple_from_typelist<initialization_tags>&
         initialization_items,
     const std::unordered_set<size_t>& procs_to_ignore) {
   auto& local_cache = *Parallel::local_branch(global_cache);
@@ -103,6 +105,24 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
   size_t which_proc = 0;
   const domain::BlockZCurveProcDistribution<volume_dim> element_distribution{
       num_of_procs_to_use, initial_refinement_levels, procs_to_ignore};
+
+  std::vector<size_t> nodes_used{static_cast<size_t>(sys::number_of_nodes()),
+                                 0_st};
+  std::vector<size_t> procs_used{static_cast<size_t>(sys::number_of_procs()),
+                                 0_st};
+  // tuples::tagged_tuple_from_typelist<initialization_tags> mut_init_items{};
+  // tmpl::for_each<initialization_tags>([&mut_init_items,
+  //                                      &initialization_items](auto tag_v) {
+  //   using tag = tmpl::type_from<decltype(tag_v)>;
+  //   if constexpr (std::is_base_of_v<typename tag::type, std::unique_ptr>){
+  //   tuples::get<tag>(mut_init_items) =
+  //   tuples::get<tag>(initialization_items).clone(); } else {
+
+  //   tuples::get<tag>(mut_init_items) =
+  //   tuples::get<tag>(initialization_items);
+  //   }
+  // });
+
   for (const auto& block : domain.blocks()) {
     const auto initial_ref_levs = initial_refinement_levels[block.id()];
     const std::vector<ElementId<volume_dim>> element_ids =
@@ -111,6 +131,27 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
       for (const auto& element_id : element_ids) {
         const size_t target_proc =
             element_distribution.get_proc_for_element(element_id);
+        const size_t target_node =
+            static_cast<size_t>(sys::node_of(static_cast<int>(target_proc)));
+
+        if (procs_used[target_proc] == 0) {
+          tuples::get<Events::Tags::DesignatedProc>(initialization_items) =
+              true;
+          ++procs_used[target_proc];
+        } else {
+          tuples::get<Events::Tags::DesignatedProc>(initialization_items) =
+              false;
+        }
+
+        if (nodes_used[target_node] == 0) {
+          tuples::get<Events::Tags::DesignatedNode>(initialization_items) =
+              true;
+          ++nodes_used[target_node];
+        } else {
+          tuples::get<Events::Tags::DesignatedNode>(initialization_items) =
+              false;
+        }
+
         dg_element_array(element_id)
             .insert(global_cache, initialization_items, target_proc);
       }

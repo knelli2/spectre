@@ -376,6 +376,8 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
   /// MutableGlobalCache (i.e. the GlobalCache is charm-aware).
   bool mutable_global_cache_proxy_is_set() const;
 
+  auto& mutable_cache_proxy() { return mutable_global_cache_proxy_; }
+
  private:
   // clang-tidy: false positive, redundant declaration
   template <typename GlobalCacheTag, typename MV>

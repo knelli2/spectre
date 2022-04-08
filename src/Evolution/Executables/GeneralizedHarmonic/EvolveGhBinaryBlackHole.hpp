@@ -81,6 +81,7 @@
 #include "Parallel/Reduction.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
 #include "ParallelAlgorithms/Events/Factory.hpp"
+#include "ParallelAlgorithms/Events/MemoryMonitor.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Actions/RunEventsAndTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Completion.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
@@ -165,7 +166,7 @@ struct EvolutionMetavars {
   static constexpr dg::Formulation dg_formulation =
       dg::Formulation::StrongInertial;
   using temporal_id = Tags::TimeStepId;
-  static constexpr bool local_time_stepping = false;
+  static constexpr bool local_time_stepping = true;
   // Set override_functions_of_time to true to override the
   // 2nd or 3rd order piecewise polynomial functions of time using
   // `read_spec_piecewise_polynomial()`
@@ -366,6 +367,17 @@ struct EvolutionMetavars {
                                                       observe_fields,
                                                       non_tensor_compute_tags>,
                        control_system::control_system_events<control_systems>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 0>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 1>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 2>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 3>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 4>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 5>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 6>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 7>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 8>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 9>,
+                       Events::MemoryMonitor<Tags::Time, EvolutionMetavars, 10>,
                        Events::time_events<system>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
@@ -496,6 +508,7 @@ struct EvolutionMetavars {
       Initialization::Actions::AddComputeTags<tmpl::push_back<
           StepChoosers::step_chooser_compute_tags<EvolutionMetavars>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
+      Events::Actions::InitializeMemoryMonitor<EvolutionMetavars>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
       control_system::Actions::InitializeMeasurements<control_systems>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
