@@ -6,7 +6,6 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "IO/Logging/Tags.hpp"
 #include "IO/Logging/Verbosity.hpp"
-#include "Options/Options.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
@@ -63,7 +62,7 @@ void verify_temporal_ids_and_send_points_time_independent(
             "%s: t=%.6g: VerifyTemporalIdsAndSendPoints (time-independent): "
             "Calling SendPointsToInterpolator to start sequential "
             "interpolation at the given time.\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(
                 new_temporal_ids.front()));
       }
@@ -80,7 +79,7 @@ void verify_temporal_ids_and_send_points_time_independent(
             "%s: t=%.6g: VerifyTemporalIdsAndSendPoints (time-independent): "
             "Calling SendPointsToInterpolator to start non-sequential "
             "interpolation at the given time.\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(id));
       }
       Parallel::simple_action<
@@ -140,7 +139,7 @@ void verify_temporal_ids_and_send_points_time_dependent(
                   "VerifyTemporalIdsAndSendPoints: None of the pending "
                   "temporal_ids is ready, so I am setting myself as a callback "
                   "for when the FunctionsOfTime are mutated.\n",
-                  Options::name<InterpolationTargetTag>(),
+                  pretty_type::name<InterpolationTargetTag>(),
                   InterpolationTarget_detail::get_temporal_id_value(
                       pending_temporal_ids.front()));
             }
@@ -194,7 +193,7 @@ void verify_temporal_ids_and_send_points_time_dependent(
             "%s: t=%.6g: VerifyTemporalIdsAndSendPoints: Calling "
             "SendPointsToInterpolator to start sequential interpolation at the "
             "given time.\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(
                 new_temporal_ids.front()));
       }
@@ -211,7 +210,7 @@ void verify_temporal_ids_and_send_points_time_dependent(
             "%s: t=%.6g: VerifyTemporalIdsAndSendPoints: Calling "
             "SendPointsToInterpolator to start non-sequential interpolation at "
             "the given time.\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(id));
       }
       Parallel::simple_action<
@@ -227,7 +226,7 @@ void verify_temporal_ids_and_send_points_time_dependent(
             "%s: VerifyTemporalIdsAndSendPoints: There are still pending "
             "temporal_ids, so I am calling myself so that those temporal_ids "
             "can be waited for.\n",
-            Options::name<InterpolationTargetTag>());
+            pretty_type::name<InterpolationTargetTag>());
       }
       Parallel::simple_action<
           VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>>(my_proxy);

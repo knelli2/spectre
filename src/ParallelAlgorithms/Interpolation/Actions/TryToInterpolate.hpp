@@ -14,8 +14,8 @@
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
 #include "Options/Options.hpp"
-#include "Parallel/Info.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
@@ -189,9 +189,9 @@ void try_to_interpolate(
             "%s: t=%.6g: proc=%d: TryToInterpolate: Calling "
             "Actions::InterpolationTargetReceiveVars and clearing data because "
             "all %d elements on this proc are done interpolating.\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id),
-            Parallel::my_proc(*my_proxy.ckLocalBranch()), num_elements);
+            Parallel::my_proc(*Parallel::local_branch(my_proxy)), num_elements);
       }
       Parallel::simple_action<
           Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
@@ -206,9 +206,9 @@ void try_to_interpolate(
             "Actions::InterpolationTargetReceiveVars.  Simply clearing data "
             "because all %d elements on this proc have called me but there "
             "are no interp points on any of those elements\n",
-            Options::name<InterpolationTargetTag>(),
+            pretty_type::name<InterpolationTargetTag>(),
             InterpolationTarget_detail::get_temporal_id_value(temporal_id),
-            Parallel::my_proc(*my_proxy.ckLocalBranch()), num_elements);
+            Parallel::my_proc(*Parallel::local_branch(my_proxy)), num_elements);
       }
     }
 
@@ -230,9 +230,9 @@ void try_to_interpolate(
       Parallel::printf(
           "%s: t=%.6g: proc=%d: TryToInterpolate: exiting and waiting again "
           "because only %d out of %d elements have called me.\n",
-          Options::name<InterpolationTargetTag>(),
+          pretty_type::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id),
-          Parallel::my_proc(*my_proxy.ckLocalBranch()),
+          Parallel::my_proc(*Parallel::local_branch(my_proxy)),
           vars_infos.at(temporal_id)
               .interpolation_is_done_for_these_elements.size(),
           num_elements);
