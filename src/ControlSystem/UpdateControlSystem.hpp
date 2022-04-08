@@ -185,8 +185,8 @@ struct UpdateControlSystem {
       // Begin step 7
       // Actually update the FunctionOfTime
       Parallel::mutate<::domain::Tags::FunctionsOfTime, UpdateFunctionOfTime>(
-          cache.thisProxy, function_of_time_name, current_expiration_time,
-          control_signal, new_expiration_time);
+          cache, function_of_time_name, current_expiration_time, control_signal,
+          new_expiration_time);
 
       // Begin step 8
       // Update the damping timescales with the newly calculated control error
@@ -206,7 +206,7 @@ struct UpdateControlSystem {
       // Begin step 10
       // Update the measurement timescales
       Parallel::mutate<Tags::MeasurementTimescales, UpdateFunctionOfTime>(
-          cache.thisProxy, function_of_time_name, current_expiration_time,
+          cache, function_of_time_name, current_expiration_time,
           new_measurement_timescale, new_expiration_time);
 
       // Now that the measurement timescales have been updated, tell the

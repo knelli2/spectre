@@ -214,6 +214,60 @@ struct EvolutionMetavars {
                                      control_system::Systems::Expansion<2>>;
   // using control_systems = tmpl::list<control_system::Systems::Expansion<2>>;
 
+  // Find horizons in grid frame, but also interpolate
+  // inertial-frame quantities for observers.
+  using horizons_vars_to_interpolate_to_target = tmpl::list<
+      gr::Tags::SpatialMetric<volume_dim, ::Frame::Grid, DataVector>,
+      gr::Tags::InverseSpatialMetric<volume_dim, ::Frame::Grid>,
+      gr::Tags::ExtrinsicCurvature<volume_dim, ::Frame::Grid>,
+      gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Grid>,
+      // everything below here is for observers.
+      gr::Tags::SpatialMetric<volume_dim, ::Frame::Inertial, DataVector>,
+      gr::Tags::InverseSpatialMetric<volume_dim, ::Frame::Inertial, DataVector>,
+      gr::Tags::SpatialChristoffelSecondKind<volume_dim, ::Frame::Inertial>,
+      gr::Tags::ExtrinsicCurvature<volume_dim, ::Frame::Inertial>,
+      gr::Tags::SpatialRicci<volume_dim, ::Frame::Inertial>>;
+  // Observe horizons in inertial frame.
+  using horizons_tags_to_observe = tmpl::list<
+      StrahlkorperGr::Tags::AreaCompute<::Frame::Inertial>,
+      StrahlkorperGr::Tags::IrreducibleMassCompute<::Frame::Inertial>,
+      StrahlkorperTags::MaxRicciScalarCompute,
+      StrahlkorperTags::MinRicciScalarCompute,
+      StrahlkorperGr::Tags::ChristodoulouMassCompute<::Frame::Inertial>,
+      StrahlkorperGr::Tags::DimensionlessSpinMagnitudeCompute<
+          ::Frame::Inertial>>;
+  // These ComputeItems are used only for observers, since the
+  // actual horizon-finding does not use any ComputeItems.
+  using horizons_compute_items_on_target = tmpl::append<
+      tmpl::list<
+          StrahlkorperTags::ThetaPhiCompute<::Frame::Inertial>,
+          StrahlkorperTags::RadiusCompute<::Frame::Inertial>,
+          StrahlkorperTags::RhatCompute<::Frame::Inertial>,
+          StrahlkorperTags::InvJacobianCompute<::Frame::Inertial>,
+          StrahlkorperTags::InvHessianCompute<::Frame::Inertial>,
+          StrahlkorperTags::JacobianCompute<::Frame::Inertial>,
+          StrahlkorperTags::DxRadiusCompute<::Frame::Inertial>,
+          StrahlkorperTags::D2xRadiusCompute<::Frame::Inertial>,
+          StrahlkorperTags::NormalOneFormCompute<::Frame::Inertial>,
+          StrahlkorperTags::OneOverOneFormMagnitudeCompute<
+              volume_dim, ::Frame::Inertial, DataVector>,
+          StrahlkorperTags::TangentsCompute<::Frame::Inertial>,
+          StrahlkorperTags::UnitNormalOneFormCompute<::Frame::Inertial>,
+          StrahlkorperTags::UnitNormalVectorCompute<::Frame::Inertial>,
+          StrahlkorperTags::GradUnitNormalOneFormCompute<::Frame::Inertial>,
+          // Note that StrahlkorperTags::ExtrinsicCurvatureCompute is the
+          // 2d extrinsic curvature of the strahlkorper embedded in the 3d
+          // slice, whereas gr::tags::ExtrinsicCurvature is the 3d extrinsic
+          // curvature of the slice embedded in 4d spacetime.  Both quantities
+          // are in the DataBox.
+          StrahlkorperGr::Tags::AreaElementCompute<::Frame::Inertial>,
+          StrahlkorperTags::ExtrinsicCurvatureCompute<::Frame::Inertial>,
+          StrahlkorperTags::RicciScalarCompute<::Frame::Inertial>,
+          StrahlkorperGr::Tags::SpinFunctionCompute<::Frame::Inertial>,
+          StrahlkorperGr::Tags::DimensionfulSpinMagnitudeCompute<
+              ::Frame::Inertial>>,
+      horizons_tags_to_observe>;
+
   struct AhA {
     using temporal_id = ::Tags::Time;
     using vars_to_interpolate_to_target =
@@ -305,14 +359,17 @@ struct EvolutionMetavars {
                        control_system::control_system_triggers<control_systems>,
                        DenseTriggers::standard_dense_triggers>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
-        tmpl::pair<Event,
-                   tmpl::flatten<tmpl::list<
-                       Events::Completion,
-                       dg::Events::field_observations<volume_dim, Tags::Time,
-                                                      observe_fields,
-                                                      non_tensor_compute_tags>,
-                       control_system::control_system_events<control_systems>,
-                       Events::time_events<system>>>>,
+        tmpl::pair<
+            Event,
+            tmpl::flatten<tmpl::list<
+                intrp::Events::Interpolate<3, AhA, interpolator_source_vars>,
+                intrp::Events::Interpolate<3, AhB, interpolator_source_vars>,
+                Events::Completion,
+                dg::Events::field_observations<volume_dim, Tags::Time,
+                                               observe_fields,
+                                               non_tensor_compute_tags>,
+                control_system::control_system_events<control_systems>,
+                Events::time_events<system>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
                    tmpl::list<GeneralizedHarmonic::BoundaryConditions::
@@ -346,25 +403,11 @@ struct EvolutionMetavars {
 
   // Add in control system tags by hand because they are all identical
   using observed_reduction_data_tags =
-      observers::collect_reduction_data_tags<tmpl::push_back<
+      observers::collect_reduction_data_tags<tmpl::flatten<tmpl::list<
           tmpl::at<typename factory_creation::factory_classes, Event>,
-          typename AhA::post_horizon_find_callback,
-          typename AhB::post_horizon_find_callback,
-          control_system::WriterHelper>>;
-
-  using phase_changes =
-      tmpl::list<PhaseControl::Registrars::VisitAndReturn<EvolutionMetavars,
-                                                          Phase::LoadBalancing>,
-                 PhaseControl::Registrars::VisitAndReturn<
-                     EvolutionMetavars, Phase::WriteCheckpoint>,
-                 PhaseControl::Registrars::CheckpointAndExitAfterWallclock<
-                     EvolutionMetavars>>;
-
-  using initialize_phase_change_decision_data =
-      PhaseControl::InitializePhaseChangeDecisionData<phase_changes>;
-
-  using phase_change_tags_and_combines_list =
-      PhaseControl::get_phase_change_tags<phase_changes>;
+          typename AhA::post_horizon_find_callbacks,
+          typename AhB::post_horizon_find_callbacks,
+          control_system::WriterHelper>>>;
 
   // A tmpl::list of tags to be added to the GlobalCache by the
   // metavariables
@@ -487,11 +530,10 @@ struct EvolutionMetavars {
                                             Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
               Phase, Phase::Evolve,
-              tmpl::list<
-                  ::domain::Actions::CheckFunctionsOfTimeAreReady,
-                  Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
-                  step_actions, Actions::AdvanceTime,
-                  PhaseControl::Actions::ExecutePhaseChange<phase_changes>>>>>>;
+              tmpl::list<::domain::Actions::CheckFunctionsOfTimeAreReady,
+                         Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+                         step_actions, Actions::AdvanceTime,
+                         PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
   template <typename ParallelComponent>
   struct registration_list {

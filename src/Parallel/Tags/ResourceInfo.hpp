@@ -90,7 +90,7 @@ template <typename ParallelComponent>
 struct SingletonInfo {
   using type = Parallel::SingletonInfo<ParallelComponent>;
   static constexpr Options::String help = {"Resource info for a singleton."};
-  static std::string name() { return Options::name<ParallelComponent>(); }
+  static std::string name() { return pretty_type::name<ParallelComponent>(); }
   using group = ResourceInfo;
 };
 
@@ -125,7 +125,7 @@ struct AvoidProc0 : db::SimpleTag {
 template <typename ParallelComponent>
 struct SingletonInfo : db::SimpleTag {
   using type = Parallel::SingletonInfo<ParallelComponent>;
-  static std::string name() { return Options::name<ParallelComponent>(); }
+  static std::string name() { return pretty_type::name<ParallelComponent>(); }
   using option_tags =
       tmpl::list<Parallel::OptionTags::SingletonInfo<ParallelComponent>,
                  Parallel::OptionTags::AvoidProc0>;

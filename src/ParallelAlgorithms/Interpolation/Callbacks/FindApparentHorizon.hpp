@@ -204,7 +204,7 @@ struct FindApparentHorizon {
     if (indices_of_invalid_pts.count(temporal_id) > 0 and
         not indices_of_invalid_pts.at(temporal_id).empty()) {
       Parallel::printf("Horizon finder %s failed.\n",
-                       Options::name<InterpolationTargetTag>());
+                       pretty_type::name<InterpolationTargetTag>());
       InterpolationTargetTag::horizon_find_failure_callback::template apply<
           InterpolationTargetTag>(*box, *cache, temporal_id,
                                   FastFlow::Status::InterpolationFailure);
@@ -260,7 +260,7 @@ struct FindApparentHorizon {
               "%s: t=%.6g: FindApparentHorizon: "
               "Calling Actions::SendPointsToInterpolator for next "
               "Ah iteration, and exiting (which should be without cleanup)\n",
-              Options::name<InterpolationTargetTag>(),
+              pretty_type::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         Parallel::simple_action<
@@ -275,7 +275,7 @@ struct FindApparentHorizon {
           Parallel::printf(
               "%s: t=%.6g: FindApparentHorizon: "
               "FAILED. Calling failure callback (locally)\n",
-              Options::name<InterpolationTargetTag>(),
+              pretty_type::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         InterpolationTargetTag::horizon_find_failure_callback::template apply<
@@ -284,7 +284,7 @@ struct FindApparentHorizon {
           Parallel::printf(
               "%s: t=%.6g: FindApparentHorizon: "
               "Called failure callback (locally), continuing\n",
-              Options::name<InterpolationTargetTag>(),
+              pretty_type::name<InterpolationTargetTag>(),
               InterpolationTarget_detail::get_temporal_id_value(temporal_id));
         }
         horizon_finder_failed = true;
@@ -421,7 +421,7 @@ struct FindApparentHorizon {
       Parallel::printf(
           "%s: t=%.6g: FindApparentHorizon: Exiting, which should "
           "trigger cleaning up data at this temporal_id\n",
-          Options::name<InterpolationTargetTag>(),
+          pretty_type::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id));
     }
     return true;

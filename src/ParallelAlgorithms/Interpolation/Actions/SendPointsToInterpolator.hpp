@@ -8,7 +8,6 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "IO/Logging/Tags.hpp"
 #include "IO/Logging/Verbosity.hpp"
-#include "Options/Options.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
@@ -58,7 +57,7 @@ struct SendPointsToInterpolator {
       Parallel::printf(
           "%s: t=%.6g: SendPointsToInterpolator: "
           "Calling Actions::ReceivePoints and exiting\n",
-          Options::name<InterpolationTargetTag>(),
+          pretty_type::name<InterpolationTargetTag>(),
           InterpolationTarget_detail::get_temporal_id_value(temporal_id));
     }
     Parallel::simple_action<Actions::ReceivePoints<InterpolationTargetTag>>(
