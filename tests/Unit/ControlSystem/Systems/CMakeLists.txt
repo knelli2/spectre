@@ -3,6 +3,7 @@
 
 set(LIBRARY_SOURCES
   ${LIBRARY_SOURCES}
+  Systems/CalculateTrajectories.cpp
   Systems/Test_Expansion.cpp
   Systems/Test_Shape.cpp
   Systems/Test_Rotation.cpp
