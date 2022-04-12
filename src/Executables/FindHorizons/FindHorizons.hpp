@@ -222,9 +222,9 @@ struct ApparentHorizon {
       intrp::callbacks::FindApparentHorizon<ApparentHorizon, Frame::Inertial>;
   using horizon_find_failure_callback =
       intrp::callbacks::ErrorOnFailedApparentHorizon;
-  using post_horizon_find_callback =
-      intrp::callbacks::ObserveTimeSeriesOnSurface<
-          tags_to_observe, ApparentHorizon, ApparentHorizon>;
+  using post_horizon_find_callbacks =
+      tmpl::list<intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe,
+                                                              ApparentHorizon>>;
 
   static std::string name() { return "Ah" + ah::name(Label); }
 
@@ -331,8 +331,8 @@ struct Metavariables {
                  observers::ObserverWriter<Metavariables>>;
 
   using observed_reduction_data_tags = observers::collect_reduction_data_tags<
-      tmpl::list<typename AhA::post_horizon_find_callback,
-                 typename AhB::post_horizon_find_callback>>;
+      tmpl::append<typename AhA::post_horizon_find_callbacks,
+                   typename AhB::post_horizon_find_callbacks>>;
 
   template <typename... Tags>
   static Phase determine_next_phase(
