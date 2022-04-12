@@ -9,6 +9,7 @@ set(LIBRARY_SOURCES
   Test_ComputeItems.cpp
   Test_FastFlow.cpp
   Test_ObjectLabel.cpp
+  Test_ObserveCenters.cpp
   Test_StrahlkorperGr.cpp
   Test_StrahlkorperInDifferentFrame.cpp
   Test_Tags.cpp
