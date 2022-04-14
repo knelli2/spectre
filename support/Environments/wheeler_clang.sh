@@ -71,6 +71,7 @@ spectre_run_cmake() {
           -D MEMORY_ALLOCATOR=SYSTEM \
           -D BUILD_PYTHON_BINDINGS=OFF \
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
+          -D ASAN=ON \
           "$@" \
           $SPECTRE_HOME
 }
