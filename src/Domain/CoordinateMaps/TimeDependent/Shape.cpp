@@ -75,7 +75,14 @@ Shape& Shape::operator=(const Shape& rhs) {
   return *this;
 }
 
-Shape::Shape(const Shape& rhs) { *this = rhs; }
+Shape::Shape(const Shape& rhs)
+    : f_of_t_name_(rhs.f_of_t_name_),
+      center_(rhs.center_),
+      l_max_(rhs.l_max_),
+      m_max_(rhs.m_max_),
+      ylm_(rhs.ylm_),
+      transition_func_(rhs.transition_func_->get_clone()),
+      coefs_(rhs.coefs_) {}
 
 template <typename T>
 std::array<tt::remove_cvref_wrap_t<T>, 3> Shape::operator()(
