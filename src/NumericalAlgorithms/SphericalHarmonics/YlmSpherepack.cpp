@@ -22,6 +22,8 @@
 #include "Utilities/MakeArray.hpp"
 #include "Utilities/Spherepack.hpp"
 
+#include "Parallel/Printf.hpp"
+
 //============================================================================
 // Note that SPHEREPACK (which is wrapped by YlmSpherepack) takes
 // n_theta and n_phi as input, and is ok with arbitrary values of
@@ -780,6 +782,11 @@ void YlmSpherepack::calculate_interpolation_data() const {
   // We need to compute alpha, beta, index, and pmm only once.
   const size_t array_size = n_theta_ * l1 - l1 * (l1 - 1) / 2;
   index.resize(array_size);
+  if (not alpha.empty()) {
+    ERROR("alpha NOT empty before resize!\n");
+  } else {
+    Parallel::printf("new alpha size: %d\n", array_size);
+  }
   alpha.resize(array_size);
   beta.resize(array_size);
   pmm.resize(l1);
