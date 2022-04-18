@@ -11,6 +11,7 @@ set(ALGORITHM_TEST_LINK_LIBRARIES
   Boost::program_options
   Charmxx::main
   ErrorHandling
+  IO
   Informer
   Options
   Parallel
@@ -171,6 +172,7 @@ set(LIBRARY "Test_Parallel")
 set(LIBRARY_SOURCES
   Test_GlobalCacheDataBox.cpp
   Test_InboxInserters.cpp
+  Test_MemoryMonitors.cpp
   Test_NodeLock.cpp
   Test_Parallel.cpp
   Test_ParallelComponentHelpers.cpp
