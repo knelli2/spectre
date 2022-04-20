@@ -21,11 +21,13 @@
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/PupStlCpp17.hpp"
+#include "Parallel/Serialize.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Requires.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 #include "Utilities/TypeTraits/CreateGetTypeAliasOrDefault.hpp"
@@ -33,6 +35,21 @@
 
 #include "Parallel/GlobalCache.decl.h"
 #include "Parallel/Main.decl.h"
+
+#include "Parallel/Printf.hpp"
+
+/// \cond
+template <typename Metavariables>
+struct MemoryMonitor;
+namespace Parallel {
+template <typename Metavariables>
+struct GlobalCache;
+}  // namespace Parallel
+namespace mem_monitor {
+template <typename ContributingComponent>
+struct ContributeMemoryData;
+}  // namespace mem_monitor
+/// \endcond
 
 namespace Parallel {
 
@@ -88,6 +105,20 @@ using get_component_if_mocked =
     decltype(get_component_if_mocked_impl<ParallelComponent, ComponentList>());
 }  // namespace GlobalCache_detail
 
+/// \cond
+template <typename ParallelComponentTag, typename Metavariables>
+auto get_parallel_component(GlobalCache<Metavariables>& cache)
+    -> Parallel::proxy_from_parallel_component<
+        GlobalCache_detail::get_component_if_mocked<
+            typename Metavariables::component_list, ParallelComponentTag>>&;
+
+template <typename ParallelComponentTag, typename Metavariables>
+auto get_parallel_component(const GlobalCache<Metavariables>& cache)
+    -> const Parallel::proxy_from_parallel_component<
+        GlobalCache_detail::get_component_if_mocked<
+            typename Metavariables::component_list, ParallelComponentTag>>&;
+/// \endcond
+
 /// \ingroup ParallelGroup
 /// A Charm++ chare that caches mutable data once per Charm++ core.
 ///
@@ -136,6 +167,15 @@ class MutableGlobalCache : public CBase_MutableGlobalCache<Metavariables> {
   // subsequent arguments.  Called via `GlobalCache::mutate`.
   template <typename GlobalCacheTag, typename Function, typename... Args>
   void mutate(const std::tuple<Args...>& args);
+
+  // Entry method that computes the size of the local branch of the
+  // MutableGlobalCache and sends it to the MemoryMonitor parallel component.
+  //
+  // Note: This can only be called if the MemoryMonitor component is in the
+  // `component_list` of the metavariables. Also can't be called in the testing
+  // framework. Trying to do either of these will result in an ERROR.
+  void compute_size_for_memory_monitor(
+      CProxy_GlobalCache<Metavariables> global_cache_proxy, const double time);
 
   // Not an entry method, and intended to be called only from
   // `GlobalCache` via the free function
@@ -240,6 +280,44 @@ void MutableGlobalCache<Metavariables>::mutate(
     callback->invoke();
   }
 }
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
+#endif  // defined(__GNUC__) && !defined(__clang__)
+template <typename Metavariables>
+void MutableGlobalCache<Metavariables>::compute_size_for_memory_monitor(
+    CProxy_GlobalCache<Metavariables> global_cache_proxy, const double time) {
+  if constexpr (tmpl::list_contains_v<typename Metavariables::component_list,
+                                      MemoryMonitor<Metavariables>>) {
+    const double size_in_bytes =
+        static_cast<double>(size_of_object_in_bytes(*this));
+    const double size_in_MB = size_in_bytes / 1.0e6;
+
+    auto& cache = *Parallel::local_branch(global_cache_proxy);
+
+    auto& mem_monitor_proxy =
+        Parallel::get_parallel_component<MemoryMonitor<Metavariables>>(cache);
+
+    // We use sys::my_proc() here rather than
+    // Parallel::my_proc(*Parallel::local_branch(this->thisProxy)) because the
+    // MutableGlobalCache doesn't have a `my_proc()` member to call
+    const int my_proc = sys::my_proc();
+
+    Parallel::simple_action<
+        mem_monitor::ContributeMemoryData<MutableGlobalCache<Metavariables>>>(
+        mem_monitor_proxy, time, my_proc, size_in_MB);
+  } else {
+    (void)global_cache_proxy;
+    (void)time;
+    ERROR(
+        "This entry method of the MutableGlobalCache can only be called if the "
+        "MemoryMonitor is in the component list in the metavariables.\n");
+  }
+}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif  // defined(__GNUC__) && !defined(__clang__)
 
 template <typename Metavariables>
 void MutableGlobalCache<Metavariables>::pup(PUP::er& p) {
@@ -373,6 +451,14 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
   template <typename GlobalCacheTag, typename Function, typename... Args>
   void mutate(const std::tuple<Args...>& args);
 
+  /// Entry method that computes the size of the local branch of the
+  /// GlobalCache and sends it to the MemoryMonitor parallel component.
+  ///
+  /// \note This can only be called if the MemoryMonitor component is in the
+  /// `component_list` of the metavariables. Also can't be called in the testing
+  /// framework. Trying to do either of these will result in an ERROR.
+  void compute_size_for_memory_monitor(const double time);
+
   /// Retrieve the proxy to the global cache
   proxy_type get_this_proxy();
 
@@ -502,6 +588,41 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
     mutable_global_cache_->template mutate<GlobalCacheTag, Function>(args);
   }
 }
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
+#endif  // defined(__GNUC__) && !defined(__clang__)
+template <typename Metavariables>
+void GlobalCache<Metavariables>::compute_size_for_memory_monitor(
+    const double time) {
+  if constexpr (tmpl::list_contains_v<typename Metavariables::component_list,
+                                      MemoryMonitor<Metavariables>>) {
+    const double size_in_bytes =
+        static_cast<double>(size_of_object_in_bytes(*this));
+    const double size_in_MB = size_in_bytes / 1.0e6;
+
+    auto& mem_monitor_proxy =
+        Parallel::get_parallel_component<MemoryMonitor<Metavariables>>(*this);
+
+    // We use sys::my_node() here rather than
+    // Parallel::my_node(*Parallel::local_branch(this->get_this_proxy()))
+    // because the MutableGlobalCache doesn't have a `my_node()` member to call
+    const int my_node = sys::my_node();
+
+    Parallel::simple_action<
+        mem_monitor::ContributeMemoryData<GlobalCache<Metavariables>>>(
+        mem_monitor_proxy, time, my_node, size_in_MB);
+  } else {
+    (void)time;
+    ERROR(
+        "This entry method of the GlobalCache can only be called if the "
+        "MemoryMonitor is in the component list in the metavariables.\n");
+  }
+}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif  // defined(__GNUC__) && !defined(__clang__)
 
 template <typename Metavariables>
 typename Parallel::GlobalCache<Metavariables>::proxy_type
