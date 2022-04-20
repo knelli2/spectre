@@ -20,8 +20,10 @@
 #include "Options/FactoryHelpers.hpp"
 #include "Options/Options.hpp"
 #include "Options/Protocols/FactoryCreation.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Parallel/PhaseControl/ExecutePhaseChange.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/CleanUpInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolationTargetReceiveVars.hpp"
@@ -124,8 +126,9 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = Options::add_factory_classes<
         typename gh_base::factory_creation::factory_classes,
-        tmpl::pair<Event, tmpl::list<intrp::Events::Interpolate<
-                              3, AhA, interpolator_source_vars>>>>;
+        tmpl::pair<Event, tmpl::list<Events::MonitorMemory<3, ::Tags::Time>,
+                                     intrp::Events::Interpolate<
+                                         3, AhA, interpolator_source_vars>>>>;
   };
 
   using const_global_cache_tags = tmpl::list<
@@ -197,6 +200,7 @@ struct EvolutionMetavars<3, InitialData, BoundaryConditions>
   using component_list = tmpl::flatten<tmpl::list<
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
+      MemoryMonitor<EvolutionMetavars>,
       std::conditional_t<evolution::is_numeric_initial_data_v<InitialData>,
                          importers::ElementDataReader<EvolutionMetavars>,
                          tmpl::list<>>,

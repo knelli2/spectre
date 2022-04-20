@@ -152,6 +152,19 @@ EventsAndTriggers:
         Offset: 2
   : - AhA
   ? Slabs:
+      EvenlySpaced:
+        Interval: 1
+        Offset: 0
+  : - MonitorMemory:
+        ComponentsToMonitor:
+          - "DgElementArray"
+          - "Interpolator"
+          - "InterpolationTarget"
+          - "GlobalCache"
+          - "MutableGlobalCache"
+          - "Observer"
+          - "ObserverWriter"
+  ? Slabs:
       Specified:
         Values: [3]
   : - Completion
