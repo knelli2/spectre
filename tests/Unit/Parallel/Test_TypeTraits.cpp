@@ -3,6 +3,7 @@
 
 #include <type_traits>
 
+#include "Framework/ActionTesting.hpp"
 #include "Parallel/Algorithms/AlgorithmArrayDeclarations.hpp"
 #include "Parallel/Algorithms/AlgorithmGroupDeclarations.hpp"
 #include "Parallel/Algorithms/AlgorithmNodegroupDeclarations.hpp"
@@ -28,18 +29,22 @@ struct Metavariables {
 struct SingletonParallelComponent {
   using metavariables = Metavariables;
   using initialization_tags = tmpl::list<>;
+  using chare_type = Parallel::Algorithms::Singleton;
 };
 struct ArrayParallelComponent {
   using metavariables = Metavariables;
   using initialization_tags = tmpl::list<>;
+  using chare_type = Parallel::Algorithms::Array;
 };
 struct GroupParallelComponent {
   using metavariables = Metavariables;
   using initialization_tags = tmpl::list<>;
+  using chare_type = Parallel::Algorithms::Group;
 };
 struct NodegroupParallelComponent {
   using metavariables = Metavariables;
   using initialization_tags = tmpl::list<>;
+  using chare_type = Parallel::Algorithms::Nodegroup;
 };
 
 using singleton_proxy =
@@ -106,3 +111,8 @@ static_assert(Parallel::is_pupable_v<PupableClass>,
 static_assert(not Parallel::is_pupable<NonpupableClass>::value,
               "Failed testing type trait is_pupable");
 // [is_pupable_example]
+
+static_assert(Parallel::is_singleton_v<SingletonParallelComponent>);
+static_assert(Parallel::is_array_v<ArrayParallelComponent>);
+static_assert(Parallel::is_group_v<GroupParallelComponent>);
+static_assert(Parallel::is_nodegroup_v<NodegroupParallelComponent>);

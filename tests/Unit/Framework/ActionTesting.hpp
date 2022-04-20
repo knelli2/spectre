@@ -695,6 +695,8 @@ struct MockArrayChare {
       Component, Index,
       typename MockDistributedObject<Component>::inbox_tags_list,
       MockArrayChare>;
+  static std::string name() { return "Array"; }
+  using component_type = Parallel::Algorithms::Array;
 };
 /// A mock class for the CMake-generated `Parallel::Algorithms::Group`
 struct MockGroupChare {
@@ -703,6 +705,8 @@ struct MockGroupChare {
       Component, Index,
       typename MockDistributedObject<Component>::inbox_tags_list,
       MockGroupChare>;
+  static std::string name() { return "Group"; }
+  using component_type = Parallel::Algorithms::Group;
 };
 /// A mock class for the CMake-generated `Parallel::Algorithms::NodeGroup`
 struct MockNodeGroupChare {
@@ -711,6 +715,8 @@ struct MockNodeGroupChare {
       Component, Index,
       typename MockDistributedObject<Component>::inbox_tags_list,
       MockNodeGroupChare>;
+  static std::string name() { return "Nodegroup"; }
+  using component_type = Parallel::Algorithms::Nodegroup;
 };
 /// A mock class for the CMake-generated `Parallel::Algorithms::Singleton`
 struct MockSingletonChare {
@@ -719,6 +725,8 @@ struct MockSingletonChare {
       Component, Index,
       typename MockDistributedObject<Component>::inbox_tags_list,
       MockSingletonChare>;
+  static std::string name() { return "Singleton"; }
+  using component_type = Parallel::Algorithms::Singleton;
 };
 }  // namespace ActionTesting
 
