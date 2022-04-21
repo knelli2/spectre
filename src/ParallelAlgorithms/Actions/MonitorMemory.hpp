@@ -310,6 +310,11 @@ struct ProcessSingleton {
                     const ArrayIndex& /*array_index*/, const double time) {
     auto& singleton_proxy =
         Parallel::get_parallel_component<ParallelComponent>(cache);
+    auto* singleton_ptr = singleton_proxy.ckLocal();
+    if (singleton_ptr == nullptr) {
+      ERROR("Singleton " << pretty_type::name<ParallelComponent>()
+                         << " pointer is null.");
+    }
     const double size_in_bytes = static_cast<double>(
         size_of_object_in_bytes(*singleton_proxy.ckLocal()));
     const double size_in_MB = size_in_bytes / 1.0e6;
