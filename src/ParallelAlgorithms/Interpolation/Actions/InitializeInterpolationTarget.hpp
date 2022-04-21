@@ -9,6 +9,7 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/VariablesTag.hpp"
+#include "Parallel/Local.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"  // IWYU pragma: keep
 #include "Utilities/Requires.hpp"
 #include "Utilities/TMPL.hpp"
@@ -16,6 +17,9 @@
 #include "Utilities/TypeTraits.hpp"
 #include "Utilities/TypeTraits/CreateGetTypeAliasOrDefault.hpp"
 #include "Utilities/TypeTraits/CreateIsCallable.hpp"
+
+#include "Parallel/Printf.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 
 /// \cond
 // IWYU pragma: no_forward_declare db::DataBox
@@ -92,7 +96,7 @@ struct InitializeInterpolationTarget {
             typename ActionList, typename ParallelComponent>
   static auto apply(db::DataBox<DbTagsList>& box,
                     const tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
-                    const Parallel::GlobalCache<Metavariables>& cache,
+                    Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& /*array_index*/,
                     const ActionList /*meta*/,
                     const ParallelComponent* const /*meta*/) {
@@ -103,6 +107,14 @@ struct InitializeInterpolationTarget {
             const Parallel::GlobalCache<Metavariables>&>) {
       InterpolationTargetTag::compute_target_points::initialize(
           make_not_null(&box), cache);
+    }
+    Parallel::printf("Initializing singleton %s on proc %d\n",
+                     pretty_type::name<ParallelComponent>(), sys::my_proc());
+    auto& proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
+    auto* ptr = Parallel::local(proxy);
+    if (ptr == nullptr) {
+      ERROR("Singleton " << pretty_type::name<ParallelComponent>()
+                         << " pointer in Initialization is null.");
     }
     return std::make_tuple(std::move(box));
   }
