@@ -171,6 +171,14 @@ void test_element_id() {
   CHECK(ElementId<3>::external_boundary_id().segment_ids() ==
         make_array<3>(SegmentId(ElementId<3>::max_refinement_level - 1, 0)));
   CHECK(ElementId<3>::external_boundary_id().grid_index() == 0);
+
+  ElementId<3> zeroth_element(0);
+  ElementId<3> not_zeroth_element1{0, 1};
+  ElementId<3> not_zeroth_element2{0, {{{1, 0}, {2, 1}, {1, 0}}}, 0};
+
+  CHECK(is_zeroth_element(zeroth_element));
+  CHECK_FALSE(is_zeroth_element(not_zeroth_element1));
+  CHECK_FALSE(is_zeroth_element(not_zeroth_element2));
 }
 
 template <size_t VolumeDim>

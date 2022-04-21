@@ -181,6 +181,15 @@ bool operator>=(const ElementId<VolumeDim>& lhs,
   return !(lhs < rhs);
 }
 
+/// Returns a bool if the element is the `0th` element in the domain.
+///
+/// An element is considered to be the `0th` element if its ElementId `id` has
+/// 1. id.block_id() == 0
+/// 2. all id.segment_ids() have SegmentId.index() == 0
+/// 3. id.grid_index() == 0
+template <size_t Dim>
+bool is_zeroth_element(const ElementId<Dim>& id);
+
 // ######################################################################
 // INLINE DEFINITIONS
 // ######################################################################
