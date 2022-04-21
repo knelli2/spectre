@@ -64,6 +64,7 @@
 #include "Parallel/Algorithms/AlgorithmSingleton.hpp"
 #include "Parallel/InitializationFunctions.hpp"
 #include "Parallel/Local.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Parallel/PhaseControl/CheckpointAndExitAfterWallclock.hpp"
 #include "Parallel/PhaseControl/ExecutePhaseChange.hpp"
 #include "Parallel/PhaseControl/VisitAndReturn.hpp"
@@ -71,6 +72,7 @@
 #include "Parallel/Reduction.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
 #include "ParallelAlgorithms/Events/Factory.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Actions/RunEventsAndTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Completion.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
@@ -343,7 +345,7 @@ struct EvolutionMetavars {
             tmpl::flatten<tmpl::list<
                 intrp::Events::Interpolate<3, AhA, interpolator_source_vars>,
                 intrp::Events::Interpolate<3, AhB, interpolator_source_vars>,
-                Events::Completion,
+                Events::MonitorMemory<3, ::Tags::Time>, Events::Completion,
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields,
                                                non_tensor_compute_tags>,
@@ -517,7 +519,7 @@ struct EvolutionMetavars {
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
       importers::ElementDataReader<EvolutionMetavars>,
-      intrp::Interpolator<EvolutionMetavars>,
+      MemoryMonitor<EvolutionMetavars>, intrp::Interpolator<EvolutionMetavars>,
       intrp::InterpolationTarget<EvolutionMetavars, AhA>,
       intrp::InterpolationTarget<EvolutionMetavars, AhB>, gh_dg_element_array>>;
 
