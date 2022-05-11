@@ -132,6 +132,12 @@ namespace evolution::dg::Actions {
  * \note The term is always added in the `Frame::Inertial` frame, and the plus
  * sign arises because we add it to the time derivative.
  *
+ * \warning The mesh velocity terms are added to the time derivatives before
+ * invoking the boundary conditions. This means that the time derivatives passed
+ * to the boundary conditions are with respect to \f$\hat{t}\f$, not \f$t\f$.
+ * This is especially important in the TimeDerivative/Bjorhus boundary
+ * conditions.
+ *
  * Here are examples of the `TimeDerivative` struct used to compute the volume
  * time derivative. This struct is what the type alias
  * `System::compute_volume_time_derivative` points to. The time derivatives are
