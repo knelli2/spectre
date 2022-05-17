@@ -12,6 +12,8 @@
 
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Matrix.hpp"
+#include "Domain/Creators/DomainCreator.hpp"
+#include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
 #include "IO/H5/AccessType.hpp"
@@ -199,6 +201,101 @@ void read_spec_piecewise_polynomial(
     }
   }
 }
+
+template <size_t Dim>
+std::unordered_map<std::string,
+                   std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
+override_functions_of_time(
+    const std::unique_ptr<::DomainCreator<Dim>>& domain_creator,
+    const std::string& function_of_time_file,
+    const std::map<std::string, std::string>& function_of_time_name_map,
+    const std::unordered_map<std::string, double>& initial_expiration_times) {
+  std::unordered_map<std::string,
+                     domain::FunctionsOfTime::PiecewisePolynomial<2>>
+      spec_functions_of_time_second_order{};
+  std::unordered_map<std::string,
+                     domain::FunctionsOfTime::PiecewisePolynomial<3>>
+      spec_functions_of_time_third_order{};
+  std::unordered_map<std::string,
+                     domain::FunctionsOfTime::QuaternionFunctionOfTime<3>>
+      spec_functions_of_time_quaternion{};
+
+  // Import those functions of time of each supported order
+  domain::FunctionsOfTime::read_spec_piecewise_polynomial(
+      make_not_null(&spec_functions_of_time_second_order),
+      function_of_time_file, function_of_time_name_map);
+  domain::FunctionsOfTime::read_spec_piecewise_polynomial(
+      make_not_null(&spec_functions_of_time_third_order), function_of_time_file,
+      function_of_time_name_map);
+
+  auto functions_of_time{
+      domain_creator->functions_of_time(initial_expiration_times)};
+
+  bool uses_quaternion_rotation = false;
+  for (const auto& name_and_fot : functions_of_time) {
+    auto* maybe_quaternion_fot =
+        dynamic_cast<domain::FunctionsOfTime::QuaternionFunctionOfTime<3>*>(
+            name_and_fot.second.get());
+    if (maybe_quaternion_fot != nullptr) {
+      uses_quaternion_rotation = true;
+    }
+  }
+
+  // Only parse as quaternion function of time if it exists
+  if (uses_quaternion_rotation) {
+    domain::FunctionsOfTime::read_spec_piecewise_polynomial(
+        make_not_null(&spec_functions_of_time_quaternion),
+        function_of_time_file, function_of_time_name_map, true);
+  }
+
+  for (const auto& [spec_name, spectre_name] : function_of_time_name_map) {
+    (void)spec_name;
+    // The FunctionsOfTime we are mutating must already have
+    // an element with key==spectre_name; this action only
+    // mutates the value associated with that key
+    if (functions_of_time.count(spectre_name) == 0) {
+      ERROR("Trying to import data for key "
+            << spectre_name
+            << " in FunctionsOfTime, but FunctionsOfTime does not "
+               "contain that key. This might happen if the option "
+               "FunctionOfTimeNameMap is not specified correctly. Keys "
+               "contained in FunctionsOfTime: "
+            << keys_of(functions_of_time) << "\n");
+    }
+    auto* piecewise_polynomial_second_order =
+        dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<2>*>(
+            functions_of_time[spectre_name].get());
+    auto* piecewise_polynomial_third_order =
+        dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<3>*>(
+            functions_of_time[spectre_name].get());
+    auto* quaternion_fot_third_order =
+        dynamic_cast<domain::FunctionsOfTime::QuaternionFunctionOfTime<3>*>(
+            functions_of_time[spectre_name].get());
+    if (piecewise_polynomial_second_order == nullptr) {
+      if (piecewise_polynomial_third_order == nullptr) {
+        if (quaternion_fot_third_order == nullptr) {
+          ERROR("The function of time with name "
+                << spectre_name
+                << " is not a PiecewisePolynomial<2>, "
+                   "PiecewisePolynomial<3>, or QuaternionFunctionOfTime<3> "
+                   "and so cannot be set using "
+                   "read_spec_piecewise_polynomial\n");
+        } else {
+          *quaternion_fot_third_order =
+              spec_functions_of_time_quaternion.at(spectre_name);
+        }
+      } else {
+        *piecewise_polynomial_third_order =
+            spec_functions_of_time_third_order.at(spectre_name);
+      }
+    } else {
+      *piecewise_polynomial_second_order =
+          spec_functions_of_time_second_order.at(spectre_name);
+    }
+  }
+
+  return functions_of_time;
+}
 }  // namespace domain::FunctionsOfTime
 
 #define FOTTYPE(data) BOOST_PP_TUPLE_ELEM(0, data)
@@ -217,4 +314,21 @@ GENERATE_INSTANTIATIONS(INSTANTIATE,
                          domain::FunctionsOfTime::QuaternionFunctionOfTime<3>))
 
 #undef FOTTYPE
+#undef INSTANTIATE
+
+#define DIM(data) BOOST_PP_TUPLE_ELEM(0, data)
+
+#define INSTANTIATE(_, data)                                                 \
+  template std::unordered_map<                                               \
+      std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>> \
+  domain::FunctionsOfTime::override_functions_of_time(                       \
+      const std::unique_ptr<::DomainCreator<DIM(data)>>& domain_creator,     \
+      const std::string& function_of_time_file,                              \
+      const std::map<std::string, std::string>& function_of_time_name_map,   \
+      const std::unordered_map<std::string, double>&                         \
+          initial_expiration_times);
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
+
+#undef DIM
 #undef INSTANTIATE
