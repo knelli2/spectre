@@ -192,6 +192,20 @@ namespace detail {
 CREATE_HAS_STATIC_MEMBER_VARIABLE(override_functions_of_time)
 CREATE_HAS_STATIC_MEMBER_VARIABLE_V(override_functions_of_time)
 
+template <typename Metavariables, bool HasOverrideFunctionsOfTime>
+struct IsActiveOptionList {
+  using type = tmpl::conditional_t<
+      Metavariables::override_functions_of_time,
+      tmpl::list<domain::FunctionsOfTime::OptionTags::FunctionOfTimeFile,
+                 domain::FunctionsOfTime::OptionTags::FunctionOfTimeNameMap>,
+      tmpl::list<>>;
+};
+
+template <typename Metavariables>
+struct IsActiveOptionList<Metavariables, false> {
+  using type = tmpl::list<>;
+};
+
 }  // namespace detail
 
 /// \ingroup DataBoxTagsGroup
@@ -217,11 +231,9 @@ struct IsActive : db::SimpleTag {
 
   static constexpr bool pass_metavariables = true;
   template <typename Metavariables>
-  using option_tags = tmpl::conditional_t<
-      detail::has_override_functions_of_time_v<Metavariables>,
-      tmpl::list<domain::FunctionsOfTime::OptionTags::FunctionOfTimeFile,
-                 domain::FunctionsOfTime::OptionTags::FunctionOfTimeNameMap>,
-      tmpl::list<>>;
+  using option_tags = typename detail::IsActiveOptionList<
+      Metavariables,
+      detail::has_override_functions_of_time_v<Metavariables>>::type;
 
   template <typename Metavariables>
   static bool create_from_options(
