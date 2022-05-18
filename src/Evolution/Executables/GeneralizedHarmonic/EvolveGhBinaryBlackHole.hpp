@@ -11,6 +11,12 @@
 #include "ApparentHorizons/ComputeItems.hpp"
 #include "ApparentHorizons/ObserveCenters.hpp"
 #include "ApparentHorizons/Tags.hpp"
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Event.hpp"
+#include "ControlSystem/Systems/Expansion.hpp"
+#include "ControlSystem/Systems/Rotation.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Domain/Creators/Factory1D.hpp"
@@ -18,6 +24,7 @@
 #include "Domain/Creators/Factory3D.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Protocols/Metavariables.hpp"
 #include "Domain/Tags.hpp"
@@ -294,7 +301,15 @@ struct EvolutionMetavars {
         ah::callbacks::ObserveCenters<AhB>>;
   };
 
-  using interpolation_target_tags = tmpl::list<AhA, AhB>;
+  using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
+                                     control_system::Systems::Expansion<2>>;
+
+  static constexpr bool use_control_systems =
+      tmpl::size<control_systems>::value > 0;
+
+  using interpolation_target_tags = tmpl::push_back<
+      control_system::metafunctions::interpolation_target_tags<control_systems>,
+      AhA, AhB>;
   using interpolator_source_vars = tmpl::list<
       gr::Tags::SpacetimeMetric<volume_dim, ::Frame::Inertial>,
       GeneralizedHarmonic::Tags::Pi<volume_dim, ::Frame::Inertial>,
@@ -344,7 +359,10 @@ struct EvolutionMetavars {
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger,
+                   tmpl::flatten<tmpl::list<
+                       control_system::control_system_triggers<control_systems>,
+                       DenseTriggers::standard_dense_triggers>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<
             Event,
@@ -355,6 +373,7 @@ struct EvolutionMetavars {
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields,
                                                non_tensor_compute_tags>,
+                control_system::control_system_events<control_systems>,
                 Events::time_events<system>>>>,
         tmpl::pair<GeneralizedHarmonic::BoundaryConditions::BoundaryCondition<
                        volume_dim>,
@@ -467,8 +486,8 @@ struct EvolutionMetavars {
   using initialization_actions = tmpl::list<
       Actions::SetupDataBox,
       Initialization::Actions::TimeAndTimeStep<EvolutionMetavars>,
-      evolution::dg::Initialization::Domain<volume_dim,
-                                            override_functions_of_time>,
+      evolution::dg::Initialization::Domain<
+          volume_dim, override_functions_of_time, use_control_systems>,
       Initialization::Actions::NonconservativeSystem<system>,
       Initialization::Actions::AddComputeTags<::Tags::DerivCompute<
           typename system::variables_tag,
@@ -481,6 +500,7 @@ struct EvolutionMetavars {
           StepChoosers::step_chooser_compute_tags<EvolutionMetavars>>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using gh_dg_element_array = DgElementArray<
@@ -510,7 +530,8 @@ struct EvolutionMetavars {
                                             Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
               Phase, Phase::Evolve,
-              tmpl::list<Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+              tmpl::list<::domain::Actions::CheckFunctionsOfTimeAreReady,
+                         Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                          step_actions, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
@@ -526,8 +547,11 @@ struct EvolutionMetavars {
       observers::ObserverWriter<EvolutionMetavars>,
       importers::ElementDataReader<EvolutionMetavars>,
       intrp::Interpolator<EvolutionMetavars>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhA>,
-      intrp::InterpolationTarget<EvolutionMetavars, AhB>, gh_dg_element_array>>;
+      tmpl::transform<interpolation_target_tags,
+                      tmpl::bind<intrp::InterpolationTarget,
+                                 tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
+      control_system::control_components<EvolutionMetavars, control_systems>,
+      gh_dg_element_array>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "
