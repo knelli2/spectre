@@ -44,6 +44,8 @@ namespace control_system {
  *
  * The algorithm to determine whether or not to update the functions of time is
  * as follows:
+ * 0. Ensure this control system is active. If it isn't, end here and don't
+ *    process the measurements.
  * 1. Determine if we need to update now. This is done by checking if the next
  *    measurement scheduled to happen will be after the current expiration time
  *    of the function of time we are controlling. If it is, we need to update
@@ -98,6 +100,14 @@ struct UpdateControlSystem {
                   db::tag_is_retrievable_v<
                       ::control_system::Tags::WriteDataToDisk,
                       db::DataBox<DbTags>>) {
+      // Begin step 0
+      // If this control system isn't active, don't do anything
+      const bool is_active =
+          get<control_system::Tags::IsActive<ControlSystem>>(*box);
+      if (not is_active) {
+        return;
+      }
+
       // Begin step 1
       const auto& functions_of_time =
           Parallel::get<::domain::Tags::FunctionsOfTime>(cache);

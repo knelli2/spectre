@@ -38,6 +38,7 @@ namespace Actions {
  *   - `control_system::Tags::TimescaleTuner<ControlSystem>`
  *   - `control_system::Tags::ControlError<ControlSystem>`
  *   - `control_system::Tags::WriteDataToDisk`
+ *   - `control_system::Tags::IsActive<ControlSystem>`
  * - Removes: Nothing
  * - Modifies:
  *   - `control_system::Tags::Averager<ControlSystem>`
@@ -58,7 +59,8 @@ struct Initialize {
       tmpl::list<control_system::Tags::Averager<ControlSystem>,
                  control_system::Tags::Controller<ControlSystem>,
                  control_system::Tags::TimescaleTuner<ControlSystem>,
-                 control_system::Tags::ControlError<ControlSystem>>,
+                 control_system::Tags::ControlError<ControlSystem>,
+                 control_system::Tags::IsActive<ControlSystem>>,
       typename ControlSystem::simple_tags>;
 
   using compute_tags = tmpl::list<>;
