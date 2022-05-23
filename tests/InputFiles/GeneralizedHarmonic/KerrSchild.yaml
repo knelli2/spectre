@@ -153,8 +153,15 @@ EventsAndTriggers:
         Offset: 2
   : - AhA
   ? Slabs:
+      EvenlySpaced:
+        Interval: 1
+        Offset: 0
+  : - MonitorMemory:
+        ComponentsToMonitor:
+          - MutableGlobalCache
+  ? Slabs:
       Specified:
-        Values: [3]
+        Values: [10]
   : - Completion
 
 EventsAndDenseTriggers:

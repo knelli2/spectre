@@ -63,7 +63,9 @@
 #include "Parallel/PhaseDependentActionList.hpp"
 #include "Parallel/Reduction.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
+#include "ParallelAlgorithms/Actions/MemoryMonitor/ContributeMemoryData.hpp"
 #include "ParallelAlgorithms/Events/Factory.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "ParallelAlgorithms/Events/ObserveTimeStep.hpp"
 #include "ParallelAlgorithms/Events/Tags.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Actions/RunEventsAndTriggers.hpp"
@@ -188,10 +190,10 @@ struct GeneralizedHarmonicTemplateBase<
 
   using analytic_solution_fields = typename system::variables_tag::tags_list;
 
-  using initialize_initial_data_dependent_quantities_actions = tmpl::list<
-      GeneralizedHarmonic::gauges::Actions::InitializeDampedHarmonic<
-          volume_dim, use_damped_harmonic_rollon>,
-      Parallel::Actions::TerminatePhase>;
+  using initialize_initial_data_dependent_quantities_actions =
+      tmpl::list<GeneralizedHarmonic::gauges::Actions::InitializeDampedHarmonic<
+                     volume_dim, use_damped_harmonic_rollon>,
+                 Parallel::Actions::TerminatePhase>;
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& /*p*/) {}
@@ -213,15 +215,14 @@ struct GeneralizedHarmonicTemplateBase<
           analytic_solution_fields, gr::Tags::Lapse<DataVector>,
           GeneralizedHarmonic::Tags::GaugeConstraintCompute<volume_dim, frame>,
           GeneralizedHarmonic::Tags::TwoIndexConstraintCompute<volume_dim,
-                                                                 frame>,
+                                                               frame>,
           GeneralizedHarmonic::Tags::ThreeIndexConstraintCompute<volume_dim,
                                                                  frame>,
           // following tags added to observe constraints
           ::Tags::PointwiseL2NormCompute<
               GeneralizedHarmonic::Tags::GaugeConstraint<volume_dim, frame>>,
           ::Tags::PointwiseL2NormCompute<
-              GeneralizedHarmonic::Tags::TwoIndexConstraint<volume_dim,
-                                                              frame>>,
+              GeneralizedHarmonic::Tags::TwoIndexConstraint<volume_dim, frame>>,
           ::Tags::PointwiseL2NormCompute<
               GeneralizedHarmonic::Tags::ThreeIndexConstraint<volume_dim,
                                                               frame>>,
@@ -235,7 +236,7 @@ struct GeneralizedHarmonicTemplateBase<
               GeneralizedHarmonic::Tags::FourIndexConstraintCompute<3, frame>,
               GeneralizedHarmonic::Tags::FConstraintCompute<3, frame>,
               ::Tags::PointwiseL2NormCompute<
-              GeneralizedHarmonic::Tags::FConstraint<3, frame>>,
+                  GeneralizedHarmonic::Tags::FConstraint<3, frame>>,
               ::Tags::PointwiseL2NormCompute<
                   GeneralizedHarmonic::Tags::FourIndexConstraint<3, frame>>,
               GeneralizedHarmonic::Tags::ConstraintEnergyCompute<3, frame>>,
@@ -251,6 +252,7 @@ struct GeneralizedHarmonicTemplateBase<
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<Event, tmpl::flatten<tmpl::list<
                               Events::Completion,
+                              Events::MonitorMemory<3, ::Tags::Time>,
                               dg::Events::field_observations<
                                   volume_dim, Tags::Time, observe_fields,
                                   non_tensor_compute_tags>,

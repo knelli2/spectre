@@ -6,22 +6,37 @@
 
 Evolution:
   InitialTime: 0.0
-  InitialTimeStep: 0.01
-  TimeStepper: DormandPrince5
+  InitialTimeStep: 0.0001
+  InitialSlabSize: 0.0001
+  StepController: BinaryFraction
+  StepChoosers:
+    - Increase:
+        Factor: 2
+    - ElementSizeCfl:
+        SafetyFactor: 0.5
+    - ErrorControl:
+        AbsoluteTolerance: 1e-8
+        RelativeTolerance: 1e-6
+        MaxFactor: 2
+        MinFactor: 0.25
+        SafetyFactor: 0.95
+  TimeStepper:
+    AdamsBashforthN:
+      Order: 5
 
 DomainCreator:
   BinaryCompactObject:
     ObjectA:
-      InnerRadius: 0.7925
-      OuterRadius: 6.683
+      InnerRadius: 0.45825
+      OuterRadius: 6.0
       XCoord: &XCoordA -7.683
       Interior:
         ExciseWithBoundaryCondition:
           Outflow:
       UseLogarithmicMap: true
     ObjectB:
-      InnerRadius: 0.7925
-      OuterRadius: 6.683
+      InnerRadius: 0.45825
+      OuterRadius: 6.0
       XCoord: &XCoordB 7.683
       Interior:
         ExciseWithBoundaryCondition:
@@ -33,30 +48,30 @@ DomainCreator:
       Sphericity: 0.0
     OuterShell:
       InnerRadius: Auto
-      OuterRadius: 1493.0
-      RadialDistribution: Logarithmic
+      OuterRadius: 300.0
+      RadialDistribution: Linear
       BoundaryCondition:
         ConstraintPreservingBjorhus:
           Type: ConstraintPreservingPhysical
     InitialRefinement:
-      ObjectAShell:   [3, 3, 4]
-      ObjectACube:    [2, 2, 1]
-      ObjectBShell:   [3, 3, 4]
-      ObjectBCube:    [2, 2, 1]
-      EnvelopingCube: [2, 2, 3]
-      CubedShell:     [2, 2, 2]
-      OuterShell:     [2, 2, 5]
-    InitialGridPoints: 5
+      ObjectAShell:   [2, 2, 3]
+      ObjectBShell:   [2, 2, 3]
+      ObjectACube:    [1, 1, 0]
+      ObjectBCube:    [1, 1, 0]
+      EnvelopingCube: [1, 1, 2]
+      CubedShell:     [1, 1, 1]
+      OuterShell:     [1, 1, 4]
+    InitialGridPoints: 7
     TimeDependentMaps:
       InitialTime: 0.0
       ExpansionMap:
+        OuterBoundary: 300.0
         InitialExpansion: 1.0
-        InitialExpansionVelocity: 0.0
-        OuterBoundary: 1493.0
+        InitialExpansionVelocity: -4.6148457646200002e-05
         AsymptoticVelocityOuterBoundary: -1.0e-6
         DecayTimescaleOuterBoundaryVelocity: 50.0
       RotationMap:
-        InitialAngularVelocity: [0.0, 0.0, 0.0]
+        InitialAngularVelocity: [0.0, 0.0, 1.5264577062000000e-02]
       SizeMap:
         InitialValues: [0.0, 0.0]
         InitialVelocities: [0.0, 0.0]
@@ -78,7 +93,7 @@ EvolutionSystem:
   GeneralizedHarmonic:
     DhGaugeParameters:
       SpatialDecayWidth: 17.0152695482514  # From SpEC run: 100.0 / sqrt(34.54)
-      Amplitudes: [1.0, 1.0, 1.0]          # From SpEC run: damped harmonic
+      Amplitudes: [0.0, 0.0, 0.0]          # From SpEC run: damped harmonic
       Exponents: [2, 2, 2]                 # From SpEC run
     DampingFunctionGamma0:
       TimeDependentTripleGaussian:
@@ -126,11 +141,11 @@ SpatialDiscretization:
     Formulation: StrongInertial
     Quadrature: GaussLobatto
 
-Filtering:
-  ExpFilter0:
-    Alpha: 36.0
-    HalfPower: 210
-    DisableForDebugging: true
+#Filtering:
+#  ExpFilter0:
+#    Alpha: 36.0
+#    HalfPower: 210
+#    DisableForDebugging: true
 
 EventsAndTriggers:
   ? And:
@@ -190,6 +205,13 @@ EventsAndTriggers:
         Offset: 0
   : - AhA
     - AhB
+  ? Slabs:
+      EvenlySpaced:
+        Interval: 1
+        Offset: 0
+  : - MonitorMemory:
+        ComponentsToMonitor:
+          - MutableGlobalCache
   ? TimeCompares:
       Comparison: GreaterThan
       Value: 0.02
@@ -271,16 +293,13 @@ ControlSystems:
 #   ADM variables (`Lapse`, `Shift`, `SpatialMetric`, `ExtrinsicCurvature`).
 Importers:
   NumericInitialData:
-    FileGlob: "/path/to/initial_data.h5"
-    Subgroup: "VolumeData"
-    ObservationValue: Last
+    FileGlob: "/home/knelli/Documents/research/sims/blah/ID_inspiral_h1p7/ID_q1spin0_InitHarmonic_NoShape_h1p7_Inspiral.h5"
+    Subgroup: "element_data"
+    ObservationValue: 0.0
     Variables:
-      Lapse: Lapse
-      # Load a shift that is not corotating. See `docs/Examples/BbhInitialData`
-      # for details.
-      Shift: ShiftExcess
-      SpatialMetric: SpatialMetric
-      ExtrinsicCurvature: ExtrinsicCurvature
+      SpacetimeMetric: SpacetimeMetric
+      Pi: Pi
+      Phi: Phi
 
 # control.h5 should contain data for FunctionsOfTime that can be read by
 # ReadSpecPiecewisePolynomial. By default, this will override the spectre
@@ -288,7 +307,7 @@ Importers:
 # and/or Rotation names from the NameMap. Currently only Expansion and Rotation
 # are supported in spectre.
 CubicFunctionOfTimeOverride:
-  FunctionOfTimeFile: "/path/to/control.h5"
+  FunctionOfTimeFile: None
   # Note: SpEC calls the hole on the right hole A, but spectre calls hole A
   # the hole on the left. So reverse the LambdaFactors used here
   FunctionOfTimeNameMap: {ExpansionFactor: Expansion,

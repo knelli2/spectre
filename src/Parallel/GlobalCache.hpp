@@ -151,6 +151,10 @@ class MutableGlobalCache : public CBase_MutableGlobalCache<Metavariables> {
         MutableGlobalCache<Metavariables>,
         CkIndex_MutableGlobalCache<Metavariables>>::registrar;
   }
+
+  WRAPPED_PUPable_decl_base_template(CBase_MutableGlobalCache<Metavariables>,
+                                     MutableGlobalCache<Metavariables>);
+
   /// \cond
   MutableGlobalCache() = default;
   MutableGlobalCache(const MutableGlobalCache&) = default;
@@ -196,6 +200,9 @@ class MutableGlobalCache : public CBase_MutableGlobalCache<Metavariables> {
       get_mutable_global_cache_tag_storage<Metavariables>>
       mutable_global_cache_{};
 };
+
+template <typename Metavariables>
+PUP::able::PUP_ID MutableGlobalCache<Metavariables>::my_PUP_ID = 0;  // NOLINT
 
 template <typename Metavariables>
 MutableGlobalCache<Metavariables>::MutableGlobalCache(
@@ -415,6 +422,7 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
         GlobalCache<Metavariables>,
         CkIndex_GlobalCache<Metavariables>>::registrar;
   }
+
   /// \cond
   GlobalCache() = default;
   GlobalCache(const GlobalCache&) = default;
