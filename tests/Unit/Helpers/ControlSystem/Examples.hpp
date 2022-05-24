@@ -92,7 +92,7 @@ struct ExampleMeasurement
 
 /// [ControlError]
 struct ExampleControlError
-    : tt::ConforsTo<control_system::protocols::ControlError> {
+    : tt::ConformsTo<control_system::protocols::ControlError> {
   template <typename Metavariables, typename... TupleTags>
   DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
                         const double time,
@@ -104,7 +104,7 @@ struct ExampleControlError
     (void)measurements;
     return DataVector{};
   }
-}
+};
 /// [ControlError]
 
 /// [ControlSystem]

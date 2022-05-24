@@ -485,9 +485,8 @@ std::string create_option_string(const bool excise_A, const bool excise_B,
       "      InitialRotationAngle: [0.0, 0.0, 2.0]\n"
       "      InitialAngularVelocity: [0.0, 0.0, -0.2]\n"
       // q = (cos(theta/2), nhat*sin(theta/2))
-      "      InitialQuaternion: [0.54030230586, 0.0, 0.0,
-    0.8414709848]\n
-      "
+      "      InitialQuaternion: [0.54030230586, 0.0, 0.0,"
+    "0.8414709848]\n"
       "    SizeMap:\n"
       "      InitialValues: [0.0, 0.0]\n"
       "      InitialVelocities: [-0.1, -0.2]\n"
@@ -588,9 +587,9 @@ void test_bbh_time_dependent_factory(const bool with_boundary_conditions,
       5.0;  // matches DecayTimescaleOuterBoundaryVelocity: 5.0 above
   std::array<DataVector, 3> expansion_factor_coefs{{{1.0}, {-0.1}, {0.0}}};
   const double init_rotation_angle = 2.0;
-  std::array<DataVector, 1> quaternion_coefs{{cos(init_rotation_angle / 2.0),
+  std::array<DataVector, 1> quaternion_coefs{{{cos(init_rotation_angle / 2.0),
                                               0.0, 0.0,
-                                              sin(init_rotation_angle / 2.0)}};
+                                              sin(init_rotation_angle / 2.0)}}};
   std::array<DataVector, 4> rotation_angle_coefs{
       {{0.0, 0.0, init_rotation_angle}, {0.0, 0.0, -0.2}, {3, 0.0}, {3, 0.0}}};
   std::array<DataVector, 4> lambda_factor_a0_coefs{

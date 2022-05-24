@@ -89,7 +89,8 @@ struct Translation : tt::ConformsTo<protocols::ControlSystem> {
       auto& control_sys_proxy = Parallel::get_parallel_component<
           ControlComponent<Metavariables, Translation<DerivOrder>>>(cache);
 
-      const DataVector center = array_to_datavector(strahlkorper.center());
+      const DataVector center =
+          array_to_datavector(strahlkorper.physical_center());
 
       Parallel::simple_action<::Actions::UpdateMessageQueue<
           QueueTags::Center<Horizon>, MeasurementQueue,
