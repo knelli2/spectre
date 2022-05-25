@@ -31,6 +31,23 @@ namespace detail {
 template <size_t DerivOrder>
 DataVector calculate_measurement_timescales(
     const ::Controller<DerivOrder>& controller, const ::TimescaleTuner& tuner) {
+  const DataVector timescale = tuner.current_timescale();
+  const double update_fraction = controller.get_update_fraction();
+  const double frac = 1.0 / static_cast<double>(DerivOrder + 1);
+  const DataVector measure_timescale_1 = timescale * update_fraction * frac;
+  const DataVector measure_timescale_2 =
+      tuner.current_timescale() * controller.get_update_fraction() *
+      (1.0 / static_cast<double>(DerivOrder + 1));
+  Parallel::printf(
+      "Inside calculate_measurement_timescales:\n"
+      " Deriv order: %d\n"
+      " update fraction: %.17f\n"
+      " damp timescale: %s\n"
+      " frac: %.17f\n"
+      " measure timescale 1: %s\n"
+      " measure timescale 2: %s\n",
+      DerivOrder, update_fraction, timescale, frac, measure_timescale_1,
+      measure_timescale_2);
   return tuner.current_timescale() * controller.get_update_fraction() *
          (1.0 / static_cast<double>(DerivOrder + 1));
 }

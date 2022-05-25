@@ -122,7 +122,7 @@ struct UpdateControlSystem {
       // If the next time we are going to measure is after the current
       // expiration time, we have to update things now
       const bool need_to_update_now =
-          current_expiration_time <=
+          current_expiration_time <
           time + current_min_time_between_measurements;
       // End step 1
 
@@ -178,6 +178,8 @@ struct UpdateControlSystem {
           controller(time, current_timescale, opt_avg_values.value(),
                      time_offset_0th, time_offset);
       // End step 5
+
+      Parallel::printf(" Control signal: %s\n\n", control_signal);
 
       // Begin step 6
       // Calculate the next expiration time based on the current one

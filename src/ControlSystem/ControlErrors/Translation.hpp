@@ -29,6 +29,9 @@ template <size_t Dim>
 struct Domain;
 struct FunctionsOfTime;
 }  // namespace domain::Tags
+namespace control_system::Tags {
+struct MeasurementTimescales;
+}  // namespace control_system::Tags
 /// \endcond
 
 namespace control_system {
@@ -77,7 +80,7 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
   template <typename Metavariables, typename... TupleTags>
   DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
                         const double time,
-                        const std::string& /*function_of_time_name*/,
+                        const std::string& function_of_time_name,
                         const tuples::TaggedTuple<TupleTags...>& measurements) {
     const auto& domain = get<domain::Tags::Domain<3>>(cache);
     const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
@@ -90,11 +93,15 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
         functions_of_time.at("Expansion")->func(time)[0][0];
 
     using horizon_label = control_system::ah::HorizonLabel;
+    using center_A = control_system::QueueTags::Center<horizon_label::AhA>;
     using center_B = control_system::QueueTags::Center<horizon_label::AhB>;
 
     const DataVector grid_position_of_B = array_to_datavector(
         domain.excision_spheres().at("ObjectBExcisionSphere").center());
     const DataVector current_position_of_B = get<center_B>(measurements);
+    const DataVector grid_position_of_A = array_to_datavector(
+        domain.excision_spheres().at("ObjectAExcisionSphere").center());
+    const DataVector current_position_of_A = get<center_A>(measurements);
 
     const DataVector rotation_error =
         rotation_control_error_(cache, time, "Rotation", measurements);
@@ -124,6 +131,32 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
            "Error in computing translation control error. First component of "
            "resulting quaternion should be 0.0, but is " +
                get_output(result_with_four_components[0]) + " instead.");
+
+    const auto trans_func_and_2_derivs =
+        functions_of_time.at(function_of_time_name)->func_and_2_derivs(time);
+
+    const auto& timescales =
+        get<control_system::Tags::MeasurementTimescales>(cache);
+
+    const auto timescale = timescales.at(function_of_time_name)->func(time)[0];
+
+    Parallel::printf(
+        "Time: %.17f\n"
+        " grid_A: %s\n"
+        " grid_B: %s\n"
+        " current_A: %s\n"
+        " current_B: %s\n"
+        " rot_error: %s\n"
+        " exp_error: %.17f\n"
+        " trans_error: %s\n"
+        " trans_func: %s\n"
+        " trans_deriv: %s\n"
+        " trans_2deriv: %s\n"
+        " measure timescale: %s\n\n",
+        time, grid_position_of_A, grid_position_of_B, current_position_of_A,
+        current_position_of_B, rotation_error, expansion_error,
+        result_with_four_components, trans_func_and_2_derivs[0],
+        trans_func_and_2_derivs[1], trans_func_and_2_derivs[2], timescale);
 
     return {result_with_four_components[1], result_with_four_components[2],
             result_with_four_components[3]};

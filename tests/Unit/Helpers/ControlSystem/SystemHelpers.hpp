@@ -218,7 +218,7 @@ struct SystemHelper {
     // Inputs for control systems. We need different controllers, averagers, and
     // timescale tuners because different initial parameters get set for each
     // before they are put into the DataBoxes
-    Averager<trans_deriv_order - 1> translation_averager{0.25, false};
+    Averager<trans_deriv_order - 1> translation_averager{0.25, true};
     Averager<exp_deriv_order - 1> expansion_averager{0.25, false};
     Averager<rot_deriv_order - 1> rotation_averager{0.25, false};
     const double update_timescale = 0.5;
@@ -226,10 +226,10 @@ struct SystemHelper {
         {update_timescale, update_timescale, update_timescale},
         10.0,
         0.1,
-        4.0e-3,
-        1.0e-3,
+        2.0,
+        0.1,
         1.01,
-        0.98};
+        0.99};
     TimescaleTuner rotation_tuner{
         {update_timescale, update_timescale, update_timescale},
         10.0,
@@ -328,6 +328,27 @@ struct SystemHelper {
           std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<0>>(
               initial_time_, translation_measurement_timescale,
               initial_translation_expiration_time);
+
+      Parallel::printf(
+          "Parsing:\n"
+          " Deriv order: %d\n"
+          " Avg fraction: %.17f\n"
+          " Using avg 0th deriv: %s\n"
+          " Controller type: %s\n"
+          " Update fraction: %.17f\n"
+          " Damp timescale: %s\n"
+          " Measure timescale: %s\n"
+          " Time between measurements: %.17f\n"
+          " Expiration time: %.17f\n\n",
+          trans_deriv_order, translation_averager.avg_timescale_frac(),
+          translation_averager.using_average_0th_deriv_of_q() ? "true"
+                                                              : "false",
+          pretty_type::get_name<decltype(translation_controller)>(),
+          translation_controller.get_update_fraction(),
+          translation_tuner.current_timescale(),
+          translation_measurement_timescale[0],
+          min(translation_measurement_timescale[0]),
+          initial_translation_expiration_time);
 
       // Translation control error requires a quaternion and expansion thus we
       // have to add these in (otherwise we'd be adding in the whole control
