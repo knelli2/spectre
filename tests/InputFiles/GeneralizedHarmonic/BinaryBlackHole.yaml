@@ -19,6 +19,18 @@ ResourceInfo:
     ControlSystemAhB:
       Proc: Auto
       Exclusive: true
+    SelfStartCceWorldtubeTarget:
+      Proc: Auto
+      Exclusive: false
+    CceWorldtubeTarget:
+      Proc: Auto
+      Exclusive: false
+    GhWorldtubeBoundary:
+      Proc: Auto
+      Exclusive: false
+    CharacteristicEvolution:
+      Proc: Auto
+      Exclusive: false
 
 Evolution:
   InitialTime: 0.0
@@ -93,6 +105,7 @@ DomainCreator:
         InitialVelocities: [0.0, 0.0]
         InitialAccelerations: [0.0, 0.0]
 
+# To turn on CCE, add the `CceWorltubeTarget` event here
 EventsAndDenseTriggers:
 
 # Set gauge and constraint damping parameters.
@@ -308,3 +321,62 @@ CubicFunctionOfTimeOverride:
                           RotationAngle: Rotation,
                           LambdaFactorA0: SizeB,
                           LambdaFactorB0: SizeA}
+
+# All options for Cauchy Characteristic Extraction (CCE). To run CCE, add the
+# `CceWorltubeTarget` Event under EventsAndDenseTriggers. This is disabled by
+# default because currently, the CCE evolution fails after about 200M due to
+# small time steps. Note: If you try to add the `CceWorldtubeTarget` Event under
+# EventsAndTriggers, CCE won't work properly
+Cce:
+  Evolution:
+    TimeStepper:
+      AdamsBashforthN:
+        Order: 5
+    StepChoosers:
+      - Constant: 1.0
+      - Increase:
+          Factor: 2
+      - ErrorControl(SwshVars):
+          AbsoluteTolerance: 1e-8
+          RelativeTolerance: 1e-6
+          MaxFactor: 2
+          MinFactor: 0.25
+          SafetyFactor: 0.9
+      - ErrorControl(CoordVars):
+          AbsoluteTolerance: 1e-8
+          RelativeTolerance: 1e-7
+          MaxFactor: 2
+          MinFactor: 0.25
+          SafetyFactor: 0.9
+    StepController:
+      BinaryFraction
+
+  LMax: 20
+  NumberOfRadialPoints: 12
+  ObservationLMax: 8
+
+  InitializeJ: InverseCubic
+
+  StartTime: 0.0
+  ExtractionRadius: &ExtractRadius 150.0
+
+  GhInterfaceManager:
+    BoundaryInterpolator: CubicSpanInterpolator
+
+  Filtering:
+    RadialFilterHalfPower: 24
+    RadialFilterAlpha: 35.0
+    FilterLMax: 18
+
+  ScriInterpOrder: 5
+  ScriOutputDensity: 5
+
+InterpolationTargets:
+  SelfStartCceWorldtubeTarget:
+    Lmax: 20
+    Center: [0.0, 0.0, 0.0]
+    Radius: *ExtractRadius
+  CceWorldtubeTarget:
+    Lmax: 20
+    Center: [0.0, 0.0, 0.0]
+    Radius: *ExtractRadius
