@@ -38,10 +38,30 @@
 #include "Evolution/DiscontinuousGalerkin/Initialization/Mortars.hpp"
 #include "Evolution/EventsAndDenseTriggers/DenseTrigger.hpp"
 #include "Evolution/EventsAndDenseTriggers/DenseTriggers/Factory.hpp"
+#include "Evolution/Executables/Cce/CharacteristicExtractBase.hpp"
 #include "Evolution/Initialization/DgDomain.hpp"
 #include "Evolution/Initialization/Evolution.hpp"
 #include "Evolution/Initialization/NonconservativeSystem.hpp"
 #include "Evolution/NumericInitialData.hpp"
+#include "Evolution/Systems/Cce/Actions/InterpolateDuringSelfStart.hpp"
+#include "Evolution/Systems/Cce/BoundaryData.hpp"
+#include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
+#include "Evolution/Systems/Cce/Components/WorldtubeBoundary.hpp"
+#include "Evolution/Systems/Cce/Initialize/ConformalFactor.hpp"
+#include "Evolution/Systems/Cce/Initialize/InitializeJ.hpp"
+#include "Evolution/Systems/Cce/Initialize/InverseCubic.hpp"
+#include "Evolution/Systems/Cce/Initialize/NoIncomingRadiation.hpp"
+#include "Evolution/Systems/Cce/Initialize/RegisterInitializeJWithCharm.hpp"
+#include "Evolution/Systems/Cce/Initialize/ZeroNonSmooth.hpp"
+#include "Evolution/Systems/Cce/IntegrandInputSteps.hpp"
+#include "Evolution/Systems/Cce/InterfaceManagers/GhInterfaceManager.hpp"
+#include "Evolution/Systems/Cce/InterfaceManagers/GhLocalTimeStepping.hpp"
+#include "Evolution/Systems/Cce/InterfaceManagers/GhLockstep.hpp"
+#include "Evolution/Systems/Cce/OptionTags.hpp"
+#include "Evolution/Systems/Cce/System.hpp"
+#include "Evolution/Systems/Cce/Tags.hpp"
+#include "Evolution/Systems/Cce/WorldtubeBufferUpdater.hpp"
+#include "Evolution/Systems/Cce/WorldtubeDataManager.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Actions/NumericInitialData.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryConditions/Bjorhus.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryConditions/DirichletMinkowski.hpp"
@@ -64,6 +84,10 @@
 #include "IO/Observer/ObserverComponent.hpp"
 #include "IO/Observer/Tags.hpp"
 #include "NumericalAlgorithms/DiscontinuousGalerkin/Tags.hpp"
+#include "NumericalAlgorithms/Interpolation/BarycentricRationalSpanInterpolator.hpp"
+#include "NumericalAlgorithms/Interpolation/CubicSpanInterpolator.hpp"
+#include "NumericalAlgorithms/Interpolation/LinearSpanInterpolator.hpp"
+#include "NumericalAlgorithms/Interpolation/SpanInterpolator.hpp"
 #include "NumericalAlgorithms/LinearOperators/ExponentialFilter.hpp"
 #include "NumericalAlgorithms/LinearOperators/FilterAction.hpp"
 #include "Options/Options.hpp"
@@ -93,6 +117,7 @@
 #include "ParallelAlgorithms/EventsAndTriggers/LogicalTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Trigger.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/CleanUpInterpolator.hpp"
+#include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolationTargetReceiveVars.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceivePoints.hpp"
@@ -103,12 +128,15 @@
 #include "ParallelAlgorithms/Interpolation/Callbacks/FindApparentHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ObserveSurfaceData.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ObserveTimeSeriesOnSurface.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/SendGhWorldtubeData.hpp"
 #include "ParallelAlgorithms/Interpolation/Events/Interpolate.hpp"
+#include "ParallelAlgorithms/Interpolation/Events/InterpolateWithoutInterpComponent.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Interpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Protocols/InterpolationTargetTag.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/ApparentHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Targets/KerrHorizon.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Christoffel.hpp"
 #include "PointwiseFunctions/GeneralRelativity/DetAndInverseSpatialMetric.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/ConstraintGammas.hpp"
@@ -122,6 +150,7 @@
 #include "Time/Actions/UpdateU.hpp"
 #include "Time/StepChoosers/Cfl.hpp"
 #include "Time/StepChoosers/Constant.hpp"
+#include "Time/StepChoosers/ErrorControl.hpp"
 #include "Time/StepChoosers/Factory.hpp"
 #include "Time/StepChoosers/Increase.hpp"
 #include "Time/StepChoosers/PreventRapidIncrease.hpp"
@@ -161,7 +190,10 @@ class CProxy_GlobalCache;
 // that would apply only when evolving binary black holes. This would
 // require adding a number of compile-time switches, an outcome we would prefer
 // to avoid.
-struct EvolutionMetavars {
+struct EvolutionMetavars : CharacteristicExtractDefaults {
+  template <bool self_start>
+  struct CceWorldtubeTarget;
+
   static constexpr size_t volume_dim = 3;
   static constexpr bool use_damped_harmonic_rollon = false;
   using initial_data = evolution::NumericInitialData;
@@ -236,9 +268,6 @@ struct EvolutionMetavars {
   static constexpr bool use_control_systems =
       tmpl::size<control_systems>::value > 0;
 
-  using interpolation_target_tags = tmpl::push_back<
-      control_system::metafunctions::interpolation_target_tags<control_systems>,
-      AhA, AhB>;
   using interpolator_source_vars = ::ah::source_vars<volume_dim>;
 
   using observe_fields = tmpl::append<
@@ -295,6 +324,11 @@ struct EvolutionMetavars {
   using non_tensor_compute_tags =
       tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>>;
 
+  using cce_vars_to_interpolate_to_target = interpolator_source_vars;
+
+  // the subset of step choosers that are valid for the DG system only
+  using dg_step_choosers = StepChoosers::standard_step_choosers<system>;
+
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = tmpl::map<
@@ -309,6 +343,12 @@ struct EvolutionMetavars {
                 intrp::Events::Interpolate<3, AhA, interpolator_source_vars>,
                 intrp::Events::Interpolate<3, AhB, interpolator_source_vars>,
                 Events::MonitorMemory<3, ::Tags::Time>, Events::Completion,
+                intrp::Events::InterpolateWithoutInterpComponent<
+                    volume_dim, CceWorldtubeTarget<true>, EvolutionMetavars,
+                    cce_vars_to_interpolate_to_target>,
+                intrp::Events::Interpolate<volume_dim,
+                                           CceWorldtubeTarget<false>,
+                                           cce_vars_to_interpolate_to_target>,
                 dg::Events::field_observations<volume_dim, Tags::Time,
                                                observe_fields,
                                                non_tensor_compute_tags>,
@@ -330,7 +370,8 @@ struct EvolutionMetavars {
                 PhaseControl::VisitAndReturn<Parallel::Phase::WriteCheckpoint>,
                 PhaseControl::CheckpointAndExitAfterWallclock>>,
         tmpl::pair<StepChooser<StepChooserUse::LtsStep>,
-                   StepChoosers::standard_step_choosers<system>>,
+                   tmpl::remove_duplicates<tmpl::flatten<
+                       tmpl::list<dg_step_choosers, cce_step_choosers>>>>,
         tmpl::pair<
             StepChooser<StepChooserUse::Slab>,
             StepChoosers::standard_slab_choosers<system, local_time_stepping>>,
@@ -343,9 +384,6 @@ struct EvolutionMetavars {
         tmpl::pair<Trigger, tmpl::append<Triggers::logical_triggers,
                                          Triggers::time_triggers>>>;
   };
-
-  using observed_reduction_data_tags = observers::collect_reduction_data_tags<
-      tmpl::at<typename factory_creation::factory_classes, Event>>;
 
   // A tmpl::list of tags to be added to the GlobalCache by the
   // metavariables
@@ -370,7 +408,12 @@ struct EvolutionMetavars {
        Parallel::Phase::InitializeTimeStepperHistory, Parallel::Phase::Evolve,
        Parallel::Phase::Exit}};
 
+  template <bool self_start>
   using step_actions = tmpl::list<
+      tmpl::conditional_t<
+          self_start,
+          Cce::Actions::InterpolateDuringSelfStart<CceWorldtubeTarget<true>>,
+          tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<EvolutionMetavars>,
       tmpl::conditional_t<
           local_time_stepping,
@@ -410,6 +453,8 @@ struct EvolutionMetavars {
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
       control_system::Actions::InitializeMeasurements<control_systems>,
+      intrp::Actions::ElementInitInterpPoints<
+          intrp::Tags::InterpPointInfo<EvolutionMetavars>>,
       Initialization::Actions::RemoveOptionsAndTerminatePhase>;
 
   using gh_dg_element_array = DgElementArray<
@@ -436,19 +481,50 @@ struct EvolutionMetavars {
                                             Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
               Parallel::Phase::InitializeTimeStepperHistory,
-              SelfStart::self_start_procedure<step_actions, system>>,
+              SelfStart::self_start_procedure<step_actions<true>, system>>,
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
               tmpl::list<::domain::Actions::CheckFunctionsOfTimeAreReady,
                          Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
-                         step_actions, Actions::AdvanceTime,
+                         step_actions<false>, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
-  template <typename ParallelComponent>
-  struct registration_list {
-    using type = std::conditional_t<
-        std::is_same_v<ParallelComponent, gh_dg_element_array>,
-        dg_registration_list, tmpl::list<>>;
+    template <bool self_start>
+    struct CceWorldtubeTarget
+        : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
+      using temporal_id =
+          tmpl::conditional_t<self_start, ::Tags::TimeStepId, ::Tags::Time>;
+
+      static std::string name() {
+        return self_start ? "SelfStartCceWorldtubeTarget"
+                          : "CceWorldtubeTarget";
+      }
+      using compute_items_on_source = tmpl::list<>;
+      using compute_items_on_target = tmpl::list<>;
+      using compute_target_points =
+          intrp::TargetPoints::KerrHorizon<CceWorldtubeTarget,
+                                           ::Frame::Inertial>;
+      using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
+          Cce::CharacteristicEvolution<EvolutionMetavars>, self_start>;
+      using vars_to_interpolate_to_target = cce_vars_to_interpolate_to_target;
+      template <typename Metavariables>
+      using interpolating_component = gh_dg_element_array;
+    };
+
+    using interpolation_target_tags = tmpl::push_back<
+      control_system::metafunctions::interpolation_target_tags<control_systems>,
+      AhA, AhB, CceWorldtubeTarget<true>, CceWorldtubeTarget<false>>;
+
+    using observed_reduction_data_tags = observers::collect_reduction_data_tags<
+        tmpl::at<typename factory_creation::factory_classes, Event>>;
+
+    using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
+
+    template <typename ParallelComponent>
+    struct registration_list {
+      using type = std::conditional_t<
+          std::is_same_v<ParallelComponent, gh_dg_element_array>,
+          dg_registration_list, tmpl::list<>>;
   };
 
   using component_list = tmpl::flatten<tmpl::list<
@@ -461,11 +537,14 @@ struct EvolutionMetavars {
                       tmpl::bind<intrp::InterpolationTarget,
                                  tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
       control_system::control_components<EvolutionMetavars, control_systems>,
-      gh_dg_element_array>>;
+      cce_boundary_component, gh_dg_element_array,
+      Cce::CharacteristicEvolution<EvolutionMetavars>>>;
 
   static constexpr Options::String help{
       "Evolve a binary black hole using the Generalized Harmonic "
-      "formulation\n"};
+      "formulation\n"
+      "with a coupled CCE evolution for asymptotic gravitational-wave data "
+      "output"};
 };
 
 static const std::vector<void (*)()> charm_init_node_funcs{
@@ -475,6 +554,10 @@ static const std::vector<void (*)()> charm_init_node_funcs{
     &domain::creators::time_dependence::register_derived_with_charm,
     &domain::FunctionsOfTime::register_derived_with_charm,
     &GeneralizedHarmonic::BoundaryCorrections::register_derived_with_charm,
+    &Cce::register_initialize_j_with_charm<
+        metavariables::uses_partially_flat_cartesian_coordinates>,
+    &Parallel::register_derived_classes_with_charm<Cce::WorldtubeDataManager>,
+    &Parallel::register_derived_classes_with_charm<intrp::SpanInterpolator>,
     &domain::creators::register_derived_with_charm,
     &GeneralizedHarmonic::ConstraintDamping::register_derived_with_charm,
     &Parallel::register_factory_classes_with_charm<metavariables>};
