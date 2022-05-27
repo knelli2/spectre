@@ -12,6 +12,10 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Parallel/Printf.hpp"
+#include "Utilities/GetOutput.hpp"
+#include "Utilities/StdHelpers.hpp"
+
 /// \cond
 // IWYU pragma: no_forward_declare db::DataBox
 namespace Parallel {
@@ -63,7 +67,7 @@ struct CleanUpInterpolator {
   static void apply(
       db::DataBox<DbTags>& box,  // HorizonManager's box
       const Parallel::GlobalCache<Metavariables>& /*cache*/,
-      const ArrayIndex& /*array_index*/,
+      const ArrayIndex& array_index,
       const typename InterpolationTargetTag::temporal_id::type& temporal_id) {
     // Signal that this InterpolationTarget is done at this time.
     db::mutate<Tags::InterpolatedVarsHolders<Metavariables>>(
@@ -81,20 +85,24 @@ struct CleanUpInterpolator {
     bool this_temporal_id_is_done = true;
     const auto& holders =
         db::get<Tags::InterpolatedVarsHolders<Metavariables>>(box);
-    tmpl::for_each<typename Metavariables::interpolation_target_tags>(
-        [&](auto tag) {
-          using Tag = typename decltype(tag)::type;
-          if constexpr (std::is_same_v<
-                            typename InterpolationTargetTag::temporal_id,
-                            typename Tag::temporal_id>) {
-            const auto& found =
-                get<Vars::HolderTag<Tag, Metavariables>>(holders)
-                    .temporal_ids_when_data_has_been_interpolated;
-            if (found.count(temporal_id) == 0) {
-              this_temporal_id_is_done = false;
-            }
-          }
-        });
+    tmpl::for_each<
+        typename Metavariables::interpolation_target_tags>([&](auto tag) {
+      using Tag = typename decltype(tag)::type;
+      if constexpr (std::is_same_v<typename InterpolationTargetTag::temporal_id,
+                                   typename Tag::temporal_id>) {
+        const auto& holder = get<Vars::HolderTag<Tag, Metavariables>>(holders);
+        const auto& found = holder.temporal_ids_when_data_has_been_interpolated;
+
+        Parallel::printf(
+            "%s, Core %s:\n Info.keys = %s\n Completed times = %s\n",
+            pretty_type::name<Tag>(), get_output(array_index),
+            keys_of(holder.infos), found);
+
+        if (found.count(temporal_id) == 0) {
+          this_temporal_id_is_done = false;
+        }
+      }
+    });
 
     // We don't need any more volume data for this temporal_id,
     // so remove it.
@@ -111,7 +119,7 @@ struct CleanUpInterpolator {
       // Clean up temporal_ids_when_data_has_been_interpolated
       db::mutate<Tags::InterpolatedVarsHolders<Metavariables>>(
           make_not_null(&box),
-          [&temporal_id](
+          [&temporal_id, &array_index](
               const gsl::not_null<
                   typename Tags::InterpolatedVarsHolders<Metavariables>::type*>
                   holders_l) {
@@ -124,6 +132,9 @@ struct CleanUpInterpolator {
                     get<Vars::HolderTag<Tag, Metavariables>>(*holders_l)
                         .temporal_ids_when_data_has_been_interpolated.erase(
                             temporal_id);
+                    Parallel::printf("%s, Core %d:\n Removing ID %s\n",
+                                     pretty_type::name<Tag>(), array_index,
+                                     temporal_id);
                   }
                 });
           });
