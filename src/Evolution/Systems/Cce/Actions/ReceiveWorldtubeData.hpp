@@ -11,6 +11,7 @@
 #include "Parallel/AlgorithmMetafunctions.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Time/SelfStart.hpp"
 #include "Time/Tags.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Utilities/Gsl.hpp"
@@ -58,10 +59,20 @@ struct ReceiveWorldtubeData {
         const ParallelComponent* const /*meta*/) {
     auto& inbox = tuples::get<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(inboxes);
+    Parallel::printf(
+        "%s: Receiving worldtube data at time %g, Inbox counts = %d\n",
+        SelfStart::is_self_starting(db::get<::Tags::TimeStepId>(box))
+            ? "SelfStart"
+            : "Regular",
+        db::get<::Tags::TimeStepId>(box).substep_time().value(),
+        inbox.count(db::get<::Tags::TimeStepId>(box)));
     if (inbox.count(db::get<::Tags::TimeStepId>(box)) != 1) {
       return {std::move(box), Parallel::AlgorithmExecution::Pause,
               tmpl::index_of<ActionList, ReceiveWorldtubeData>::value};
     }
+
+    Parallel::printf("Have enough data to do cce evolution at time %g\n",
+                     db::get<::Tags::TimeStepId>(box).substep_time().value());
 
     tmpl::for_each<typename Metavariables::cce_boundary_communication_tags>(
         [&inbox, &box](auto tag_v) {
@@ -74,6 +85,8 @@ struct ReceiveWorldtubeData {
               },
               db::get<::Tags::TimeStepId>(box));
         });
+    Parallel::printf("Erasing time %g from the inbox\n",
+                     db::get<::Tags::TimeStepId>(box).substep_time().value());
     inbox.erase(db::get<::Tags::TimeStepId>(box));
     return {std::move(box), Parallel::AlgorithmExecution::Continue,
             tmpl::index_of<ActionList, ReceiveWorldtubeData>::value + 1};

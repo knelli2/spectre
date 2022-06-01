@@ -144,6 +144,7 @@ struct ScriObserveInterpolated {
     Variables<detail::weyl_correction_list> corrected_scri_plus_weyl{
         Spectral::Swsh::number_of_swsh_collocation_points(l_max)};
 
+    Parallel::printf("Inside ScriObserveInterpolated before while loop\n");
     while (
         db::get<Tags::InterpolationManager<
             ComplexDataVector,
@@ -168,6 +169,7 @@ struct ScriObserveInterpolated {
         interpolation_time = interpolation.first;
         get(get<tag>(corrected_scri_plus_weyl)).data() = interpolation.second;
       });
+      Parallel::printf(" Interpolating to time %.17g\n", interpolation_time);
 
       detail::correct_weyl_scalars_for_inertial_time(
           make_not_null(&corrected_scri_plus_weyl));

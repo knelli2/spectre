@@ -10,6 +10,7 @@
 #include "Evolution/Systems/Cce/Actions/BoundaryComputeAndSendToEvolution.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Time/SelfStart.hpp"
 #include "Time/Tags.hpp"
 
 namespace Cce {
@@ -51,6 +52,13 @@ struct RequestBoundaryData {
                     const ArrayIndex& /*array_index*/,
                     const ActionList /*meta*/,
                     const ParallelComponent* const /*meta*/) {
+    Parallel::printf(
+        "%s: Inside Request boundary data at time %g. Calling "
+        "BoundaryComputeAndSendToEvolution\n",
+        SelfStart::is_self_starting(db::get<::Tags::TimeStepId>(box))
+            ? "SelfStart"
+            : "Regular",
+        db::get<::Tags::TimeStepId>(box).substep_time().value());
     Parallel::simple_action<Actions::BoundaryComputeAndSendToEvolution<
         WorldtubeBoundaryComponent, EvolutionComponent>>(
         Parallel::get_parallel_component<WorldtubeBoundaryComponent>(cache),
