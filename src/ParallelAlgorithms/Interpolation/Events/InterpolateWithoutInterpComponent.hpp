@@ -25,6 +25,11 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/CreateGetStaticMemberVariableOrDefault.hpp"
 
+#include "Domain/Structure/Element.hpp"
+#include "Domain/Structure/ElementId.hpp"
+#include "Time/SelfStart.hpp"
+#include "Utilities/StdHelpers.hpp"
+
 /// \cond
 namespace domain {
 namespace Tags {
@@ -93,13 +98,14 @@ class InterpolateWithoutInterpComponent<VolumeDim, InterpolationTargetTag,
                  evolution::dg::subcell::Tags::ActiveGrid, SourceVarTags...>,
       tmpl::list<typename InterpolationTargetTag::temporal_id,
                  Tags::InterpPointInfo<Metavariables>,
-                 domain::Tags::Mesh<VolumeDim>, SourceVarTags...>>;
+                 domain::Tags::Mesh<VolumeDim>, ::Tags::TimeStepId,
+                 SourceVarTags...>>;
 
   template <typename ParallelComponent>
   void operator()(
       const typename InterpolationTargetTag::temporal_id::type& temporal_id,
       const typename Tags::InterpPointInfo<Metavariables>::type& point_infos,
-      const Mesh<VolumeDim>& mesh,
+      const Mesh<VolumeDim>& mesh, const ::TimeStepId timestep_id,
       const typename SourceVarTags::type&... source_vars_input,
       Parallel::GlobalCache<Metavariables>& cache,
       const ElementId<VolumeDim>& array_index,
@@ -114,6 +120,16 @@ class InterpolateWithoutInterpComponent<VolumeDim, InterpolationTargetTag,
     const std::vector<ElementId<VolumeDim>> element_ids{{array_index}};
     const auto element_coord_holders =
         element_logical_coordinates(element_ids, block_logical_coords);
+
+    // using ::operator<<;
+    // Parallel::printf(
+    //     "Block logical coords: %s\n"
+    //     "Point info: %s\n"
+    //     "Element IDs: %s\n"
+    //     "Element logical coords:%s\n\n",
+    //     block_logical_coords,
+    //     get<Vars::PointInfoTag<InterpolationTargetTag,
+    //     VolumeDim>>(point_infos), element_ids, element_coord_holders);
 
     if (element_coord_holders.count(array_index) == 0) {
       // There are no target points in this element, so we don't need
@@ -184,6 +200,15 @@ class InterpolateWithoutInterpComponent<VolumeDim, InterpolationTargetTag,
     // 2. Set up interpolator
     intrp::Irregular<VolumeDim> interpolator(
         mesh, element_coord_holder.element_logical_coords);
+
+    if (is_zeroth_element(array_index)) {
+      Parallel::printf(
+          "%s: InterpolateWithoutIntrpComponent. Calling "
+          "InterpolationTargetVarsFromElement at time %g from ElementId %s\n",
+          SelfStart::is_self_starting(timestep_id) ? "SelfStart" : "Regular",
+          InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+          array_index);
+    }
 
     // 3. Interpolate and send interpolated data to target
     auto& receiver_proxy = Parallel::get_parallel_component<

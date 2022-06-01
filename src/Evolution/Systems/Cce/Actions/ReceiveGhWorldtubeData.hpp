@@ -24,6 +24,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits.hpp"
 
+#include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+
 namespace Cce {
 namespace Actions {
 
@@ -70,10 +72,22 @@ struct ReceiveGhWorldtubeData {
       auto insert_gh_data_to_interface_manager =
           [&spacetime_metric, &phi, &pi, &time,
            &cache](const auto interface_manager) {
+            Parallel::printf(
+                "%s: ReceiveGhWorldtubeData. Inserting gh data to interface "
+                "manager at time %g\n",
+                DuringSelfStart ? "SelfStart" : "Regular",
+                intrp::InterpolationTarget_detail::get_temporal_id_value(time));
             interface_manager->insert_gh_data(time, spacetime_metric, phi, pi);
             const auto gh_data =
                 interface_manager->retrieve_and_remove_first_ready_gh_data();
             if (static_cast<bool>(gh_data)) {
+              Parallel::printf(
+                  "%s: ReceiveGhWorldtubeData. Interface manager has enough "
+                  "data at time %g, "
+                  "sending to CCE evolution.\n",
+                  DuringSelfStart ? "SelfStart" : "Regular",
+                  intrp::InterpolationTarget_detail::get_temporal_id_value(
+                      time));
               Parallel::simple_action<Actions::SendToEvolution<
                   GhWorldtubeBoundary<Metavariables>, EvolutionComponent>>(
                   Parallel::get_parallel_component<
@@ -82,9 +96,17 @@ struct ReceiveGhWorldtubeData {
             }
           };
       if constexpr (DuringSelfStart) {
+        Parallel::printf(
+            "ReceiveGhWorldtubeData. Mutating self start interface manager at "
+            "time %g\n",
+            intrp::InterpolationTarget_detail::get_temporal_id_value(time));
         db::mutate<Tags::SelfStartGhInterfaceManager>(
             make_not_null(&box), insert_gh_data_to_interface_manager);
       } else {
+        Parallel::printf(
+            "ReceiveGhWorldtubeData. Mutating regular interface manager at "
+            "time %g\n",
+            intrp::InterpolationTarget_detail::get_temporal_id_value(time));
         db::mutate<Tags::GhInterfaceManager>(
             make_not_null(&box), insert_gh_data_to_interface_manager);
       }

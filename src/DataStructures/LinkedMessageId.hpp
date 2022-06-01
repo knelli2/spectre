@@ -10,6 +10,7 @@
 #include <pup.h>
 
 #include "Parallel/PupStlCpp17.hpp"
+#include "Utilities/StdHelpers.hpp"
 
 /// \ingroup DataStructuresGroup
 /// An identifier for an element in a sequence
