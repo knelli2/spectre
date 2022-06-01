@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <algorithm>
+#include <deque>
 #include <unordered_map>
 #include <utility>
 
@@ -67,7 +69,9 @@ struct InterpolatorReceiveVolumeData {
             const auto& finished_temporal_ids =
                 get<Vars::HolderTag<tag, Metavariables>>(holders)
                     .temporal_ids_when_data_has_been_interpolated;
-            if (finished_temporal_ids.count(temporal_id) == 0) {
+            if (std::find(finished_temporal_ids.begin(),
+                          finished_temporal_ids.end(),
+                          temporal_id) == finished_temporal_ids.end()) {
               this_temporal_id_is_done = false;
             }
           }

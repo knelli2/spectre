@@ -163,7 +163,8 @@ struct AddToTemporalIdsWhenDataHasBeenInterpolated {
                 holders) {
           get<intrp::Vars::HolderTag<InterpolationTargetTag, Metavariables>>(
               *holders)
-              .temporal_ids_when_data_has_been_interpolated.insert(temporal_id);
+              .temporal_ids_when_data_has_been_interpolated.push_back(
+                  temporal_id);
         });
   }
 };

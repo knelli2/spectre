@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <pup.h>
 #include <unordered_map>
@@ -78,6 +79,21 @@ struct MockMetavariables {
   using component_list = tmpl::list<mock_interpolator<MockMetavariables>>;
   enum class Phase { Initialization, Testing, Exit };
 };
+
+template <typename interp_component, typename InterpolationTargetTag,
+          typename Metavariables, typename TemporalId>
+bool temporal_ids_when_data_has_been_interpolated_contains(
+    const ActionTesting::MockRuntimeSystem<Metavariables>& runner,
+    const TemporalId& temporal_id) {
+  const auto& finished_temporal_ids =
+      get<intrp::Vars::HolderTag<InterpolationTargetTag, Metavariables>>(
+          ActionTesting::get_databox_tag<
+              interp_component,
+              intrp::Tags::InterpolatedVarsHolders<Metavariables>>(runner, 0))
+          .temporal_ids_when_data_has_been_interpolated;
+  return std::find(finished_temporal_ids.begin(), finished_temporal_ids.end(),
+                   temporal_id) != finished_temporal_ids.end();
+}
 
 SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.CleanUp", "[Unit]") {
   using metavars = MockMetavariables;
@@ -167,13 +183,9 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.CleanUp", "[Unit]") {
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagA, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(
-              temporal_id.substep_time().value()) == 1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagA>(
+      runner, temporal_id.substep_time().value()));
   CHECK(
       get<intrp::Vars::HolderTag<metavars::InterpolationTagB, metavars>>(
           ActionTesting::get_databox_tag<
@@ -212,26 +224,17 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.CleanUp", "[Unit]") {
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagA, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(
-              temporal_id.substep_time().value()) == 1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagA>(
+      runner, temporal_id.substep_time().value()));
   CHECK(
       get<intrp::Vars::HolderTag<metavars::InterpolationTagC, metavars>>(
           ActionTesting::get_databox_tag<
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagC, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(temporal_id) ==
-      1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagC>(runner, temporal_id));
   CHECK(
       get<intrp::Vars::HolderTag<metavars::InterpolationTagB, metavars>>(
           ActionTesting::get_databox_tag<
@@ -265,39 +268,25 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.CleanUp", "[Unit]") {
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagA, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(
-              temporal_id.substep_time().value()) == 1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagA>(
+      runner, temporal_id.substep_time().value()));
   CHECK(
       get<intrp::Vars::HolderTag<metavars::InterpolationTagB, metavars>>(
           ActionTesting::get_databox_tag<
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagB, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(temporal_id) ==
-      1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagB>(runner, temporal_id));
   CHECK(
       get<intrp::Vars::HolderTag<metavars::InterpolationTagC, metavars>>(
           ActionTesting::get_databox_tag<
               interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
               runner, 0))
           .temporal_ids_when_data_has_been_interpolated.size() == 1);
-  CHECK(
-      get<intrp::Vars::HolderTag<metavars::InterpolationTagC, metavars>>(
-          ActionTesting::get_databox_tag<
-              interp_component, intrp::Tags::InterpolatedVarsHolders<metavars>>(
-              runner, 0))
-          .temporal_ids_when_data_has_been_interpolated.count(temporal_id) ==
-      1);
+  CHECK(temporal_ids_when_data_has_been_interpolated_contains<
+        interp_component, metavars::InterpolationTagC>(runner, temporal_id));
 
   // There should be no queued actions; verify this.
   CHECK(runner.is_simple_action_queue_empty<mock_interpolator<metavars>>(0));
