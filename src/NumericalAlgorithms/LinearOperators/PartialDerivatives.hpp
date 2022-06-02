@@ -288,4 +288,36 @@ struct DerivCompute
       tmpl::list<VariablesTag, domain::Tags::Mesh<Dim>, InverseJacobianTag>;
 };
 
+template <typename Tag, typename InverseJacobianTag>
+struct TensorDerivCompute
+    : db::add_tag_prefix<
+          deriv, Tag,
+          tmpl::size_t<
+              tmpl::back<typename InverseJacobianTag::type::index_list>::dim>,
+          typename tmpl::back<
+              typename InverseJacobianTag::type::index_list>::Frame>,
+      db::ComputeTag {
+ private:
+  using inv_jac_indices = typename InverseJacobianTag::type::index_list;
+  static constexpr auto Dim = tmpl::back<inv_jac_indices>::dim;
+  using deriv_frame = typename tmpl::back<inv_jac_indices>::Frame;
+
+ public:
+  using base = db::add_tag_prefix<
+      deriv, Tag,
+      tmpl::size_t<
+          tmpl::back<typename InverseJacobianTag::type::index_list>::dim>,
+      typename tmpl::back<
+          typename InverseJacobianTag::type::index_list>::Frame>;
+  using return_type = typename base::type;
+  static constexpr void (*function)(
+      gsl::not_null<return_type*>, const typename Tag::type&, const Mesh<Dim>&,
+      const InverseJacobian<DataVector, Dim, Frame::ElementLogical,
+                            deriv_frame>&) =
+      partial_derivative<typename Tag::type::symmetry,
+                         typename Tag::type::index_list, Dim, deriv_frame>;
+  using argument_tags =
+      tmpl::list<Tag, domain::Tags::Mesh<Dim>, InverseJacobianTag>;
+};
+
 }  // namespace Tags

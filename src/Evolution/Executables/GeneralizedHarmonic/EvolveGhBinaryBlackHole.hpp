@@ -265,25 +265,47 @@ struct EvolutionMetavars {
   using interpolator_source_vars = ::ah::source_vars<volume_dim>;
 
   using observe_fields = tmpl::append<
-      tmpl::list<gr::Tags::Lapse<DataVector>,
-                 GeneralizedHarmonic::Tags::GaugeConstraintCompute<
-                     volume_dim, ::Frame::Inertial>,
-                 GeneralizedHarmonic::Tags::TwoIndexConstraintCompute<
-                     volume_dim, ::Frame::Inertial>,
-                 GeneralizedHarmonic::Tags::ThreeIndexConstraintCompute<
-                     volume_dim, ::Frame::Inertial>,
-                 // following tags added to observe constraints
-                 ::Tags::PointwiseL2NormCompute<
-                     GeneralizedHarmonic::Tags::GaugeConstraint<
-                         volume_dim, ::Frame::Inertial>>,
-                 ::Tags::PointwiseL2NormCompute<
-                     GeneralizedHarmonic::Tags::TwoIndexConstraint<
-                         volume_dim, ::Frame::Inertial>>,
-                 ::Tags::PointwiseL2NormCompute<
-                     GeneralizedHarmonic::Tags::ThreeIndexConstraint<
-                         volume_dim, ::Frame::Inertial>>,
-                 ::domain::Tags::Coordinates<volume_dim, Frame::Grid>,
-                 ::domain::Tags::Coordinates<volume_dim, Frame::Inertial>>,
+      tmpl::list<
+          gr::Tags::Lapse<DataVector>,
+          gr::Tags::Shift<3, ::Frame::Inertial, DataVector>,
+          Tags::TensorDerivCompute<
+              gr::Tags::SpatialMetric<3, Frame::Inertial, DataVector>,
+              ::domain::Tags::InverseJacobian<3, ::Frame::ElementLogical,
+                                              ::Frame::Inertial>>,
+          gr::Tags::SpatialChristoffelFirstKindCompute<3, ::Frame::Inertial,
+                                                       DataVector>,
+          Tags::TensorDerivCompute<
+              gr::Tags::SpatialChristoffelFirstKind<3, ::Frame::Inertial,
+                                                    DataVector>,
+              ::domain::Tags::InverseJacobian<3, ::Frame::ElementLogical,
+                                              ::Frame::Inertial>>,
+          gr::Tags::SpatialChristoffelSecondKindCompute<3, ::Frame::Inertial,
+                                                        DataVector>,
+          Tags::TensorDerivCompute<
+              gr::Tags::SpatialChristoffelSecondKind<3, ::Frame::Inertial,
+                                                     DataVector>,
+              ::domain::Tags::InverseJacobian<3, ::Frame::ElementLogical,
+                                              ::Frame::Inertial>>,
+          gr::Tags::SpatialRicciCompute<3, ::Frame::Inertial, DataVector>,
+          gr::Tags::SpatialRicciScalarCompute<3, ::Frame::Inertial, DataVector>,
+          GeneralizedHarmonic::Tags::GaugeConstraintCompute<volume_dim,
+                                                            ::Frame::Inertial>,
+          GeneralizedHarmonic::Tags::TwoIndexConstraintCompute<
+              volume_dim, ::Frame::Inertial>,
+          GeneralizedHarmonic::Tags::ThreeIndexConstraintCompute<
+              volume_dim, ::Frame::Inertial>,
+          // following tags added to observe constraints
+          ::Tags::PointwiseL2NormCompute<
+              GeneralizedHarmonic::Tags::GaugeConstraint<volume_dim,
+                                                         ::Frame::Inertial>>,
+          ::Tags::PointwiseL2NormCompute<
+              GeneralizedHarmonic::Tags::TwoIndexConstraint<volume_dim,
+                                                            ::Frame::Inertial>>,
+          ::Tags::PointwiseL2NormCompute<
+              GeneralizedHarmonic::Tags::ThreeIndexConstraint<
+                  volume_dim, ::Frame::Inertial>>,
+          ::domain::Tags::Coordinates<volume_dim, Frame::Grid>,
+          ::domain::Tags::Coordinates<volume_dim, Frame::Inertial>>,
       // The 4-index constraint is only implemented in 3d
       tmpl::conditional_t<
           volume_dim == 3,
