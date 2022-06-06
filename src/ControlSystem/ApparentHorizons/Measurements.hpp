@@ -9,6 +9,7 @@
 #include "ApparentHorizons/ComputeHorizonVolumeQuantities.hpp"
 #include "ApparentHorizons/HorizonAliases.hpp"
 #include "ApparentHorizons/ObjectLabel.hpp"
+#include "ApparentHorizons/ObserveCenters.hpp"
 #include "ApparentHorizons/Tags.hpp"
 #include "ControlSystem/Protocols/Measurement.hpp"
 #include "ControlSystem/Protocols/Submeasurement.hpp"
@@ -19,6 +20,8 @@
 #include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ErrorOnFailedApparentHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/FindApparentHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/ObserveSurfaceData.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/ObserveTimeSeriesOnSurface.hpp"
 #include "ParallelAlgorithms/Interpolation/Interpolate.hpp"
 #include "ParallelAlgorithms/Interpolation/Protocols/InterpolationTargetTag.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/ApparentHorizon.hpp"
@@ -58,10 +61,11 @@ struct BothHorizons : tt::ConformsTo<protocols::Measurement> {
         using type = LinkedMessageId<double>;
       };
 
-      using vars_to_interpolate_to_target =
-          ::ah::vars_to_interpolate_to_target<3, ::Frame::Grid>;
+      using vars_to_interpolate_to_target = tmpl::append<
+          ::ah::vars_to_interpolate_to_target<3, ::Frame::Grid>,
+          ::ah::vars_to_interpolate_to_target<3, ::Frame::Inertial>>;
       using compute_vars_to_interpolate = ::ah::ComputeHorizonVolumeQuantities;
-      using compute_items_on_target = tmpl::list<>;
+      using compute_items_on_target = ::ah::compute_items_on_target<3>;
       using compute_target_points =
           intrp::TargetPoints::ApparentHorizon<InterpolationTarget,
                                                ::Frame::Grid>;
@@ -70,8 +74,15 @@ struct BothHorizons : tt::ConformsTo<protocols::Measurement> {
                                                 ::Frame::Grid>;
       using horizon_find_failure_callback =
           intrp::callbacks::ErrorOnFailedApparentHorizon;
+      using tags_to_observe = ::ah::tags_for_observing;
+      using surface_tags_to_observe = ::ah::surface_tags_for_observing;
       using post_horizon_find_callbacks =
-          tmpl::list<control_system::RunCallbacks<FindHorizon, ControlSystems>>;
+          tmpl::list<control_system::RunCallbacks<FindHorizon, ControlSystems>,
+                     intrp::callbacks::ObserveTimeSeriesOnSurface<
+                         tags_to_observe, InterpolationTarget>,
+                     intrp::callbacks::ObserveSurfaceData<
+                         surface_tags_to_observe, InterpolationTarget>,
+                     ::ah::callbacks::ObserveCenters<InterpolationTarget>>;
     };
 
    public:
