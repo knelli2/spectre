@@ -137,7 +137,7 @@
 #include "ParallelAlgorithms/Interpolation/Protocols/InterpolationTargetTag.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/ApparentHorizon.hpp"
-#include "ParallelAlgorithms/Interpolation/Targets/KerrHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Targets/Sphere.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Christoffel.hpp"
 #include "PointwiseFunctions/GeneralRelativity/DetAndInverseSpatialMetric.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/ConstraintGammas.hpp"
@@ -490,42 +490,40 @@ struct EvolutionMetavars : CharacteristicExtractDefaults {
                          step_actions<false>, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
-    template <bool self_start>
-    struct CceWorldtubeTarget
-        : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
-      using temporal_id =
-          tmpl::conditional_t<self_start, ::Tags::TimeStepId, ::Tags::Time>;
+  template <bool self_start>
+  struct CceWorldtubeTarget
+      : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
+    using temporal_id =
+        tmpl::conditional_t<self_start, ::Tags::TimeStepId, ::Tags::Time>;
 
-      static std::string name() {
-        return self_start ? "SelfStartCceWorldtubeTarget"
-                          : "CceWorldtubeTarget";
-      }
-      using compute_items_on_source = tmpl::list<>;
-      using compute_items_on_target = tmpl::list<>;
-      using compute_target_points =
-          intrp::TargetPoints::KerrHorizon<CceWorldtubeTarget,
-                                           ::Frame::Inertial>;
-      using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
-          Cce::CharacteristicEvolution<EvolutionMetavars>, self_start>;
-      using vars_to_interpolate_to_target = cce_vars_to_interpolate_to_target;
-      template <typename Metavariables>
-      using interpolating_component = gh_dg_element_array;
-    };
+    static std::string name() {
+      return self_start ? "SelfStartCceWorldtubeTarget" : "CceWorldtubeTarget";
+    }
+    using compute_items_on_source = tmpl::list<>;
+    using compute_items_on_target = tmpl::list<>;
+    using compute_target_points =
+        intrp::TargetPoints::Sphere<CceWorldtubeTarget, ::Frame::Inertial>;
+    using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
+        Cce::CharacteristicEvolution<EvolutionMetavars>, self_start>;
+    using vars_to_interpolate_to_target = cce_vars_to_interpolate_to_target;
+    template <typename Metavariables>
+    using interpolating_component = gh_dg_element_array;
+  };
 
-    using interpolation_target_tags = tmpl::push_back<
+  using interpolation_target_tags = tmpl::push_back<
       control_system::metafunctions::interpolation_target_tags<control_systems>,
       AhA, AhB, CceWorldtubeTarget<true>, CceWorldtubeTarget<false>>;
 
-    using observed_reduction_data_tags = observers::collect_reduction_data_tags<
-        tmpl::at<typename factory_creation::factory_classes, Event>>;
+  using observed_reduction_data_tags = observers::collect_reduction_data_tags<
+      tmpl::at<typename factory_creation::factory_classes, Event>>;
 
-    using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
+  using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
 
-    template <typename ParallelComponent>
-    struct registration_list {
-      using type = std::conditional_t<
-          std::is_same_v<ParallelComponent, gh_dg_element_array>,
-          dg_registration_list, tmpl::list<>>;
+  template <typename ParallelComponent>
+  struct registration_list {
+    using type = std::conditional_t<
+        std::is_same_v<ParallelComponent, gh_dg_element_array>,
+        dg_registration_list, tmpl::list<>>;
   };
 
   using component_list = tmpl::flatten<tmpl::list<
