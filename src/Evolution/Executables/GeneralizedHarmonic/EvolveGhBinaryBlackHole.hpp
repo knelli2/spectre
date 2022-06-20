@@ -186,6 +186,26 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+namespace Tags {
+struct TimeAndPrevious : db::SimpleTag {
+  using type = LinkedMessageId<double>;
+};
+
+struct TimeAndPreviousCompute : TimeAndPrevious, db::ComputeTag {
+  using argument_tags =
+      tmpl::list<::Tags::Time, ::evolution::Tags::PreviousTriggerTime>;
+  using base = TimeAndPrevious;
+  using return_type = LinkedMessageId<double>;
+
+  static void function(
+      gsl::not_null<LinkedMessageId<double>*> time_and_previous,
+      const double time, const std::optional<double>& previous_time) {
+    time_and_previous->id = time;
+    time_and_previous->previous = previous_time;
+  }
+};
+}  // namespace Tags
+
 // Note: this executable does not use GeneralizedHarmonicBase.hpp, because
 // using it would require a number of changes in GeneralizedHarmonicBase.hpp
 // that would apply only when evolving binary black holes. This would
@@ -323,7 +343,8 @@ struct EvolutionMetavars : CharacteristicExtractDefaults {
                   3, ::Frame::Inertial>>,
           tmpl::list<>>>;
   using non_tensor_compute_tags =
-      tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>>;
+      tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>,
+                 ::Tags::TimeAndPreviousCompute>;
 
   using cce_vars_to_interpolate_to_target = interpolator_source_vars;
 
@@ -493,8 +514,8 @@ struct EvolutionMetavars : CharacteristicExtractDefaults {
   template <bool self_start>
   struct CceWorldtubeTarget
       : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
-    using temporal_id =
-        tmpl::conditional_t<self_start, ::Tags::TimeStepId, ::Tags::Time>;
+    using temporal_id = tmpl::conditional_t<self_start, ::Tags::TimeStepId,
+                                            ::Tags::TimeAndPrevious>;
 
     static std::string name() {
       return self_start ? "SelfStartCceWorldtubeTarget" : "CceWorldtubeTarget";
