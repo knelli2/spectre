@@ -63,7 +63,7 @@ void write_components_to_disk(
     const double time, Parallel::GlobalCache<Metavariables>& cache,
     const std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>&
         function_of_time,
-    const std::array<DataVector, ControlSystem::deriv_order>& q_and_derivs,
+    const std::array<DataVector, 2>& q_and_derivs,
     const DataVector& control_signal) {
   auto& observer_writer_proxy = Parallel::get_parallel_component<
       observers::ObserverWriter<Metavariables>>(cache);
@@ -127,4 +127,34 @@ void write_components_to_disk(
     );
   }
 }
+
+template <typename ControlSystem, typename Metavariables>
+void write_damping_timescales(const double time, const DataVector& timescales,
+                              Parallel::GlobalCache<Metavariables>& cache) {
+  const std::string subfile_name{"/ControlSystems/" + ControlSystem::name() +
+                                 "/DampingTimescales"};
+
+  const size_t num_components = timescales.size();
+  std::vector<double> data(num_components);
+  std::vector<std::string> legend{num_components + 1};
+  legend[0] = "Time";
+  for (size_t i = 0; i < num_components; ++i) {
+    const std::optional<std::string> component_name_opt =
+        ControlSystem::component_name(i, num_components);
+    if (not component_name_opt) {
+      continue;
+    }
+    data[i] = timescales[i];
+    legend[i + 1] = component_name_opt.value();
+  }
+
+  auto& observer_writer_proxy = Parallel::get_parallel_component<
+      observers::ObserverWriter<Metavariables>>(cache);
+
+  Parallel::threaded_action<observers::ThreadedActions::WriteReductionDataRow>(
+      // Node 0 is always the writer
+      observer_writer_proxy[0], subfile_name, std::move(legend),
+      std::make_tuple(time, std::move(data)));
+}
+
 }  // namespace control_system

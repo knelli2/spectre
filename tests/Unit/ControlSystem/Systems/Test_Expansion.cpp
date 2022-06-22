@@ -50,7 +50,8 @@ void test_expansion_control_system() {
   const double initial_separation = 15.0;
   // This final time is chosen so that the damping timescales have adequate time
   // to reach the maximum damping timescale
-  const double final_time = 500.0;
+  const double final_time = 5.0;
+  CHECK(false);
 
   // Set up the system helper.
   control_system::TestHelpers::SystemHelper<metavars> system_helper{};
@@ -64,6 +65,7 @@ void test_expansion_control_system() {
       "      Expansion: 1\n"
       "ControlSystems:\n"
       "  WriteDataToDisk: false\n"
+      "  MeasurementsPerUpdate: 4\n"
       "  Expansion:\n"
       "    Averager:\n"
       "      AverageTimescaleFraction: 0.25\n"
@@ -97,7 +99,7 @@ void test_expansion_control_system() {
 
   // Setup runner and all components
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
-  MockRuntimeSystem runner{{"DummyFileName", std::move(domain)},
+  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4},
                            {std::move(initial_functions_of_time),
                             std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<

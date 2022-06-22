@@ -96,6 +96,13 @@ struct WriteDataToDisk {
       "Whether control system data should be saved during an evolution."};
   using group = ControlSystemGroup;
 };
+
+struct MeasurementsPerUpdate {
+  using type = int;
+  static constexpr Options::String help = {
+      "How many AH measurements are to be done between updates."};
+  using group = ControlSystemGroup;
+};
 }  // namespace OptionTags
 
 /// \ingroup ControlSystemGroup
@@ -221,6 +228,20 @@ struct ControlError : db::SimpleTag {
       const control_system::OptionHolder<ControlSystem>& option_holder) {
     return option_holder.control_error;
   }
+};
+
+struct MeasurementsPerUpdate : db::SimpleTag {
+  using type = int;
+
+  using option_tags = tmpl::list<OptionTags::MeasurementsPerUpdate>;
+  static constexpr bool pass_metavariables = false;
+  static int create_from_options(const int measurements_per_update) {
+    return measurements_per_update;
+  }
+};
+
+struct CurrentNumberOfMeasurements : db::SimpleTag {
+  using type = int;
 };
 
 namespace detail {

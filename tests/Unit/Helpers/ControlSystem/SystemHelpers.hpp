@@ -23,6 +23,7 @@
 #include "ControlSystem/ControlErrors/Translation.hpp"
 #include "ControlSystem/Controller.hpp"
 #include "ControlSystem/DataVectorHelpers.hpp"
+#include "ControlSystem/InitialExpirationTimes.hpp"
 #include "ControlSystem/Systems/Expansion.hpp"
 #include "ControlSystem/Systems/Rotation.hpp"
 #include "ControlSystem/Systems/Translation.hpp"
@@ -64,6 +65,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include <sstream>
+
 /// \cond
 namespace OptionTags {
 struct InitialTime;
@@ -79,6 +82,7 @@ using init_simple_tags =
                control_system::Tags::ControlError<ControlSystem>,
                control_system::Tags::WriteDataToDisk,
                control_system::Tags::IsActive<ControlSystem>,
+               control_system::Tags::CurrentNumberOfMeasurements,
                typename ControlSystem::MeasurementQueue>;
 
 class FakeCreator : public DomainCreator<3> {
@@ -144,6 +148,9 @@ struct MockControlComponent {
   using system = ControlSystem;
 
   using simple_tags = init_simple_tags<ControlSystem>;
+
+  using const_global_cache_tags =
+      tmpl::list<control_system::Tags::MeasurementsPerUpdate>;
 
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       Parallel::Phase::Initialization,
@@ -261,11 +268,13 @@ double initialize_expansion_functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times) {
   constexpr size_t deriv_order = ExpansionSystem::deriv_order;
   const double initial_expansion = 1.0;
-  const double expansion_velocity_outer_boundary = 0.0;
-  const double decay_timescale_outer_boundary = 0.05;
+  const double init_exp_vel = -4.61484576462e-05;
+  const double expansion_velocity_outer_boundary = -1.0e-6;
+  const double decay_timescale_outer_boundary = 50.0;
   auto init_func_expansion =
       make_array<deriv_order + 1, DataVector>(DataVector{1, 0.0});
   init_func_expansion[0][0] = initial_expansion;
+  init_func_expansion[1][0] = init_exp_vel;
 
   const std::string expansion_name = ExpansionSystem::name();
   (*functions_of_time)[expansion_name] = std::make_unique<
@@ -289,7 +298,7 @@ double initialize_rotation_functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times) {
   constexpr size_t deriv_order = RotationSystem::deriv_order;
 
-  const double initial_omega_z = 0.01;
+  const double initial_omega_z = 0.015264577062;
   auto init_func_rotation =
       make_array<deriv_order + 1, DataVector>(DataVector{3, 0.0});
   init_func_rotation[1][2] = initial_omega_z;
@@ -300,6 +309,29 @@ double initialize_rotation_functions_of_time(
   (*functions_of_time)[rotation_name] = std::make_unique<
       domain::FunctionsOfTime::QuaternionFunctionOfTime<deriv_order>>(
       initial_time, init_quaternion, init_func_rotation,
+      initial_expiration_times.at(rotation_name));
+
+  return 1.0;
+}
+
+template <typename RotationSystem>
+double initialize_rotation2d_functions_of_time(
+    const gsl::not_null<std::unordered_map<
+        std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>*>
+        functions_of_time,
+    const double initial_time,
+    const std::unordered_map<std::string, double>& initial_expiration_times) {
+  constexpr size_t deriv_order = RotationSystem::deriv_order;
+
+  const double initial_omega_z = 0.015264577062;
+  auto init_func_rotation =
+      make_array<deriv_order + 1, DataVector>(DataVector{1, 0.0});
+  init_func_rotation[1][0] = initial_omega_z;
+
+  const std::string rotation_name = RotationSystem::name();
+  (*functions_of_time)[rotation_name] = std::make_unique<
+      domain::FunctionsOfTime::PiecewisePolynomial<deriv_order>>(
+      initial_time, init_func_rotation,
       initial_expiration_times.at(rotation_name));
 
   return 1.0;
@@ -490,19 +522,23 @@ struct SystemHelper {
           get<control_system::Tags::Controller<system>>(init_tuple);
       const auto& tuner =
           get<control_system::Tags::TimescaleTuner<system>>(init_tuple);
+      const DataVector measurement_timescale =
+          control_system::calculate_measurement_timescales(
+              controller, tuner, measurements_per_update_);
+      const std::array<DataVector, 1> init_measurement_timescale{
+          {measurement_timescale}};
+      averager.assign_time_between_measurements(min(measurement_timescale));
 
-      const std::array<DataVector, 1> measurement_timescale{
-          {control_system::calculate_measurement_timescales(controller,
-                                                            tuner)}};
-      averager.assign_time_between_measurements(min(measurement_timescale[0]));
-
-      const double initial_expiration_time =
-          controller.get_update_fraction() * min(tuner.current_timescale());
+      const double measurement_expr_time = measurement_expiration_time(
+          initial_time_, measurement_timescale, measurements_per_update_);
 
       initial_measurement_timescales_[name<system>()] =
           std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<0>>(
-              initial_time_, measurement_timescale, initial_expiration_time);
-      initial_expiration_times[name<system>()] = initial_expiration_time;
+              initial_time_, init_measurement_timescale, measurement_expr_time);
+
+      initial_expiration_times[name<system>()] =
+          function_of_time_expiration_time(initial_time_, measurement_timescale,
+                                           measurements_per_update_);
     });
 
     const double excision_radius =
@@ -557,16 +593,100 @@ struct SystemHelper {
       ActionTesting::MockRuntimeSystem<Metavars>& runner,
       const double final_time, gsl::not_null<Generator*> generator,
       const F horizon_function, const size_t number_of_horizons) {
-    double time = initial_time_;
-    std::optional<double> prev_time{};
-    double dt = 0.0;
-
     auto& cache = ActionTesting::cache<element_component>(runner, 0);
     const auto& measurement_timescales =
         Parallel::get<control_system::Tags::MeasurementTimescales>(cache);
+    // const auto& functions_of_time =
+    //     Parallel::get<domain::Tags::FunctionsOfTime>(cache);
+
+    // Allocate now because we need these variables outside the loop
+    double time = initial_time_;
+    std::optional<double> prev_time{};
+    const auto calculate_dt =
+        [&measurement_timescales](const double local_time) -> double {
+      double tmp_dt = std::numeric_limits<double>::max();
+      std::stringstream ss{};
+      ss << "Calculating dt at t = " << local_time;
+      for (auto& name_measurement_timescale : measurement_timescales) {
+        ss << "\n " << name_measurement_timescale.first << ":";
+        // const auto* fot =
+        //     dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<0>*>(
+        //         name_measurement_timescale.second.get());
+        // ss << " Deriv info = " << fot->get_deriv_info() << "\n";
+        ss << " tmp_dt = " << tmp_dt;
+        ss << ", timescales = "
+           << name_measurement_timescale.second->func(local_time)[0];
+        tmp_dt = std::min(
+            tmp_dt,
+            min(name_measurement_timescale.second->func(local_time)[0]));
+      }
+      ss << "\n"
+         << " Final dt = " << tmp_dt;
+      Parallel::printf("%s\n", ss.str());
+      return tmp_dt;
+    };
+    double dt = calculate_dt(time);
+
+    const auto all_expr_times =
+        [&measurement_timescales](const double local_time) -> std::string {
+      std::stringstream ss{};
+      ss << "Expr times = (";
+      for (const auto& name_measurement_timescale : measurement_timescales) {
+        ss << name_measurement_timescale.second->time_bounds()[1];
+        ss << ", ";
+      }
+      std::string result = ss.str();
+      result.pop_back();
+      result.pop_back();
+      result += ")\n";
+
+      ss.str("");
+
+      ss << "Measure timescales (t=" << local_time << ") = (";
+      for (const auto& name_measurement_timescale : measurement_timescales) {
+        if (name_measurement_timescale.second->time_bounds()[1] > local_time) {
+          ss << name_measurement_timescale.second->func(local_time)[0];
+          ss << ", ";
+        } else {
+          ss << "expired, ";
+        }
+      }
+
+      result += ss.str();
+      result.pop_back();
+      result.pop_back();
+      result += ")";
+
+      return result;
+    };
+
+    using obs_writer = typename Metavars::observer_component;
 
     // Start loop
     while (time < final_time) {
+      //   std::stringstream ss{};
+      //   for (const auto& name_fot : functions_of_time) {
+      //     const auto* fot2 =
+      //         dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<2>*>(
+      //             name_fot.second.get());
+      //     const auto* fot3 =
+      //         dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<3>*>(
+      //             name_fot.second.get());
+      //     if (fot2 != nullptr) {
+      //       ss << name_fot.first << " " << fot2->get_deriv_info();
+      //     } else if (fot3 != nullptr) {
+      //       ss << name_fot.first << " " << fot3->get_deriv_info();
+      //     }
+      //     ss << "\n";
+      //     Parallel::printf("%s", ss.str());
+      //   }
+      Parallel::printf(
+          "Time stuff before:\n"
+          " prev_time = %s\n"
+          " time = %f\n"
+          " dt = %f\n",
+          prev_time, time, dt);
+      Parallel::printf("%s\n\n", all_expr_times(time));
       // Setup the measurement Id. This would normally be created in the control
       // system event.
       const LinkedMessageId<double> measurement_id{time, prev_time};
@@ -604,6 +724,14 @@ struct SystemHelper {
         }
         ActionTesting::invoke_queued_simple_action<component>(
             make_not_null(&runner), 0);
+
+        const size_t num_writes =
+            ActionTesting::number_of_queued_threaded_actions<obs_writer>(runner,
+                                                                         0);
+        for (size_t i = 0; i < num_writes; i++) {
+          ActionTesting::invoke_queued_threaded_action<obs_writer>(
+              make_not_null(&runner), 0);
+        }
       });
 
       // At this point, the control systems for each transformation should have
@@ -613,13 +741,15 @@ struct SystemHelper {
       // Our dt is set by the smallest measurement timescale. The control system
       // updates these timescales when it updates the functions of time
       prev_time = time;
-      dt = std::numeric_limits<double>::max();
-      for (auto& [name, measurement_timescale] : measurement_timescales) {
-        // Avoid compiler warning with gcc-7
-        (void)name;
-        dt = std::min(dt, min(measurement_timescale->func(time)[0]));
-      }
+      dt = calculate_dt(time);
       time += dt;
+      Parallel::printf(
+          "Time stuff after:\n"
+          " prev_time = %s\n"
+          " time = %f\n"
+          " dt = %f\n",
+          prev_time, time, dt);
+      Parallel::printf("%s\n\n", all_expr_times(time));
     }
 
     // Get horizons at final time in grid frame
@@ -634,11 +764,14 @@ struct SystemHelper {
       tmpl::remove_duplicates<tmpl::transform<
           control_components, tmpl::bind<option_tag, tmpl::_1>>>,
       control_system::OptionTags::WriteDataToDisk, ::OptionTags::InitialTime,
-      domain::OptionTags::DomainCreator<3>>;
+      domain::OptionTags::DomainCreator<3>,
+      control_system::OptionTags::MeasurementsPerUpdate>;
   template <typename System>
-  using creatable_tags =
-      tmpl::list_difference<init_simple_tags<System>,
-                            tmpl::list<typename System::MeasurementQueue>>;
+  using creatable_tags = tmpl::list_difference<
+      init_simple_tags<System>,
+      tmpl::list<typename System::MeasurementQueue,
+                 control_system::Tags::CurrentNumberOfMeasurements,
+                 control_system::Tags::MeasurementsPerUpdate>>;
 
   void parse_options(const std::string& option_string) {
     Options::Parser<option_list> parser{"Peter Parker the option parser."};
@@ -648,6 +781,13 @@ struct SystemHelper {
           return tuples::tagged_tuple_from_typelist<option_list>(
               std::move(args)...);
         });
+
+    const auto created_measurements_per_update =
+        Parallel::create_from_options<Metavars>(
+            options, tmpl::list<control_system::Tags::MeasurementsPerUpdate>{});
+
+    measurements_per_update_ = get<control_system::Tags::MeasurementsPerUpdate>(
+        created_measurements_per_update);
 
     tmpl::for_each<control_systems>([this, &options](auto system_v) {
       using system = tmpl::type_from<decltype(system_v)>;
@@ -663,6 +803,7 @@ struct SystemHelper {
               get<control_system::Tags::Controller<system>>(created_tags),
               get<control_system::Tags::ControlError<system>>(created_tags),
               get<control_system::Tags::WriteDataToDisk>(created_tags), true,
+              -1,
               // Just need an empty queue. It will get filled in as the control
               // system is updated
               LinkedMessageQueue<
@@ -686,6 +827,7 @@ struct SystemHelper {
   AllTags all_init_tags_{};
   Strahlkorper<Frame::Grid> horizon_a_{};
   Strahlkorper<Frame::Grid> horizon_b_{};
+  int measurements_per_update_{};
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
 };
 }  // namespace control_system::TestHelpers

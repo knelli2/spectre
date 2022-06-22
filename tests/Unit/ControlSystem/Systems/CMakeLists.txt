@@ -3,6 +3,7 @@
 
 set(LIBRARY_SOURCES
   ${LIBRARY_SOURCES}
+  Systems/Test_Compare.cpp
   Systems/Test_Expansion.cpp
   Systems/Test_Rotation.cpp
   Systems/Test_RotScaleTrans.cpp
