@@ -281,7 +281,7 @@ struct InterpolationTarget {
                          Metavariables, InterpolationTargetTag>,
                      Parallel::Actions::TerminatePhase>>,
       Parallel::PhaseActions<
-          Parallel::Phase::Register,
+          Parallel::Phase::RegisterWithObserver,
           tmpl::list<
               tmpl::conditional_t<
                   InterpolationTargetTag::compute_target_points::is_sequential::
