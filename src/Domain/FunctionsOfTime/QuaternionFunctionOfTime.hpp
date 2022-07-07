@@ -141,6 +141,11 @@ class QuaternionFunctionOfTime : public FunctionOfTime {
     return angle_f_of_t_.func_and_2_derivs(t);
   }
 
+  std::array<DataVector, MaxDeriv + 1> angle_func_and_all_derivs(
+      const double t) const {
+    return angle_f_of_t_.func_and_all_derivs(t);
+  }
+
  private:
   template <size_t LocalMaxDeriv>
   friend bool operator==(  // NOLINT(readability-redundant-declaration)
