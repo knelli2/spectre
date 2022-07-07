@@ -64,6 +64,10 @@ class FunctionOfTime : public PUP::able {
     ERROR("Cannot update this FunctionOfTime.");
   }
 
+  virtual DataVector max_deriv(double /*t*/) const {
+    ERROR("Cannot calculate the function values for the maximum derivative.");
+  }
+
   /// Resets the expiration time to a new value. By default, the expiration time
   /// of a FunctionOfTime cannot be reset.
   virtual void reset_expiration_time(double /*next_expiration_time*/) {

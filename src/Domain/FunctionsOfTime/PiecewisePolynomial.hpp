@@ -61,6 +61,10 @@ class PiecewisePolynomial : public FunctionOfTime {
     return func_and_derivs<2>(t);
   }
 
+  DataVector max_deriv(double t) const override {
+    return func_and_derivs<MaxDeriv>(t)[MaxDeriv];
+  }
+
   /// Updates the `MaxDeriv`th derivative of the function at the given time.
   /// `updated_max_deriv` is a vector of the `MaxDeriv`ths for each component.
   /// `next_expiration_time` is the next expiration time.
