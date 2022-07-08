@@ -29,8 +29,6 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits.hpp"
 
-#include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
-
 namespace Cce {
 namespace Actions {
 
@@ -234,19 +232,10 @@ struct BoundaryComputeAndSendToEvolution<GhWorldtubeBoundary<Metavariables>,
         [&time,
          &cache](const gsl::not_null<InterfaceManagers::GhInterfaceManager*>
                      interface_manager) {
-          Parallel::printf(
-              "%s: BoundaryCompute. Requesting gh data from interface manager "
-              "at time %g\n",
-              SelfStart::is_self_starting(time) ? "SelfStart" : "Regular",
-              time.substep_time().value());
           interface_manager->request_gh_data(time);
           const auto gh_data =
               interface_manager->retrieve_and_remove_first_ready_gh_data();
           if (static_cast<bool>(gh_data)) {
-            Parallel::printf(
-                "%s: BoundaryCompute. Interface manager has enough data, "
-                "sending to CCE evolution\n",
-                SelfStart::is_self_starting(time) ? "SelfStart" : "Regular");
             Parallel::simple_action<Actions::SendToEvolution<
                 GhWorldtubeBoundary<Metavariables>, EvolutionComponent>>(
                 Parallel::get_parallel_component<
@@ -255,12 +244,9 @@ struct BoundaryComputeAndSendToEvolution<GhWorldtubeBoundary<Metavariables>,
           }
         };
     if (SelfStart::is_self_starting(time)) {
-      Parallel::printf(
-          "BoundaryCompute. Mutating self start interface manager\n");
       db::mutate<Tags::SelfStartGhInterfaceManager>(
           make_not_null(&box), retrieve_data_and_send_to_evolution);
     } else {
-      Parallel::printf("BoundaryCompute. Mutating regular interface manager\n");
       db::mutate<Tags::GhInterfaceManager>(make_not_null(&box),
                                            retrieve_data_and_send_to_evolution);
     }
@@ -300,9 +286,6 @@ struct SendToEvolution<GhWorldtubeBoundary<Metavariables>, EvolutionComponent> {
         },
         db::get<InitializationTags::ExtractionRadius>(box),
         db::get<Tags::LMax>(box));
-    Parallel::printf(
-        "Calling receive data for the cce evolution component for time %g\n",
-        intrp::InterpolationTarget_detail::get_temporal_id_value(time));
     Parallel::receive_data<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(
         Parallel::get_parallel_component<EvolutionComponent>(cache), time,

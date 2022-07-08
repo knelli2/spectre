@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "DataStructures/Tensor/TypeAliases.hpp"
-#include "Utilities/StdHelpers.hpp"
 
 /// \cond
 namespace domain {
@@ -70,12 +69,6 @@ struct ElementLogicalCoordHolder {
   tnsr::I<DataVector, Dim, Frame::ElementLogical> element_logical_coords;
   std::vector<size_t> offsets;
 };
-
-template <size_t Dim>
-std::ostream& operator<<(std::ostream& os,
-                         const ElementLogicalCoordHolder<Dim>& t) {
-  return os << '(' << t.element_logical_coords << ',' << t.offsets << ')';
-}
 
 /// \ingroup ComputationalDomainGroup
 ///

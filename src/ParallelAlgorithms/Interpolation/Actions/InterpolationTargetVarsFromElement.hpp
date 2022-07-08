@@ -141,19 +141,8 @@ struct InterpolationTargetVarsFromElement {
     InterpolationTarget_detail::add_received_variables<InterpolationTargetTag>(
         make_not_null(&box), vars_src, global_offsets, temporal_id);
 
-    Parallel::printf(
-        "%s: InterpolationTargetVarsFromElement. Received interpolated data at "
-        "time %g\n",
-        pretty_type::name<InterpolationTargetTag>(),
-        InterpolationTarget_detail::get_temporal_id_value(temporal_id));
-
     if (InterpolationTarget_detail::have_data_at_all_points<
             InterpolationTargetTag>(box, temporal_id)) {
-      Parallel::printf(
-          "%s: InterpolationTargetVarsFromElement. Received all necessary data "
-          "at time %g. Calling Callback\n",
-          pretty_type::name<InterpolationTargetTag>(),
-          InterpolationTarget_detail::get_temporal_id_value(temporal_id));
       // All the valid points have been interpolated.
       // We throw away the return value of call_callback in this case
       // (it is known to be always true; it can be false only for
