@@ -99,7 +99,8 @@ T Option::parse_as() const {
     // This happens when trying to parse an empty value as a container
     // with no entries.
     if ((tt::is_a_v<std::vector, T> or tt::is_std_array_of_size_v<0, T> or
-         tt::is_maplike_v<T>) and node().IsNull()) {
+         tt::is_maplike_v<T>)and node()
+            .IsNull()) {
       return T{};
     }
     Context error_context = context();
@@ -563,9 +564,8 @@ struct get_impl<Tag, Metavariables, Tag> {
 
       if (t != suggested_value) {
         Parallel::printf_error(
-            "%s, line %d:\n  Specified: %s\n  Suggested: %s\n",
-            label, option.context().line + 1,
-            (MakeString{} << std::boolalpha << t),
+            "%s, line %d:\n  Specified: %s\n  Suggested: %s\n", label,
+            option.context().line + 1, (MakeString{} << std::boolalpha << t),
             (MakeString{} << std::boolalpha << suggested_value));
       }
     }
@@ -746,8 +746,9 @@ void Parser<OptionList, Group>::parse(const YAML::Node& node) {
 
   if (not valid_names.empty()) {
     PARSE_ERROR(context_, "You did not specify the option"
-                << (valid_names.size() == 1 ? " " : "s ")
-                << (MakeString{} << valid_names) << "\n" << parsing_help(node));
+                              << (valid_names.size() == 1 ? " " : "s ")
+                              << (MakeString{} << valid_names) << "\n"
+                              << parsing_help(node));
   }
 
   tmpl::for_each<subgroups>([this](auto subgroup_v) {
@@ -814,8 +815,10 @@ void Parser<OptionList, Group>::overlay(const YAML::Node& node) {
               ...);
         })) {
       PARSE_ERROR(context,
-                  "Option '" << name << "' is not a valid option.\n"
-                  << parsing_help<overlayable_tags_and_subgroups_list>(node));
+                  "Option '"
+                      << name << "' is not a valid option.\n"
+                      << parsing_help<overlayable_tags_and_subgroups_list>(
+                             node));
     }
 
     if (tmpl::as_pack<overlayable_tags_and_subgroups_list>(
@@ -825,15 +828,19 @@ void Parser<OptionList, Group>::overlay(const YAML::Node& node) {
                       ...);
             })) {
       PARSE_ERROR(context,
-                  "Option '" << name << "' is not overlayable.\n"
-                  << parsing_help<overlayable_tags_and_subgroups_list>(node));
+                  "Option '"
+                      << name << "' is not overlayable.\n"
+                      << parsing_help<overlayable_tags_and_subgroups_list>(
+                             node));
     }
 
     // Check for duplicate key
     if (0 != overlaid_options.count(name)) {
       PARSE_ERROR(context,
-                  "Option '" << name << "' specified twice.\n"
-                  << parsing_help<overlayable_tags_and_subgroups_list>(node));
+                  "Option '"
+                      << name << "' specified twice.\n"
+                      << parsing_help<overlayable_tags_and_subgroups_list>(
+                             node));
     }
 
     overlaid_options.insert(name);
@@ -897,7 +904,8 @@ inline void Parser<OptionList, Group>::check_lower_bound(
       PARSE_ERROR(context, "Value " << (MakeString{} << t)
                                     << " is below the lower bound of "
                                     << (MakeString{} << T::lower_bound())
-                                    << ".\n" << help());
+                                    << ".\n"
+                                    << help());
     }
   }
 }
@@ -915,7 +923,8 @@ inline void Parser<OptionList, Group>::check_upper_bound(
       PARSE_ERROR(context, "Value " << (MakeString{} << t)
                                     << " is above the upper bound of "
                                     << (MakeString{} << T::upper_bound())
-                                    << ".\n" << help());
+                                    << ".\n"
+                                    << help());
     }
   }
 }
@@ -1088,8 +1097,8 @@ struct create_from_yaml<std::variant<T...>> {
   static Result create(const Option& options) {
     Result result{};
     bool constructed = false;
-    const auto try_parse =
-        [&constructed, &options, &result](auto alternative_v) {
+    const auto try_parse = [&constructed, &options,
+                            &result](auto alternative_v) {
       using Alternative = tmpl::type_from<decltype(alternative_v)>;
       if (constructed) {
         return;

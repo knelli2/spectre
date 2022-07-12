@@ -323,8 +323,7 @@ ObserveNorms<ObservationValueTag, tmpl::list<ObservableTensorTags...>,
 template <typename ObservationValueTag, typename... ObservableTensorTags,
           typename... NonTensorComputeTags, typename ArraySectionIdTag>
 template <typename ComputeTagsList, typename DataBoxType,
-          typename Metavariables, size_t VolumeDim,
-          typename ParallelComponent>
+          typename Metavariables, size_t VolumeDim, typename ParallelComponent>
 void ObserveNorms<ObservationValueTag, tmpl::list<ObservableTensorTags...>,
                   tmpl::list<NonTensorComputeTags...>, ArraySectionIdTag>::
 operator()(const typename ObservationValueTag::type& observation_value,

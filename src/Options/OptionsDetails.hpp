@@ -158,8 +158,8 @@ struct yaml_type<std::variant<T...>> {
 template <typename S, typename = std::void_t<>>
 struct has_suggested : std::false_type {};
 template <typename S>
-struct has_suggested<
-    S, std::void_t<decltype(std::declval<S>().suggested_value())>>
+struct has_suggested<S,
+                     std::void_t<decltype(std::declval<S>().suggested_value())>>
     : std::true_type {};
 
 template <typename S, typename = std::void_t<>>

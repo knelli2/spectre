@@ -150,20 +150,19 @@ class ObserveVolumeIntegrals<
     std::vector<double> local_volume_integrals{};
     std::vector<std::string> reduction_names = {
         db::tag_name<ObservationValueTag>(), "Volume"};
-    const auto record_integrals = [&local_volume_integrals, &reduction_names,
-                                   &det_jacobian,
-                                   &mesh](const auto tensor_tag_v,
-                                          const auto& tensor) {
-      using tensor_tag = tmpl::type_from<decltype(tensor_tag_v)>;
-      for (size_t i = 0; i < tensor.size(); ++i) {
-        reduction_names.push_back("VolumeIntegral(" +
-                                  db::tag_name<tensor_tag>() +
-                                  tensor.component_suffix(i) + ")");
-        local_volume_integrals.push_back(
-            definite_integral(det_jacobian * tensor[i], mesh));
-      }
-      return 0;
-    };
+    const auto record_integrals =
+        [&local_volume_integrals, &reduction_names, &det_jacobian, &mesh](
+            const auto tensor_tag_v, const auto& tensor) {
+          using tensor_tag = tmpl::type_from<decltype(tensor_tag_v)>;
+          for (size_t i = 0; i < tensor.size(); ++i) {
+            reduction_names.push_back("VolumeIntegral(" +
+                                      db::tag_name<tensor_tag>() +
+                                      tensor.component_suffix(i) + ")");
+            local_volume_integrals.push_back(
+                definite_integral(det_jacobian * tensor[i], mesh));
+          }
+          return 0;
+        };
     EXPAND_PACK_LEFT_TO_RIGHT(
         record_integrals(tmpl::type_<Tensors>{}, tensors));
 

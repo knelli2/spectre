@@ -53,8 +53,7 @@ class Event : public ::Event {
   static_assert(tmpl::all<ControlSystems,
                           std::is_same<metafunctions::measurement<tmpl::_1>,
                                        tmpl::pin<measurement>>>::value);
-  static_assert(
-      tt::assert_conforms_to_v<measurement, protocols::Measurement>);
+  static_assert(tt::assert_conforms_to_v<measurement, protocols::Measurement>);
 
   template <typename ControlSystem>
   using process_measurement_for_control_system =

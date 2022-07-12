@@ -143,7 +143,8 @@ struct ChangeSlabSize {
       }
       ASSERT(inbox.begin()->first >= slab_number,
              "Received data for a change at slab " << inbox.begin()->first
-             << " but it is already slab " << slab_number);
+                                                   << " but it is already slab "
+                                                   << slab_number);
       return 0;
     };
 
