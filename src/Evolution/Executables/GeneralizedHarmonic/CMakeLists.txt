@@ -12,6 +12,17 @@ function(add_generalized_harmonic_executable_with_horizon
     )
 endfunction(add_generalized_harmonic_executable_with_horizon)
 
+function(add_generalized_harmonic_executable_with_horizon_cce
+    INITIAL_DATA_NAME INITIAL_DATA BOUNDARY_CONDITIONS LIBS_TO_LINK)
+  add_spectre_parallel_executable(
+    "EvolveGh${INITIAL_DATA_NAME}"
+    EvolveGhWithHorizonCce
+    Evolution/Executables/GeneralizedHarmonic
+    "EvolutionMetavars<3, ${INITIAL_DATA}, ${BOUNDARY_CONDITIONS}>"
+    "${LIBS_TO_LINK}"
+    )
+endfunction(add_generalized_harmonic_executable_with_horizon_cce)
+
 function(add_generalized_harmonic_executable_without_horizon
     INITIAL_DATA_NAME DIM INITIAL_DATA BOUNDARY_CONDITIONS LIBS_TO_LINK)
   add_spectre_parallel_executable(
@@ -53,6 +64,20 @@ add_generalized_harmonic_executable_with_horizon(
   GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
   GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
   "${LIBS_TO_LINK};ApparentHorizons;GeneralRelativitySolutions"
+)
+
+add_generalized_harmonic_executable_with_horizon_cce(
+  KerrSchildCce
+  GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
+  GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
+  "${LIBS_TO_LINK};ApparentHorizons;GeneralRelativitySolutions"
+)
+
+add_generalized_harmonic_executable_with_horizon_cce(
+  KerrSchildCceNumeric
+  evolution::NumericInitialData
+  GeneralizedHarmonic::Solutions::WrappedGr<gr::Solutions::KerrSchild>
+  "${LIBS_TO_LINK};ApparentHorizons;GeneralRelativitySolutions;Importers"
 )
 
 add_generalized_harmonic_executable_with_horizon(
