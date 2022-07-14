@@ -13,7 +13,6 @@
 #include "Evolution/Systems/Cce/ScriPlusValues.hpp"
 #include "IO/Observer/Actions/GetLockPointer.hpp"
 #include "Parallel/GlobalCache.hpp"
-#include "Time/SelfStart.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -61,22 +60,10 @@ struct InitializeFirstHypersurface {
     // In those cases, we do not want to alter the existing hypersurface data,
     // so we just exit. However, we do want to re-run the action each time
     // the self start 'reset's from the beginning
-    Parallel::printf(
-        "%s: Inside InitializeFirstHyperSurface at time %g\n",
-        SelfStart::is_self_starting(db::get<::Tags::TimeStepId>(box))
-            ? "SelfStart"
-            : "Regular",
-        db::get<::Tags::Time>(box));
     if (db::get<::Tags::TimeStepId>(box).slab_number() > 0 or
         db::get<::Tags::TimeStepId>(box).substep_time().fraction() != 0) {
       return {std::move(box)};
     }
-    Parallel::printf(
-        "%s: Initializing the first hypersurface at time %g\n",
-        SelfStart::is_self_starting(db::get<::Tags::TimeStepId>(box))
-            ? "SelfStart"
-            : "Regular",
-        db::get<::Tags::Time>(box));
     // some initialization schemes need the hdf5_lock so that they can read
     // their own input data from disk.
     auto hdf5_lock = Parallel::local_branch(

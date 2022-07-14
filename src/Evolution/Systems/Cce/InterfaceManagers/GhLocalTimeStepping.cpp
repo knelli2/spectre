@@ -21,7 +21,6 @@
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Utilities/Algorithm.hpp"
-#include "Utilities/StdHelpers.hpp"
 
 namespace Cce::InterfaceManagers {
 
@@ -117,18 +116,11 @@ void GhLocalTimeStepping::insert_gh_data(
   get<GeneralizedHarmonic::Tags::Phi<3, ::Frame::Inertial>>(
       input_gh_variables) = phi;
   gh_data_.insert({time_and_previous, std::move(input_gh_variables)});
-  Parallel::printf(
-      "GhLocalTimeStepping. Inserting GH data at time %s, keys of gh_data_ = "
-      "%s\n",
-      time_and_previous, keys_of(gh_data_));
   clean_up_gh_data();
 }
 
 void GhLocalTimeStepping::request_gh_data(const TimeStepId& time_id) {
   requests_.insert(time_id);
-  Parallel::printf(
-      "GhLocalTimeStepping. Requesting GH data at time %g, requests_ = %s\n",
-      time_id.substep_time().value(), requests_);
   if (requests_.size() == 1) {
     clean_up_gh_data();
   }
@@ -137,8 +129,6 @@ void GhLocalTimeStepping::request_gh_data(const TimeStepId& time_id) {
 auto GhLocalTimeStepping::retrieve_and_remove_first_ready_gh_data()
     -> std::optional<std::tuple<TimeStepId, gh_variables>> {
   if (requests_.empty()) {
-    Parallel::printf(
-        "GhLocalTimeStepping. Cannot retrieve GH data, no requests_\n");
     return std::nullopt;
   }
   const double first_request = requests_.begin()->substep_time().value();
@@ -152,32 +142,13 @@ auto GhLocalTimeStepping::retrieve_and_remove_first_ready_gh_data()
         detail::interpolate_to_time(make_not_null(&requested_values), gh_data_,
                                     interpolator_, first_request);
     if (not success) {
-      Parallel::printf(
-          "GhLocalTimeStepping. Returning nullopt: "
-          "gh_data_.begin()->first.previous = %g, latest_removed = "
-          "%g, interpolate_to_time = %s\n",
-          gh_data_.begin()->first.previous, latest_removed_,
-          detail::interpolate_to_time(make_not_null(&requested_values),
-                                      gh_data_, interpolator_, first_request)
-              ? "true"
-              : "false");
       return std::nullopt;
     }
-    Parallel::printf(
-        "GhLocalTimeStepping. Returning requested data for first request %g\n",
-        first_request);
     std::tuple requested_data{*requests_.begin(), std::move(requested_values)};
     requests_.erase(requests_.begin());
     clean_up_gh_data();
     return requested_data;
   }
-  Parallel::printf(
-      "GhLocalTimeStepping. Returning nullopt: gh_data_.size() = %d, "
-      "interpolator_->required_number_of_points_before_and_after() * 2 = "
-      "%d, first_request = %g\n",
-      gh_data_.size(),
-      interpolator_->required_number_of_points_before_and_after() * 2,
-      first_request);
   return std::nullopt;
 }
 
@@ -185,7 +156,6 @@ void GhLocalTimeStepping::clean_up_gh_data() {
   if (requests_.empty() or gh_data_.empty()) {
     return;
   }
-  Parallel::printf("Cleaning up GH data\n");
   // count the number of elements to remove from the start
   const size_t max_to_remove =
       gh_data_.size() -

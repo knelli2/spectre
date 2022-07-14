@@ -78,11 +78,6 @@ class Interpolate<VolumeDim, InterpolationTargetTag,
     static_assert(
         std::is_same_v<typename Metavariables::interpolator_source_vars,
                        tmpl::list<InterpolatorSourceVarTags...>>);
-    // const double time =
-    //   intrp::InterpolationTarget_detail::get_temporal_id_value(temporal_id);
-    // Parallel::printf("%s-Event: ElementId = %s, time = %g\n",
-    //                  pretty_type::name<InterpolationTargetTag>(),
-    //                  array_index, time);
     interpolate<InterpolationTargetTag>(temporal_id, mesh, cache, array_index,
                                         interpolator_source_vars...);
   }
@@ -93,13 +88,8 @@ class Interpolate<VolumeDim, InterpolationTargetTag,
   bool is_ready(const double time, Parallel::GlobalCache<Metavariables>& cache,
                 const ArrayIndex& array_index,
                 const Component* const component) const {
-    const bool ready =
-        domain::functions_of_time_are_ready<domain::Tags::FunctionsOfTime>(
-            cache, array_index, component, time);
-    // Parallel::printf("%s: ElementId = %s, time = %g, ready = %s\n",
-    //                  pretty_type::name<InterpolationTargetTag>(),
-    //                  array_index, time, ready ? "true" : "false");
-    return ready;
+    return domain::functions_of_time_are_ready<domain::Tags::FunctionsOfTime>(
+        cache, array_index, component, time);
   }
 
   bool needs_evolved_variables() const override { return true; }

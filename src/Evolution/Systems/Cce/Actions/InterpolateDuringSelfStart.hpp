@@ -15,9 +15,6 @@
 #include "ParallelAlgorithms/Interpolation/Events/InterpolateWithoutInterpComponent.hpp"
 #include "Utilities/TMPL.hpp"
 
-#include "Domain/Structure/Element.hpp"
-#include "Domain/Structure/ElementId.hpp"
-
 /// \cond
 namespace tuples {
 template <typename... Tags>
@@ -49,12 +46,6 @@ struct InterpolateDuringSelfStart {
     auto interpolate_event = intrp::Events::InterpolateWithoutInterpComponent<
         Metavariables::volume_dim, CceWorltubeTargetTag, Metavariables,
         typename CceWorltubeTargetTag::vars_to_interpolate_to_target>{};
-    if (is_zeroth_element(db::get<domain::Tags::Element<3>>(box).id())) {
-      Parallel::printf(
-          "InterpolateDuringSelfStart: Running 'interpolate' event during self "
-          "start at time %g\n",
-          db::get<::Tags::Time>(box));
-    }
     ::apply(
         interpolate_event,
         make_observation_box<db::AddComputeTags<

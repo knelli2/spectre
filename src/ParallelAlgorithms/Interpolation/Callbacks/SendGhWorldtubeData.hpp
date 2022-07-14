@@ -41,11 +41,6 @@ struct SendGhWorldtubeData
                     const TemporalId& temporal_id) {
     auto& cce_gh_boundary_component = Parallel::get_parallel_component<
         Cce::GhWorldtubeBoundary<Metavariables>>(cache);
-    Parallel::printf(
-        "%s: Interpolation to world tube target finished at time %g. "
-        "Sending data to cce boundary component.\n",
-        DuringSelfStart ? "SelfStart" : "Regular",
-        InterpolationTarget_detail::get_temporal_id_value(temporal_id));
     Parallel::simple_action<typename Cce::Actions::ReceiveGhWorldtubeData<
         CceEvolutionComponent, DuringSelfStart>>(
         cce_gh_boundary_component, temporal_id,
