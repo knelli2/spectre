@@ -1,0 +1,27 @@
+var namespacecpp20 =
+[
+    [ "array", "structcpp20_1_1array.html", "structcpp20_1_1array" ],
+    [ "remove_cvref", "structcpp20_1_1remove__cvref.html", "structcpp20_1_1remove__cvref" ],
+    [ "remove_cvref_t", "group__TypeTraitsGroup.html#ga81f7735f66baf7185f69d9f3ee6a84aa", null ],
+    [ "equal", "namespacecpp20.html#a4d21b6be0f0d262ae5be206b3dad8418", null ],
+    [ "find", "group__UtilitiesGroup.html#gac84a6c0bd8692c342b9ddf4ba63601e2", null ],
+    [ "find_if", "group__UtilitiesGroup.html#gad9f222044f3284747287f0c3b5089ccd", null ],
+    [ "find_if_not", "group__UtilitiesGroup.html#ga77bc48018339ff6ac9402f49a5cd2068", null ],
+    [ "iter_swap", "group__UtilitiesGroup.html#ga2f41a812c1350575cf0e202b59902983", null ],
+    [ "lexicographical_compare", "namespacecpp20.html#afe1c9816fa7391178f6550511680bb23", null ],
+    [ "make_unique_for_overwrite", "namespacecpp20.html#a4c27fb9b7917651bb0721b7ba3e5c2cd", null ],
+    [ "make_unique_for_overwrite", "namespacecpp20.html#ae6f29f81ad538d70a553f832ad0429b1", null ],
+    [ "make_unique_for_overwrite", "namespacecpp20.html#aedebef0f4f93cca81b99ac95281ea80f", null ],
+    [ "next_permutation", "group__UtilitiesGroup.html#gaf0a66c125713e4158f86b06644a309eb", null ],
+    [ "next_permutation", "group__UtilitiesGroup.html#gac4ff3f48d2db8cb4a7101602d5f6ed3d", null ],
+    [ "operator!=", "namespacecpp20.html#ac3fe6d4a7adf80a63f19616979684927", null ],
+    [ "operator<", "namespacecpp20.html#a261ae79f6bf9274a7142f7242aa6093d", null ],
+    [ "operator<<", "namespacecpp20.html#a63e5f40a5b22001f27a0589512075291", null ],
+    [ "operator<<", "namespacecpp20.html#a9aa2403e41f9c690dde69c89b1b18f0d", null ],
+    [ "operator<=", "namespacecpp20.html#a4af224b20f519565b5a177b78f82685e", null ],
+    [ "operator==", "namespacecpp20.html#ae7c1b20b47ced5a6c2c9a40a7590d8f8", null ],
+    [ "operator>", "namespacecpp20.html#a6c5ee63666b7134b36448d0b1674cd4e", null ],
+    [ "operator>=", "namespacecpp20.html#a16861d0c2031abfbc36595d03164a95b", null ],
+    [ "reverse", "group__UtilitiesGroup.html#ga0465ea9937545d1d3404c6ab6e71b15c", null ],
+    [ "swap", "group__UtilitiesGroup.html#ga9a0c6b8252068496aac93344cca7d1f3", null ]
+];

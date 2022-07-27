@@ -1,0 +1,65 @@
+var namespacecontrol__system =
+[
+    [ "Actions", "namespacecontrol__system_1_1Actions.html", "namespacecontrol__system_1_1Actions" ],
+    [ "ah", null, [
+      [ "BothHorizons", "structcontrol__system_1_1ah_1_1BothHorizons.html", "structcontrol__system_1_1ah_1_1BothHorizons" ]
+    ] ],
+    [ "ControlErrors", "namespacecontrol__system_1_1ControlErrors.html", "namespacecontrol__system_1_1ControlErrors" ],
+    [ "metafunctions", "namespacecontrol__system_1_1metafunctions.html", "namespacecontrol__system_1_1metafunctions" ],
+    [ "OptionTags", "namespacecontrol__system_1_1OptionTags.html", "namespacecontrol__system_1_1OptionTags" ],
+    [ "protocols", "namespacecontrol__system_1_1protocols.html", "namespacecontrol__system_1_1protocols" ],
+    [ "QueueTags", "namespacecontrol__system_1_1QueueTags.html", "namespacecontrol__system_1_1QueueTags" ],
+    [ "size", null, [
+      [ "States", null, [
+        [ "AhSpeed", "classcontrol__system_1_1size_1_1States_1_1AhSpeed.html", "classcontrol__system_1_1size_1_1States_1_1AhSpeed" ],
+        [ "DeltaR", "classcontrol__system_1_1size_1_1States_1_1DeltaR.html", "classcontrol__system_1_1size_1_1States_1_1DeltaR" ],
+        [ "Initial", "classcontrol__system_1_1size_1_1States_1_1Initial.html", "classcontrol__system_1_1size_1_1States_1_1Initial" ]
+      ] ],
+      [ "Info", "structcontrol__system_1_1size_1_1Info.html", "structcontrol__system_1_1size_1_1Info" ],
+      [ "CrossingTimeInfo", "structcontrol__system_1_1size_1_1CrossingTimeInfo.html", "structcontrol__system_1_1size_1_1CrossingTimeInfo" ],
+      [ "StateUpdateArgs", "structcontrol__system_1_1size_1_1StateUpdateArgs.html", "structcontrol__system_1_1size_1_1StateUpdateArgs" ],
+      [ "ControlSignalArgs", "structcontrol__system_1_1size_1_1ControlSignalArgs.html", "structcontrol__system_1_1size_1_1ControlSignalArgs" ],
+      [ "State", "classcontrol__system_1_1size_1_1State.html", "classcontrol__system_1_1size_1_1State" ],
+      [ "register_derived_with_charm", "ControlSystem_2ControlErrors_2Size_2RegisterDerivedWithCharm_8hpp.html#a3167629a2d7d47a3d4584c42905ac68d", null ]
+    ] ],
+    [ "Systems", "namespacecontrol__system_1_1Systems.html", "namespacecontrol__system_1_1Systems" ],
+    [ "Tags", "namespacecontrol__system_1_1Tags.html", "namespacecontrol__system_1_1Tags" ],
+    [ "TestHelpers", null, [
+      [ "SomeTagOnElement", "structcontrol__system_1_1TestHelpers_1_1SomeTagOnElement.html", "structcontrol__system_1_1TestHelpers_1_1SomeTagOnElement" ],
+      [ "MeasurementResultTag", "structcontrol__system_1_1TestHelpers_1_1MeasurementResultTag.html", "structcontrol__system_1_1TestHelpers_1_1MeasurementResultTag" ],
+      [ "MeasurementResultTime", "structcontrol__system_1_1TestHelpers_1_1MeasurementResultTime.html", "structcontrol__system_1_1TestHelpers_1_1MeasurementResultTime" ],
+      [ "SomeControlSystemUpdater", "structcontrol__system_1_1TestHelpers_1_1SomeControlSystemUpdater.html", null ],
+      [ "ExampleSubmeasurement", "structcontrol__system_1_1TestHelpers_1_1ExampleSubmeasurement.html", "structcontrol__system_1_1TestHelpers_1_1ExampleSubmeasurement" ],
+      [ "ExampleMeasurement", "structcontrol__system_1_1TestHelpers_1_1ExampleMeasurement.html", "structcontrol__system_1_1TestHelpers_1_1ExampleMeasurement" ],
+      [ "ExampleControlError", "structcontrol__system_1_1TestHelpers_1_1ExampleControlError.html", "structcontrol__system_1_1TestHelpers_1_1ExampleControlError" ],
+      [ "ExampleControlSystem", "structcontrol__system_1_1TestHelpers_1_1ExampleControlSystem.html", "structcontrol__system_1_1TestHelpers_1_1ExampleControlSystem" ],
+      [ "MockControlComponent", "structcontrol__system_1_1TestHelpers_1_1MockControlComponent.html", "structcontrol__system_1_1TestHelpers_1_1MockControlComponent" ],
+      [ "MockElementComponent", "structcontrol__system_1_1TestHelpers_1_1MockElementComponent.html", "structcontrol__system_1_1TestHelpers_1_1MockElementComponent" ],
+      [ "MockObserverWriter", "structcontrol__system_1_1TestHelpers_1_1MockObserverWriter.html", "structcontrol__system_1_1TestHelpers_1_1MockObserverWriter" ],
+      [ "MockMetavars", "structcontrol__system_1_1TestHelpers_1_1MockMetavars.html", "structcontrol__system_1_1TestHelpers_1_1MockMetavars" ],
+      [ "SystemHelper", "structcontrol__system_1_1TestHelpers_1_1SystemHelper.html", "structcontrol__system_1_1TestHelpers_1_1SystemHelper" ],
+      [ "Measurement", "structcontrol__system_1_1TestHelpers_1_1Measurement.html", "structcontrol__system_1_1TestHelpers_1_1Measurement" ],
+      [ "ControlError", "structcontrol__system_1_1TestHelpers_1_1ControlError.html", "structcontrol__system_1_1TestHelpers_1_1ControlError" ],
+      [ "System", "structcontrol__system_1_1TestHelpers_1_1System.html", "structcontrol__system_1_1TestHelpers_1_1System" ],
+      [ "init_simple_tags", "SystemHelpers_8hpp.html#aef1589e047a34bf459bfff6502ab67c8", null ],
+      [ "build_horizons_for_basic_control_systems", "SystemHelpers_8hpp.html#a962681a946902f1d72d22ac8b22c5b2a", null ],
+      [ "grid_frame_horizon_centers_for_basic_control_systems", "SystemHelpers_8hpp.html#a440c5d3c5f67a1e76b1fa3c5cb49a503", null ],
+      [ "initialize_expansion_functions_of_time", "SystemHelpers_8hpp.html#a021e6d8cf72cddc8c0a9f23be09f9060", null ],
+      [ "initialize_rotation_functions_of_time", "SystemHelpers_8hpp.html#acc8ddfe11d166c410716b4306fce32f0", null ],
+      [ "initialize_translation_functions_of_time", "SystemHelpers_8hpp.html#a578d521e268fb1b533f9f8ddd6351540", null ]
+    ] ],
+    [ "Event", "classcontrol__system_1_1Event.html", "classcontrol__system_1_1Event" ],
+    [ "RunCallbacks", "structcontrol__system_1_1RunCallbacks.html", null ],
+    [ "OptionHolder", "structcontrol__system_1_1OptionHolder.html", "structcontrol__system_1_1OptionHolder" ],
+    [ "Trigger", "classcontrol__system_1_1Trigger.html", "classcontrol__system_1_1Trigger" ],
+    [ "UpdateControlSystem", "structcontrol__system_1_1UpdateControlSystem.html", null ],
+    [ "UpdateFunctionOfTime", "structcontrol__system_1_1UpdateFunctionOfTime.html", null ],
+    [ "ResetFunctionOfTimeExpirationTime", "structcontrol__system_1_1ResetFunctionOfTimeExpirationTime.html", null ],
+    [ "control_components", "group__ControlSystemGroup.html#ga6ed69fbc3234081d4a0bb84ef176fc62", null ],
+    [ "control_system_events", "group__ControlSystemGroup.html#ga7bbce24937d1c40fb0b87880e9c5d219", null ],
+    [ "control_system_triggers", "group__ControlSystemGroup.html#gaaeb170256e21b2454050158aaf51937c", null ],
+    [ "inputs", "group__ControlSystemGroup.html#ga7b24e33b5fa5b0c5c7e9a05756243d48", null ],
+    [ "calculate_measurement_timescales", "group__ControlSystemGroup.html#gaddae66460f7e5eba3654dec91324151a", null ],
+    [ "initial_expiration_times", "group__ControlSystemGroup.html#gad9f65f57cc992177bd61fb46aa7074bb", null ],
+    [ "write_components_to_disk", "group__ControlSystemGroup.html#gae3ee059477c21ebedfe3423efb05afb3", null ]
+];

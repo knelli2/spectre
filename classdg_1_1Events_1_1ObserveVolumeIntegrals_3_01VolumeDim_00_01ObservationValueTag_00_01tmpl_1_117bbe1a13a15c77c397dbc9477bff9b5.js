@@ -1,0 +1,17 @@
+var classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5 =
+[
+    [ "SubfileName", "structdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_ce2042c0210c155d200e7a754122b866.html", "structdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_ce2042c0210c155d200e7a754122b866" ],
+    [ "argument_tags", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a0192b64f1f91d4fe2d5538ef55ebc587", null ],
+    [ "compute_tags_for_observation_box", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#af15f30636fc84a32d9a76b254da1103d", null ],
+    [ "is_ready_argument_tags", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a41ae11614105a2a80c0375ccad0841c3", null ],
+    [ "observation_registration_tags", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a09e405d814832dcca75db386a7416568", null ],
+    [ "observed_reduction_data_tags", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#afd1be877f2883fca8ecc6e6d27a2efbc", null ],
+    [ "options", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a5d4b886fbf461a60acf14e7081001c69", null ],
+    [ "ObserveVolumeIntegrals", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a2fb7a13b9ba5b124c5d54f04e73d215e", null ],
+    [ "ObserveVolumeIntegrals", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#ac16fa69ad2cf70c57bda9377e9415a4e", null ],
+    [ "get_observation_type_and_key_for_registration", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a9073c8505738769403831cd16f9601cf", null ],
+    [ "is_ready", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a7606e8e1f7f32f2f0f06649a3775d156", null ],
+    [ "needs_evolved_variables", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a38f1a99fc293a0353c64f5ebf1f1bf10", null ],
+    [ "operator()", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a96bbd627e3ff0275b2d0ae83647b2eaa", null ],
+    [ "pup", "classdg_1_1Events_1_1ObserveVolumeIntegrals_3_01VolumeDim_00_01ObservationValueTag_00_01tmpl_1_117bbe1a13a15c77c397dbc9477bff9b5.html#a9c6c4bfdc47e08d18b3d1dbdb38592f0", null ]
+];

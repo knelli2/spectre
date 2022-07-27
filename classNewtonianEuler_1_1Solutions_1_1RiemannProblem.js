@@ -1,0 +1,28 @@
+var classNewtonianEuler_1_1Solutions_1_1RiemannProblem =
+[
+    [ "AdiabaticIndex", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1AdiabaticIndex.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1AdiabaticIndex" ],
+    [ "InitialData", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1InitialData.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1InitialData" ],
+    [ "InitialPosition", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1InitialPosition.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1InitialPosition" ],
+    [ "LeftMassDensity", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftMassDensity.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftMassDensity" ],
+    [ "LeftPressure", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftPressure.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftPressure" ],
+    [ "LeftVelocity", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftVelocity.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1LeftVelocity" ],
+    [ "PressureStarTol", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1PressureStarTol.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1PressureStarTol" ],
+    [ "RightMassDensity", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightMassDensity.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightMassDensity" ],
+    [ "RightPressure", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightPressure.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightPressure" ],
+    [ "RightVelocity", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightVelocity.html", "structNewtonianEuler_1_1Solutions_1_1RiemannProblem_1_1RightVelocity" ],
+    [ "equation_of_state_type", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a41999a53f251f2aaa02c27d2f21f89ef", null ],
+    [ "options", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a49df1878b977f8af933b0aa1ffd2b42d", null ],
+    [ "source_term_type", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a38e0f09d3749a11febac766c073c8d05", null ],
+    [ "RiemannProblem", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a1f762cd659afa5a527d139b06f802ad2", null ],
+    [ "RiemannProblem", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#ac646f7609e14e523cfaffe95a90e5f2d", null ],
+    [ "RiemannProblem", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#aaca76906f63a2fc56a752f8a6ae01152", null ],
+    [ "~RiemannProblem", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#ae1aaa27dc60507187f8d518e06cb1043", null ],
+    [ "RiemannProblem", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a0fa52f8e4d569a214d6a3585c02c8967", null ],
+    [ "diagnostic_star_region_values", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#ac4111a45e083f2b700944ee5e2d0c87f", null ],
+    [ "equation_of_state", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a08416cd878be74ef18dcacc20dad8029", null ],
+    [ "operator=", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#aee4da3374002c1271415e576d1dee3e2", null ],
+    [ "operator=", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a8f46204cec6e29f147a6582c8da77a03", null ],
+    [ "pup", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a8ba0a51963d8db33962bac51fd001954", null ],
+    [ "variables", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a6ce0134934d35df78ee20b9819ed6989", null ],
+    [ "operator==", "classNewtonianEuler_1_1Solutions_1_1RiemannProblem.html#a3fa531e2950d97a7a13b8b56759cffc7", null ]
+];

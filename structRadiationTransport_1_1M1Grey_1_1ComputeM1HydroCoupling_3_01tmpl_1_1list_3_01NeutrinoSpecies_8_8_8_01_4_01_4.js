@@ -1,0 +1,5 @@
+var structRadiationTransport_1_1M1Grey_1_1ComputeM1HydroCoupling_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4 =
+[
+    [ "argument_tags", "structRadiationTransport_1_1M1Grey_1_1ComputeM1HydroCoupling_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4.html#a3c8a00f0e2451739b3d9d1ba6c7e3b5e", null ],
+    [ "return_tags", "structRadiationTransport_1_1M1Grey_1_1ComputeM1HydroCoupling_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4.html#a7868e82f6c878226743da881fa3dfcf8", null ]
+];

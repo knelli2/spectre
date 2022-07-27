@@ -1,0 +1,5 @@
+var structRadiationTransport_1_1M1Grey_1_1ComputeM1Closure_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4 =
+[
+    [ "argument_tags", "structRadiationTransport_1_1M1Grey_1_1ComputeM1Closure_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4.html#a1a8532a0b1add60c8447e74a88d940b8", null ],
+    [ "return_tags", "structRadiationTransport_1_1M1Grey_1_1ComputeM1Closure_3_01tmpl_1_1list_3_01NeutrinoSpecies_8_8_8_01_4_01_4.html#a219d2af394e1bc58c508208a09705df1", null ]
+];

@@ -1,0 +1,26 @@
+var classMathFunctions_1_1Gaussian =
+[
+    [ "Amplitude", "structMathFunctions_1_1Gaussian_1_1Amplitude.html", "structMathFunctions_1_1Gaussian_1_1Amplitude" ],
+    [ "Center", "structMathFunctions_1_1Gaussian_1_1Center.html", "structMathFunctions_1_1Gaussian_1_1Center" ],
+    [ "Width", "structMathFunctions_1_1Gaussian_1_1Width.html", "structMathFunctions_1_1Gaussian_1_1Width" ],
+    [ "options", "classMathFunctions_1_1Gaussian.html#a4e76a48f64778c89abd3174b1c41eff9", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian.html#a25fef015ce511f2de19742c717a634a3", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian.html#aab3d7ff055fe7e7d262672c68853bc79", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian.html#a71929ae9a18930d66cd433147b27667b", null ],
+    [ "~Gaussian", "classMathFunctions_1_1Gaussian.html#a039105ccb9f5212f97f1ac015704cbff", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian.html#ae623283e92c1435e5a97f3265016e121", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian.html#aa8405b4e7ae54b88fe818ccfff715cb0", null ],
+    [ "first_deriv", "classMathFunctions_1_1Gaussian.html#a49a9560df7c3ef383452c5fef02ab272", null ],
+    [ "first_deriv", "classMathFunctions_1_1Gaussian.html#aa30ac6db2924f10e0e4c83f8c9c2bef1", null ],
+    [ "operator()", "classMathFunctions_1_1Gaussian.html#aac3a13e042d416c9369922ab7ae2c63c", null ],
+    [ "operator()", "classMathFunctions_1_1Gaussian.html#a8d67274e905f96a1ef0ea3f6b1d9a02b", null ],
+    [ "operator=", "classMathFunctions_1_1Gaussian.html#a8339b429823a22916c917ad9aefd0a4e", null ],
+    [ "operator=", "classMathFunctions_1_1Gaussian.html#a0ef5629ced0e8ee4c7c8df0a4f3219f6", null ],
+    [ "pup", "classMathFunctions_1_1Gaussian.html#a549b3b7ebf207ab57091f6f1e15d3157", null ],
+    [ "second_deriv", "classMathFunctions_1_1Gaussian.html#a469eaec593d73615cc4b84df4bb92987", null ],
+    [ "second_deriv", "classMathFunctions_1_1Gaussian.html#a6e2e069314712abbe027fcb9d75e518c", null ],
+    [ "third_deriv", "classMathFunctions_1_1Gaussian.html#abddc0a621d0c941391f7496ec6a0aadc", null ],
+    [ "third_deriv", "classMathFunctions_1_1Gaussian.html#a6c8bc07affbf3dd689056e97c201898d", null ],
+    [ "WRAPPED_PUPable_decl_base_template", "classMathFunctions_1_1Gaussian.html#a86a2066bf751ef6502ed39c6a6279d63", null ],
+    [ "operator==", "classMathFunctions_1_1Gaussian.html#a92d8ac2743c0a8ccc8353c8803c2a3f5", null ]
+];

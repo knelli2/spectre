@@ -1,0 +1,15 @@
+var structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac =
+[
+    [ "datum_list", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a23c2d9f2ca7f8a71aee7d9d94c766320", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a89f524f9fedb6c6c7c07a53e3aaac620", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a1697fcdf5b234cb70ccfcce591bc1bc2", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a4130ddf3e8b7ccfe503d44cea61c18c6", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#acd463d7e1065cfd770da331de0c770e7", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#ae06b39e033c8c8b5b10055a96dfdf37a", null ],
+    [ "~ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a5f1ec69673766a056c9db34fe56ac953", null ],
+    [ "ReductionData", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a50c9fe714399dd72271154665c7d8038", null ],
+    [ "combine", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a315752eae0714c48d23904f86a324e2e", null ],
+    [ "finalize", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a72e1ba056fa9cc5efdc20156e6ff3cfe", null ],
+    [ "operator=", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a9bfe574b2fe5b313c3b579284e29d0d5", null ],
+    [ "operator=", "structParallel_1_1ReductionData_3_01ReductionDatum_3_01Ts_00_01InvokeCombines_00_01InvokeFinals_92b572618a1ebe21ccf137654ec822ac.html#a517d859fb64f80b0062cf0d677ee3eb9", null ]
+];

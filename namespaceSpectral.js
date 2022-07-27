@@ -1,0 +1,65 @@
+var namespaceSpectral =
+[
+    [ "filtering", "namespaceSpectral_1_1filtering.html", [
+      [ "exponential_filter", "namespaceSpectral_1_1filtering.html#a08bf157fb0d56ebd47fa653b8d9c58c0", null ],
+      [ "zero_lowest_modes", "namespaceSpectral_1_1filtering.html#a6b107b3f447658555a5d44a525f3960c", null ]
+    ] ],
+    [ "Swsh", "namespaceSpectral_1_1Swsh.html", "namespaceSpectral_1_1Swsh" ],
+    [ "MortarSize", "namespaceSpectral.html#a333f93eb48b32a0468af7aa9e01eac5e", null ],
+    [ "Basis", "group__SpectralGroup.html#ga37c9c17d05dccca652060d117f72ee21", [
+      [ "Chebyshev", "group__SpectralGroup.html#gga37c9c17d05dccca652060d117f72ee21a7672163939be25b939905898298d3648", null ],
+      [ "Legendre", "group__SpectralGroup.html#gga37c9c17d05dccca652060d117f72ee21af9d917a770fac9457858a6e6bfdd9d9c", null ],
+      [ "FiniteDifference", "group__SpectralGroup.html#gga37c9c17d05dccca652060d117f72ee21a187530090e204f0fcd551c3c96519e23", null ],
+      [ "SphericalHarmonic", "group__SpectralGroup.html#gga37c9c17d05dccca652060d117f72ee21a61cd055aeea7a9e47ee75099cc80ae0a", null ]
+    ] ],
+    [ "ChildSize", "namespaceSpectral.html#a29a5155276364fffc6ecdaadb0ba3935", [
+      [ "Full", "namespaceSpectral.html#a29a5155276364fffc6ecdaadb0ba3935abbd47109890259c0127154db1af26c75", null ],
+      [ "UpperHalf", "namespaceSpectral.html#a29a5155276364fffc6ecdaadb0ba3935ae3a06b5d628e094edec8586211c7d0a9", null ],
+      [ "LowerHalf", "namespaceSpectral.html#a29a5155276364fffc6ecdaadb0ba3935a1d62120909798ff336a9b216feb4640a", null ]
+    ] ],
+    [ "Quadrature", "group__SpectralGroup.html#ga7744e520f6d553caf358a6f09f5978c1", [
+      [ "Gauss", "group__SpectralGroup.html#gga7744e520f6d553caf358a6f09f5978c1aedc41fb7bf8bdac012523d1bcd949a4f", null ],
+      [ "GaussLobatto", "group__SpectralGroup.html#gga7744e520f6d553caf358a6f09f5978c1a8d79a6cd40b3cc60da789f4c167526b9", null ],
+      [ "CellCentered", "group__SpectralGroup.html#gga7744e520f6d553caf358a6f09f5978c1a453721c84645715ad5cc9772a3ab4c02", null ],
+      [ "FaceCentered", "group__SpectralGroup.html#gga7744e520f6d553caf358a6f09f5978c1a36fd4659928a2e6cca6f24cb70d2f9cf", null ],
+      [ "Equiangular", "group__SpectralGroup.html#gga7744e520f6d553caf358a6f09f5978c1a36d8763a4c0672922395219e5523d2f2", null ]
+    ] ],
+    [ "boundary_interpolation_matrices", "namespaceSpectral.html#aadbd6975e1d12230cf4b37a909235e21", null ],
+    [ "boundary_interpolation_matrices", "namespaceSpectral.html#ab64ddfa0b2548b2dd2909328142680a8", null ],
+    [ "boundary_interpolation_term", "namespaceSpectral.html#a6753675b6ceba30af27644591d81947f", null ],
+    [ "boundary_interpolation_term", "namespaceSpectral.html#a944ba55510898c7cbd9b35802484f33f", null ],
+    [ "boundary_lifting_term", "namespaceSpectral.html#a3d25584dc92548020581dd3b5f02831c", null ],
+    [ "boundary_lifting_term", "namespaceSpectral.html#ae30c85613539fbbb4a8c75e5155dba9e", null ],
+    [ "collocation_points", "namespaceSpectral.html#af153197d0ae3dafebbfc9708403ee9dd", null ],
+    [ "collocation_points", "namespaceSpectral.html#a09ef631a3d4a5132a4158ddf27346537", null ],
+    [ "compute_basis_function_normalization_square", "namespaceSpectral.html#a77fe2e76c5f7976f4b333aaef4e7130c", null ],
+    [ "compute_basis_function_value", "namespaceSpectral.html#a847fcdaa3319e19b7f8539da7758ca88", null ],
+    [ "compute_collocation_points_and_weights", "namespaceSpectral.html#a64b73b4651ed37edff6450d3af554114", null ],
+    [ "compute_inverse_weight_function_values", "namespaceSpectral.html#a7e394660b1504c1a8fc36231476ed41f", null ],
+    [ "differentiation_matrix", "namespaceSpectral.html#a6af0b282bf3f80f1c25e92241104196e", null ],
+    [ "differentiation_matrix", "namespaceSpectral.html#ac5624836eb75a5903cb1a2b63d2152b6", null ],
+    [ "integration_matrix", "namespaceSpectral.html#a806c47a76aa319ece2adfa73ae679fde", null ],
+    [ "integration_matrix", "namespaceSpectral.html#a553a3425a58318d0feead9dda4b4c488", null ],
+    [ "interpolation_matrix", "namespaceSpectral.html#afe804f85f89b43fe2e8ed5a1447194ed", null ],
+    [ "interpolation_matrix", "namespaceSpectral.html#ae75d175cf6d52b0e07daf2e8e831ca50", null ],
+    [ "linear_filter_matrix", "namespaceSpectral.html#add023746c5027d26aad2fc0ad4c482a7", null ],
+    [ "linear_filter_matrix", "namespaceSpectral.html#aac324fab3f659f99d836db4f97171c0e", null ],
+    [ "modal_to_nodal_matrix", "namespaceSpectral.html#a95e6610729d071fad37ffecf0c49930d", null ],
+    [ "modal_to_nodal_matrix", "namespaceSpectral.html#af429e9dd3493dc1b472f1787f49b880d", null ],
+    [ "needs_projection", "namespaceSpectral.html#aae686cf37de660a26a6c6a7f98676642", null ],
+    [ "nodal_to_modal_matrix", "namespaceSpectral.html#a139e8255c7876a8d47337f9b0f59eda3", null ],
+    [ "nodal_to_modal_matrix", "namespaceSpectral.html#acf2970df2506f321ea8d41ff826583b1", null ],
+    [ "operator<<", "namespaceSpectral.html#a67f98654ba9e0dce9531062b0f82df4f", null ],
+    [ "projection_matrix_child_to_parent", "namespaceSpectral.html#a1ece319cd1c9031f9b513dc3370087f5", null ],
+    [ "projection_matrix_child_to_parent", "namespaceSpectral.html#a6755a27e3400cd3a6e983dcb669b7558", null ],
+    [ "projection_matrix_parent_to_child", "namespaceSpectral.html#a4b9ce13d144a629adb3abc3e70dbe1fe", null ],
+    [ "projection_matrix_parent_to_child", "namespaceSpectral.html#a49ee6855b288a64764017fc0674dc188", null ],
+    [ "quadrature_weights", "namespaceSpectral.html#ad69e37093fb49fac7b75a14faefe7705", null ],
+    [ "quadrature_weights", "namespaceSpectral.html#a4d88a8b9bb3ad3c8ce3071b8bf529c14", null ],
+    [ "to_basis", "namespaceSpectral.html#a7fc06f75e321814cac120e79596487cc", null ],
+    [ "to_quadrature", "namespaceSpectral.html#a98554766ae679ca2506f78ceb18837c7", null ],
+    [ "weak_flux_differentiation_matrix", "namespaceSpectral.html#afd9c9e62ddf450d869eb06fc437cbc80", null ],
+    [ "weak_flux_differentiation_matrix", "namespaceSpectral.html#ad536bc470b570e28015795de20b9aa9d", null ],
+    [ "maximum_number_of_points", "namespaceSpectral.html#ad3f83fd18f48d47423e1d5cf9d718a7a", null ],
+    [ "minimum_number_of_points", "namespaceSpectral.html#a7ed70608b007d26c6e7bf23ea14e8357", null ]
+];

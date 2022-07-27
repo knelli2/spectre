@@ -1,0 +1,4 @@
+var structgrmhd_1_1GhValenciaDivClean_1_1BoundaryCorrections_1_1ProductOfCorrections_1_1ValenciaCorrection =
+[
+    [ "type", "structgrmhd_1_1GhValenciaDivClean_1_1BoundaryCorrections_1_1ProductOfCorrections_1_1ValenciaCorrection.html#a8115b913490eb9a251b3cf5af485fff7", null ]
+];

@@ -1,0 +1,4 @@
+var structParallel_1_1get__parallel__component__from__proxy_3_01Proxy_3_01ParallelComponent_00_01Ts_8_8_8_01_4_01_4 =
+[
+    [ "type", "structParallel_1_1get__parallel__component__from__proxy_3_01Proxy_3_01ParallelComponent_00_01Ts_8_8_8_01_4_01_4.html#aef6fc6f142f8f282d9a52c7066ba6dde", null ]
+];

@@ -1,0 +1,4 @@
+var structEvents_1_1ObserveNorms_3_01ObservationValueTag_00_01tmpl_1_1list_3_01ObservableTensorTags_89ff6859e0c36b0dd9372285c888e903 =
+[
+    [ "type", "structEvents_1_1ObserveNorms_3_01ObservationValueTag_00_01tmpl_1_1list_3_01ObservableTensorTags_89ff6859e0c36b0dd9372285c888e903.html#ae7a9a835b956e4ecaea571b186ea3061", null ]
+];

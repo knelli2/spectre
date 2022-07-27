@@ -1,0 +1,14 @@
+var group__ProtocolsGroup =
+[
+    [ "NumericalFlux", "structdg_1_1protocols_1_1NumericalFlux.html", [
+      [ "test", "structdg_1_1protocols_1_1NumericalFlux_1_1test.html", [
+        [ "argument_tags", "structdg_1_1protocols_1_1NumericalFlux_1_1test.html#aeb2bb91663b6f8fd47c35410640eb145", null ],
+        [ "package_extra_tags", "structdg_1_1protocols_1_1NumericalFlux_1_1test.html#a9e6174e063c8fe744fad1aeda7bf402c", null ],
+        [ "package_field_tags", "structdg_1_1protocols_1_1NumericalFlux_1_1test.html#aae842df2a434f292f0e1f5c11a209537", null ],
+        [ "variables_tags", "structdg_1_1protocols_1_1NumericalFlux_1_1test.html#aa6c3ba2fc382c4fd152039a01da65ba4", null ]
+      ] ]
+    ] ],
+    [ "ConformsTo", "structtt_1_1ConformsTo.html", null ],
+    [ "conforms_to", "structtt_1_1conforms__to.html", null ],
+    [ "assert_conforms_to", "structtt_1_1assert__conforms__to.html", null ]
+];

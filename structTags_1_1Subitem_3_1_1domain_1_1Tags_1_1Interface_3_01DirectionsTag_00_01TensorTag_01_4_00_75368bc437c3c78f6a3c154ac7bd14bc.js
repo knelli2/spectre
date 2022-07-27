@@ -1,0 +1,7 @@
+var structTags_1_1Subitem_3_1_1domain_1_1Tags_1_1Interface_3_01DirectionsTag_00_01TensorTag_01_4_00_75368bc437c3c78f6a3c154ac7bd14bc =
+[
+    [ "argument_tags", "structTags_1_1Subitem_3_1_1domain_1_1Tags_1_1Interface_3_01DirectionsTag_00_01TensorTag_01_4_00_75368bc437c3c78f6a3c154ac7bd14bc.html#a1ea19bf45a57e4b1ebc3340141bab1f7", null ],
+    [ "base", "structTags_1_1Subitem_3_1_1domain_1_1Tags_1_1Interface_3_01DirectionsTag_00_01TensorTag_01_4_00_75368bc437c3c78f6a3c154ac7bd14bc.html#ad41b0c3fa5bad77368e79e6d6a62a1d9", null ],
+    [ "parent_tag", "structTags_1_1Subitem_3_1_1domain_1_1Tags_1_1Interface_3_01DirectionsTag_00_01TensorTag_01_4_00_75368bc437c3c78f6a3c154ac7bd14bc.html#a516c15b888161075d8a552c6e1ad6e99", null ],
+    [ "return_type", "structTags_1_1Subitem_3_1_1domain_1_1Tags_1_1Interface_3_01DirectionsTag_00_01TensorTag_01_4_00_75368bc437c3c78f6a3c154ac7bd14bc.html#a743e8c0ada3fc99a5a487d0792dadcbc", null ]
+];

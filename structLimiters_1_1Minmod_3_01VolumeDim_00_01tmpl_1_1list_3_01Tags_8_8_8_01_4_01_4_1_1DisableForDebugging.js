@@ -1,0 +1,4 @@
+var structLimiters_1_1Minmod_3_01VolumeDim_00_01tmpl_1_1list_3_01Tags_8_8_8_01_4_01_4_1_1DisableForDebugging =
+[
+    [ "type", "structLimiters_1_1Minmod_3_01VolumeDim_00_01tmpl_1_1list_3_01Tags_8_8_8_01_4_01_4_1_1DisableForDebugging.html#a9a1f94745b86dc80dbb201dfcb7d344f", null ]
+];

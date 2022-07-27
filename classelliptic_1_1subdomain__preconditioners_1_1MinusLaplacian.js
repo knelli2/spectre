@@ -1,0 +1,27 @@
+var classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian =
+[
+    [ "BoundaryConditions", "structelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian_1_1BoundaryConditions.html", "structelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian_1_1BoundaryConditions" ],
+    [ "SolverOptionTag", "structelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian_1_1SolverOptionTag.html", "structelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian_1_1SolverOptionTag" ],
+    [ "BoundaryConditionsBase", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a5064c881de1d0579dc2c222c8785dd7d", null ],
+    [ "BoundaryConditionsSignature", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a57dc84e850765042b2443228d09f7b4a", null ],
+    [ "options", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a7ac6df1da73524d793acb9243901dfc4", null ],
+    [ "options_group", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#ab342fbc09e5d4fdb695ba78296cdb416", null ],
+    [ "poisson_system", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a14fdedbabc363d2dbbfaf9129549b487", null ],
+    [ "solver_type", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a93f2cd41335d2f0fc7d3a020ad7cf777", null ],
+    [ "SubdomainData", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#aec923b4dab9111e4c53e14ed65cfbd06", null ],
+    [ "SubdomainOperator", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a32a9ee11e1f81f592657502a160fb3e6", null ],
+    [ "MinusLaplacian", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a8b825fa0fbeedd04468ace59688290a8", null ],
+    [ "MinusLaplacian", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a2014e4c8b19069b0582fd95fa63d275c", null ],
+    [ "~MinusLaplacian", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a5652d3266dc0ffe040f169969340dc65", null ],
+    [ "MinusLaplacian", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a92939f381531fa189a8467935dae2ea7", null ],
+    [ "MinusLaplacian", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a00de6c47c975ec5ced1fdee0789d5f0c", null ],
+    [ "cached_solvers", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a990e3e512694afa1951d1df40288b938", null ],
+    [ "get_clone", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#acc796d48c0763364e15eaa68541d6f63", null ],
+    [ "operator=", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a4d3cac76734bdb33c05b6fd7fdc41834", null ],
+    [ "operator=", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#aed0f82951aae406e21cce9153c54754c", null ],
+    [ "pup", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a60f48eee7a73346e7979f033fb32da04", null ],
+    [ "reset", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#ae2ae123222d632b468edc19002a1b0d8", null ],
+    [ "solve", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a3cca08a48c18e6e5578da193948c676f", null ],
+    [ "solve", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#a82efe1485b575fcb7d31a6267fa5334b", null ],
+    [ "solver", "classelliptic_1_1subdomain__preconditioners_1_1MinusLaplacian.html#ac39a633089e4e8b20e51c7725e2177b0", null ]
+];

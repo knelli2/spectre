@@ -1,0 +1,5 @@
+var structMakeWithValueImpls_1_1MakeWithValueImpl_3_01LinearSolver_1_1Schwarz_1_1ElementCenteredSubdff03bdabdda2a4b9f257119a3915de53 =
+[
+    [ "SubdomainDataIn", "structMakeWithValueImpls_1_1MakeWithValueImpl_3_01LinearSolver_1_1Schwarz_1_1ElementCenteredSubdff03bdabdda2a4b9f257119a3915de53.html#a61cc4bc56a75b3d3ebf495c46740921b", null ],
+    [ "SubdomainDataOut", "structMakeWithValueImpls_1_1MakeWithValueImpl_3_01LinearSolver_1_1Schwarz_1_1ElementCenteredSubdff03bdabdda2a4b9f257119a3915de53.html#a68031f6abb10e1ab8bc77fdad2abd2e3", null ]
+];

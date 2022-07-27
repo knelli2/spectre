@@ -1,0 +1,28 @@
+var structSpinWeighted_3_01T_00_01Spin_00_01false_01_4 =
+[
+    [ "value_type", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#ab5cb4748d1d6171830eb954c368eeefd", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a8438147b2c764e6631b557b9b143a244", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a1e414613b03142e5961c0f22ace2af9b", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a7ef09aa4b21804ff05c8cbb103e51d94", null ],
+    [ "~SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a77f84773e7bb48c400ea715403619cc8", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a920e53483a472fcdb1e48c86806ec198", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#ad698fcc2434d935d5ac5442115e393e9", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#aa3a9dd4d5e0371b249f7e608c6ca251a", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#af5bf4338d14355b0a70b4dc9c990dce6", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#afaf4a79b2f3666e24bf87fbad909cad1", null ],
+    [ "SpinWeighted", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#aa6af49c27ecc1efa4a052ae1385ca636", null ],
+    [ "data", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#af7c5d0d7f55c8b74df7a7e8602805727", null ],
+    [ "data", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a393b368181c64a137e983a9d9027b80c", null ],
+    [ "operator+=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#ab2511378f60954df3e449133086c96b0", null ],
+    [ "operator+=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#ae1afbcdccbb5a98920fea49691973691", null ],
+    [ "operator-=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a2a91b8263b5c7689c90b7a9bccc195fd", null ],
+    [ "operator-=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a8a82ed35db2ab85894b9e1b6cfd9a998", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a19ca2906312fbe07f555dcd8f8859370", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#aecfb76dd3ec9e5944b0059c1c71da16e", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a49cb7b2fad9755ff44fa4e5604d3236b", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a7bbeaafe7d55bda16cb67434f0416696", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#adf29e1623f057742ba3227906b6db67c", null ],
+    [ "operator=", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a769949ab8416d8a3b7609c87896d5614", null ],
+    [ "pup", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a1edaf20ba72ea939fd6717bcee4679ce", null ],
+    [ "size", "structSpinWeighted_3_01T_00_01Spin_00_01false_01_4.html#a8ed725a427279616c1d1e8982ac9c718", null ]
+];

@@ -1,0 +1,27 @@
+var classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4 =
+[
+    [ "Amplitude", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Amplitude.html", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Amplitude" ],
+    [ "Center", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Center.html", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Center" ],
+    [ "Width", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Width.html", "structMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4_1_1Width" ],
+    [ "options", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a01ace9503052cfaa94afba2c9431589b", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a112334303cef6f2ed8e863b7dae18d3d", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a4b53898f113924cc39a2f210b7fa16c1", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a7557654dab5cacd3a88bc782dfcb2410", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#aeaf24d5cebd2e06a91fed8e6eb2f788d", null ],
+    [ "~Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a383d05d567b3797ae920ac132f8556af", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#adc74806b566755cbb569b898ccb59285", null ],
+    [ "Gaussian", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a17d574508789a3f9f865a5c88ab9616c", null ],
+    [ "first_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a243ee58f772522aa07af805ccdae4c93", null ],
+    [ "first_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a59ee899537a002411369d87aa8e640cd", null ],
+    [ "operator()", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a8bd781ab0e0c127cd70660a6c719791f", null ],
+    [ "operator()", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a03715c7e65704e58abd24c8307e9d1f2", null ],
+    [ "operator=", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#adc711df3a1f1f63c7692bb862f4ce692", null ],
+    [ "operator=", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#abda80ae9676d1a17457d30ea2523ba1a", null ],
+    [ "pup", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#aad48149b5a762036860a9ccf77fb83f8", null ],
+    [ "second_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a2e2b38ff15bbcb5e3cfbc9773267f8f0", null ],
+    [ "second_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a2082be69054a771102f6facfe427b7a4", null ],
+    [ "third_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#ab6fc431b0404bc979a87f95cd51ffcff", null ],
+    [ "third_deriv", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#ab9a92fe6b0f35e641892cf7c696098a5", null ],
+    [ "WRAPPED_PUPable_decl_base_template", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#a2a4f6f33406335800d760c55bf5b226f", null ],
+    [ "operator==", "classMathFunctions_1_1Gaussian_3_011_00_01Fr_01_4.html#af1a04bb6b726203b49eebdf751cfd1e3", null ]
+];

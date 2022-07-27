@@ -1,0 +1,4 @@
+var structLimiters_1_1Weno_3_01VolumeDim_00_01tmpl_1_1list_3_01Tags_8_8_8_01_4_01_4_1_1NeighborWeight =
+[
+    [ "type", "structLimiters_1_1Weno_3_01VolumeDim_00_01tmpl_1_1list_3_01Tags_8_8_8_01_4_01_4_1_1NeighborWeight.html#adac7c6b18001ded0961580cde3be3aea", null ]
+];

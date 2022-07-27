@@ -1,0 +1,4 @@
+var structgrmhd_1_1ValenciaDivClean_1_1TimeDerivativeTerms_1_1EnthalpyTimesDensityWSquaredPlusBSquared =
+[
+    [ "type", "structgrmhd_1_1ValenciaDivClean_1_1TimeDerivativeTerms_1_1EnthalpyTimesDensityWSquaredPlusBSquared.html#a8f1839eecfe67187f8a8fa3d50dd9db0", null ]
+];

@@ -1,0 +1,4 @@
+var structbrigand_1_1compute__adjacency__list_3_01VertexSeq_3_01Vertices_8_8_8_01_4_00_01F_00_01Es_8_8_8_01_4 =
+[
+    [ "type", "structbrigand_1_1compute__adjacency__list_3_01VertexSeq_3_01Vertices_8_8_8_01_4_00_01F_00_01Es_8_8_8_01_4.html#af602ba63cf1cb1dcaa9f3e5db1e0cf55", null ]
+];

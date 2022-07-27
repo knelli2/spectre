@@ -1,0 +1,26 @@
+var classNewtonianEuler_1_1Solutions_1_1IsentropicVortex =
+[
+    [ "AdiabaticIndex", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1AdiabaticIndex.html", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1AdiabaticIndex" ],
+    [ "Center", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1Center.html", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1Center" ],
+    [ "MeanVelocity", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1MeanVelocity.html", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1MeanVelocity" ],
+    [ "PerturbAmplitude", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1PerturbAmplitude.html", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1PerturbAmplitude" ],
+    [ "Strength", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1Strength.html", "structNewtonianEuler_1_1Solutions_1_1IsentropicVortex_1_1Strength" ],
+    [ "equation_of_state_type", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#ac593a8cff91c805885c245b873243d9c", null ],
+    [ "options", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a5a3cd748a28b8a797ac9cff359f47df8", null ],
+    [ "source_term_type", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a7504398a724c63c789f5cc898b88d9ef", null ],
+    [ "IsentropicVortex", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a271b4826011567d95d027523cdaf6b99", null ],
+    [ "IsentropicVortex", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a3f25fd6c8c433b63933d5773e1326aa4", null ],
+    [ "IsentropicVortex", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a427f322dac672b5660d550558a981bc1", null ],
+    [ "~IsentropicVortex", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a9bc2083cc17378e64eea1fb2c85b8c73", null ],
+    [ "IsentropicVortex", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a0552d485b50a4f94c265cae8bfefa50b", null ],
+    [ "deriv_of_perturbation_profile", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a79de7b655d538588b2d21bcfafa7355e", null ],
+    [ "equation_of_state", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#aa99e6711186ceb89b193bba91f106d23", null ],
+    [ "operator=", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#ad7e31f0ff80c4ceedcd9e8ee17e61ff6", null ],
+    [ "operator=", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a1ead040c063cc21eba0e6c099a6884b2", null ],
+    [ "perturbation_amplitude", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a8a5b0091e03aa04a2cbdadff3b527678", null ],
+    [ "perturbation_profile", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#ac2e24fc17a57283711c38424ca65dd2e", null ],
+    [ "pup", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a25c8d00f695b3e21ad6e63ceaa6f3cf1", null ],
+    [ "source_term", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a9c7f1ed0c91e0a24fd897d68a26bbf7e", null ],
+    [ "variables", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#a8b10af565af48710d8977569749b9283", null ],
+    [ "operator==", "classNewtonianEuler_1_1Solutions_1_1IsentropicVortex.html#ace1f6e8ff85e69af71321fa31be12ebf", null ]
+];

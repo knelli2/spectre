@@ -1,0 +1,4 @@
+var structParallel_1_1SingletonPack_3_01tmpl_1_1list_3_01ParallelComponents_8_8_8_01_4_01_4_1_1SingletonOption =
+[
+    [ "type", "structParallel_1_1SingletonPack_3_01tmpl_1_1list_3_01ParallelComponents_8_8_8_01_4_01_4_1_1SingletonOption.html#af17aab4fbd13710b8bc887acbf04c685", null ]
+];

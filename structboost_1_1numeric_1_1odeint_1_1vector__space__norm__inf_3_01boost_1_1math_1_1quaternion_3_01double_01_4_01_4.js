@@ -1,0 +1,5 @@
+var structboost_1_1numeric_1_1odeint_1_1vector__space__norm__inf_3_01boost_1_1math_1_1quaternion_3_01double_01_4_01_4 =
+[
+    [ "result_type", "structboost_1_1numeric_1_1odeint_1_1vector__space__norm__inf_3_01boost_1_1math_1_1quaternion_3_01double_01_4_01_4.html#ab20440944c06d6f65dff9f4b70ec251c", null ],
+    [ "operator()", "structboost_1_1numeric_1_1odeint_1_1vector__space__norm__inf_3_01boost_1_1math_1_1quaternion_3_01double_01_4_01_4.html#a6cf2316f0b60e94b8d1e21920a195ca6", null ]
+];

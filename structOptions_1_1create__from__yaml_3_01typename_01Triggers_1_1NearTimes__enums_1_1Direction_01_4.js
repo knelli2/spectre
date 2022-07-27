@@ -1,0 +1,4 @@
+var structOptions_1_1create__from__yaml_3_01typename_01Triggers_1_1NearTimes__enums_1_1Direction_01_4 =
+[
+    [ "type", "structOptions_1_1create__from__yaml_3_01typename_01Triggers_1_1NearTimes__enums_1_1Direction_01_4.html#a9acee7eae07eb0278e8faf39e0f67cd4", null ]
+];

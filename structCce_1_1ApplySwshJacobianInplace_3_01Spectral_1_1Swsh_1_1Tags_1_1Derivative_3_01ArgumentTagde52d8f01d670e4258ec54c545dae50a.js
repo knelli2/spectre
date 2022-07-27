@@ -1,0 +1,9 @@
+var structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a =
+[
+    [ "argument_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#a4171a0f4a8e40594fb10debbc61a2328", null ],
+    [ "integration_independent_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#a0d8862de0bad2db7ffc48cdf9b7ce426", null ],
+    [ "on_demand_argument_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#ae3e5d7e5e8d0a30d13a3a654ec8beb20", null ],
+    [ "pre_swsh_derivative_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#a94e15befe9a3fd583befc4e06b24c9cf", null ],
+    [ "return_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#aca604e8a532a1f06ca810929f300a8a3", null ],
+    [ "swsh_derivative_tags", "structCce_1_1ApplySwshJacobianInplace_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01ArgumentTagde52d8f01d670e4258ec54c545dae50a.html#ae28479e87cd627f1b32fe24c10f61cd2", null ]
+];

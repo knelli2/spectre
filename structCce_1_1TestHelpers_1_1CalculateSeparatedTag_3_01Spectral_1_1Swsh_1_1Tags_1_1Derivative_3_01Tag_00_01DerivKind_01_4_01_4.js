@@ -1,0 +1,4 @@
+var structCce_1_1TestHelpers_1_1CalculateSeparatedTag_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01Tag_00_01DerivKind_01_4_01_4 =
+[
+    [ "operator()", "structCce_1_1TestHelpers_1_1CalculateSeparatedTag_3_01Spectral_1_1Swsh_1_1Tags_1_1Derivative_3_01Tag_00_01DerivKind_01_4_01_4.html#a13d30a8afc271382a659594400c0e892", null ]
+];

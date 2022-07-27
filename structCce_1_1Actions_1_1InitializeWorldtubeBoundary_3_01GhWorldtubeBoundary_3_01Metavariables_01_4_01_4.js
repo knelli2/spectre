@@ -1,0 +1,5 @@
+var structCce_1_1Actions_1_1InitializeWorldtubeBoundary_3_01GhWorldtubeBoundary_3_01Metavariables_01_4_01_4 =
+[
+    [ "base_type", "structCce_1_1Actions_1_1InitializeWorldtubeBoundary_3_01GhWorldtubeBoundary_3_01Metavariables_01_4_01_4.html#a30209d51277d4ed724dc49dada54532b", null ],
+    [ "const_global_cache_tags", "structCce_1_1Actions_1_1InitializeWorldtubeBoundary_3_01GhWorldtubeBoundary_3_01Metavariables_01_4_01_4.html#a57082b3c097686637a414b28a8a2c9f4", null ]
+];

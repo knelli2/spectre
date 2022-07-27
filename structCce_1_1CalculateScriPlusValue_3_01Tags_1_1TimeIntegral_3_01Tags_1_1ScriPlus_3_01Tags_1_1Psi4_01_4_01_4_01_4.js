@@ -1,0 +1,6 @@
+var structCce_1_1CalculateScriPlusValue_3_01Tags_1_1TimeIntegral_3_01Tags_1_1ScriPlus_3_01Tags_1_1Psi4_01_4_01_4_01_4 =
+[
+    [ "argument_tags", "structCce_1_1CalculateScriPlusValue_3_01Tags_1_1TimeIntegral_3_01Tags_1_1ScriPlus_3_01Tags_1_1Psi4_01_4_01_4_01_4.html#a1a3277690513c6c53f6ef43d028d2693", null ],
+    [ "return_tags", "structCce_1_1CalculateScriPlusValue_3_01Tags_1_1TimeIntegral_3_01Tags_1_1ScriPlus_3_01Tags_1_1Psi4_01_4_01_4_01_4.html#ad489f16236f175a2c73d1637598b2992", null ],
+    [ "tensor_argument_tags", "structCce_1_1CalculateScriPlusValue_3_01Tags_1_1TimeIntegral_3_01Tags_1_1ScriPlus_3_01Tags_1_1Psi4_01_4_01_4_01_4.html#ae2fd60cdcd7801d67ecc861317cf75b6", null ]
+];

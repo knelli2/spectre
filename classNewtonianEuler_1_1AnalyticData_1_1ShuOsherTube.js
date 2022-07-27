@@ -1,0 +1,25 @@
+var classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube =
+[
+    [ "Epsilon", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1Epsilon.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1Epsilon" ],
+    [ "JumpPosition", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1JumpPosition.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1JumpPosition" ],
+    [ "Lambda", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1Lambda.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1Lambda" ],
+    [ "LeftMassDensity", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftMassDensity.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftMassDensity" ],
+    [ "LeftPressure", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftPressure.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftPressure" ],
+    [ "LeftVelocity", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftVelocity.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1LeftVelocity" ],
+    [ "RightPressure", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1RightPressure.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1RightPressure" ],
+    [ "RightVelocity", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1RightVelocity.html", "structNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube_1_1RightVelocity" ],
+    [ "equation_of_state_type", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#aa192cf0f9ce509b885800fbe063d20e2", null ],
+    [ "options", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#aa2e1ac4d7137eaff7a5436b5f08c56f1", null ],
+    [ "source_term_type", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#a3dafbaa6e076a42d229323fd362c38cd", null ],
+    [ "ShuOsherTube", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#ae4c8dd74f2fa4470fc634f0b1198c0cb", null ],
+    [ "ShuOsherTube", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#a2405ff5c06190817149b299712a0e71f", null ],
+    [ "ShuOsherTube", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#a8e83a2c9c742578404c90e7a4a594388", null ],
+    [ "ShuOsherTube", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#ad9dcc18cfdc45c145c300c745fc858fe", null ],
+    [ "~ShuOsherTube", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#aef1d57137e5d582fc384a3d9e46088ad", null ],
+    [ "equation_of_state", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#ac45bb38aac2cf5f178a4ffaf1f931849", null ],
+    [ "operator=", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#ac586462bb06fd178c37772ed09acc4ca", null ],
+    [ "operator=", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#aefd07bb63261a000de5475a7e03159ff", null ],
+    [ "pup", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#a4b9dde97132371febc0dd31b4c210d7b", null ],
+    [ "variables", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#a4b0dacfb2d3d59e568b7d2b0d6e8da25", null ],
+    [ "operator==", "classNewtonianEuler_1_1AnalyticData_1_1ShuOsherTube.html#aa3227153eb7c2dc9a328ea193a1896b9", null ]
+];

@@ -1,0 +1,4 @@
+var structgrmhd_1_1GhValenciaDivClean_1_1BoundaryConditions_1_1ProductOfConditions_1_1ValenciaCondition =
+[
+    [ "type", "structgrmhd_1_1GhValenciaDivClean_1_1BoundaryConditions_1_1ProductOfConditions_1_1ValenciaCondition.html#a0f9d64523f1421dcbbccc8ca5bd13511", null ]
+];

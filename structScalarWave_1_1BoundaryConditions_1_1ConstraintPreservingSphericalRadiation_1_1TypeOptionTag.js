@@ -1,0 +1,4 @@
+var structScalarWave_1_1BoundaryConditions_1_1ConstraintPreservingSphericalRadiation_1_1TypeOptionTag =
+[
+    [ "type", "structScalarWave_1_1BoundaryConditions_1_1ConstraintPreservingSphericalRadiation_1_1TypeOptionTag.html#a9b0ecb5486b864add4dde34db717a28c", null ]
+];

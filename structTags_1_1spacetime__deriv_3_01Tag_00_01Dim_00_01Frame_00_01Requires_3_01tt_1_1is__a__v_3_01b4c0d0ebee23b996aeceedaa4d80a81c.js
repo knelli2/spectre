@@ -1,0 +1,5 @@
+var structTags_1_1spacetime__deriv_3_01Tag_00_01Dim_00_01Frame_00_01Requires_3_01tt_1_1is__a__v_3_01b4c0d0ebee23b996aeceedaa4d80a81c =
+[
+    [ "tag", "structTags_1_1spacetime__deriv_3_01Tag_00_01Dim_00_01Frame_00_01Requires_3_01tt_1_1is__a__v_3_01b4c0d0ebee23b996aeceedaa4d80a81c.html#a74ac28036f81d4f6e91047048beca55e", null ],
+    [ "type", "structTags_1_1spacetime__deriv_3_01Tag_00_01Dim_00_01Frame_00_01Requires_3_01tt_1_1is__a__v_3_01b4c0d0ebee23b996aeceedaa4d80a81c.html#af6ad83c970233cada527278017ff7a5f", null ]
+];

@@ -1,0 +1,26 @@
+var classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4 =
+[
+    [ "Amplitude", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Amplitude.html", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Amplitude" ],
+    [ "Phase", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Phase.html", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Phase" ],
+    [ "Wavenumber", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Wavenumber.html", "structMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4_1_1Wavenumber" ],
+    [ "options", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a4797daced37b86e93b0d9b11ec7bfc38", null ],
+    [ "Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#ad9039bf247e26d0e19d79bc157c41fa2", null ],
+    [ "Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a83cda8d454413d68b98eee6fbda5f342", null ],
+    [ "~Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#aad7d6535d69a20d55ed5b3dc0fb0ff40", null ],
+    [ "Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#aa809fd323b786ced175e62b9312ce6c8", null ],
+    [ "Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a8e59ffca66cfdd717d246eb8e846d039", null ],
+    [ "Sinusoid", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a377fd0fe2eb1fe5da98f372a3b5699de", null ],
+    [ "first_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#aaccf176fe2747e925cb628dac34b753a", null ],
+    [ "first_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a0a6f5eb09ab8cffb35cf79abe6fb2774", null ],
+    [ "operator()", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#af1a72875b8de9e6a0e2bdbea04410c7f", null ],
+    [ "operator()", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a8ad37f611ac2118cce6e3744a03f36cc", null ],
+    [ "operator=", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#af14a3eb9fcf41b1a6373537ac64199ce", null ],
+    [ "operator=", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#aefe51ded36c33324762019e7cac87ecf", null ],
+    [ "pup", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a509a939239a87a6d4952f53072660062", null ],
+    [ "second_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a608b2370c19402853f384973404af763", null ],
+    [ "second_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a0f304685c8fa3f14216760df2e2bd9cf", null ],
+    [ "third_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#adb00db951ab36e8c6008d2c7d3295c1c", null ],
+    [ "third_deriv", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#ac226435f6125af97c52a74a677ec3af1", null ],
+    [ "WRAPPED_PUPable_decl_base_template", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a5b6e895d38c6167d04b446aa4953921d", null ],
+    [ "operator==", "classMathFunctions_1_1Sinusoid_3_011_00_01Fr_01_4.html#a3db2600bf910cdeb7db97c1511ba97a3", null ]
+];
