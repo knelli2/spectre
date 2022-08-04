@@ -148,6 +148,7 @@
 #include "PointwiseFunctions/AnalyticSolutions/RelativisticEuler/TovStar.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/Tags.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/Factory.hpp"
+#include "PointwiseFunctions/Hydro/MagneticPressure.hpp"
 #include "PointwiseFunctions/Hydro/MassFlux.hpp"
 #include "PointwiseFunctions/Hydro/Tags.hpp"
 #include "Time/Actions/AdvanceTime.hpp"
@@ -249,13 +250,16 @@ struct EvolutionMetavars {
           use_dg_subcell,
           evolution::dg::subcell::Tags::ObserverCoordinatesCompute<
               volume_dim, Frame::Inertial>,
-          domain::Tags::Coordinates<volume_dim, Frame::Inertial>>>;
+          domain::Tags::Coordinates<volume_dim, Frame::Inertial>>,
+      hydro::Tags::MagneticPressure<DataVector>>;
   using non_tensor_compute_tags = tmpl::list<
       tmpl::conditional_t<
           use_dg_subcell,
           evolution::dg::subcell::Tags::ObserverMeshCompute<volume_dim>,
           ::Events::Tags::ObserverMeshCompute<volume_dim>>,
-      analytic_compute, error_compute>;
+      analytic_compute, error_compute,
+      hydro::Tags::MagneticPressureCompute<DataVector, volume_dim,
+                                           Frame::Inertial>>;
 
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {

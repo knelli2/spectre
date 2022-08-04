@@ -9,6 +9,7 @@ spectre_target_sources(
   ${LIBRARY}
   PRIVATE
   LorentzFactor.cpp
+  MagneticPressure.cpp
   MassFlux.cpp
   SoundSpeedSquared.cpp
   SpecificEnthalpy.cpp
@@ -19,6 +20,7 @@ spectre_target_headers(
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
   LorentzFactor.hpp
+  MagneticPressure.hpp
   MassFlux.hpp
   SoundSpeedSquared.hpp
   SpecificEnthalpy.hpp
