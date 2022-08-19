@@ -149,36 +149,41 @@ To build with the Docker image:
 
 2. Retrieve the Docker image (you may need `sudo` in front of this command)
    ```
-   docker pull sxscollaboration/spectrebuildenv:latest
+   docker pull sxscollaboration/spectre:demo
    ```
 3. Start the Docker container (you may need `sudo`)
    ```
-   docker run -v SPECTRE_ROOT:SPECTRE_ROOT --name CONTAINER_NAME \
-              -i -t sxscollaboration/spectrebuildenv:latest /bin/bash
+   docker run -v $HOME/:$HOME/ --name spectre_demo \
+              -i -t sxscollaboration/spectre:demo /bin/bash
    ```
-   - `-v SPECTRE_ROOT:SPECTRE_ROOT` binds the directory SPECTRE_ROOT outside the
-   container to SPECTRE_ROOT inside the container. In this way, files in the
-   SPECTRE_ROOT on your host system (outside the container) become accessible
-   within the container through the directory SPECTRE_ROOT inside the
-   container. If you wonder why the same SPECTRE_ROOT needs to be used for
-   both inside and outside the container, which is why `SPECTRE_ROOT` is
-   repeated in the command above with seperated by a colon, please see one of
-   the notes below regarding `-v` flag.
-   - The `--name CONTAINER_NAME` is optional, where CONTAINER_NAME is a name
-   of your choice. If you don't name your container, docker will generate an
-   arbitrary name.
+   - `-v $HOME/:$HOME/` binds your home directory outside the container to
+   the same path inside the container. In this way, files in your home
+   directory on your host system (outside the container) become accessible
+   within the container through the same absolute path inside the
+   container. Mounting your home directory is a choice. You could mount a
+   different directory outside the container to a different path inside the
+   container. For more advanced options, see the options for the `-v` flag.
+   - The `--name spectre_demo` is optional. If you don't name your container,
+     docker will generate an arbitrary name.
    - On macOS you can significantly increase the performance of file system
    operations by appending the flag `:delegated` to `-v`, e.g.
-   `-v SPECTRE_ROOT:SPECTRE_ROOT:delegated` (see
+   `-v $HOME/:$HOME/:delegated` (see
    https://docs.docker.com/docker-for-mac/osxfs-caching/).
+   - The `-i` flag is for interactive mode, which will drop you into the
+   container.
    - It can be useful to expose a port to the host so you can run servers such
    as [Jupyter](https://jupyter.org/index.html) for accessing the Python
    bindings (see \ref spectre_using_python) or a Python web server to view the
    documentation. To do so, append the `-p` option, e.g. `-p 8000:8000`.
+   - It can also be useful to open a different port so you can run a paraview
+   server (v5.10.1 required) inside the container. Do this by adding `-p
+   11111:11111` to the above command. (This port flag can be chained with the
+   previous port flag for jupyter notebooks so you can have both ports connected
+   at the same time)
 
    You will end up in a bash shell in the docker container,
    as root (you need to be root).
-   Within the container, the files in SPECTRE_ROOT are available and Charm++ is
+   Within the container, SpECTRE is installed in `/work/spectre` and Charm++ is
    installed in `/work/charm_7_0_0`. For the following steps, stay inside the
    docker container as root.
 4. Proceed with [building SpECTRE](#building-spectre).
@@ -186,18 +191,16 @@ To build with the Docker image:
 **Notes:**
   * Everything in your build directory is owned by root, and is
     accessible only within the container.
-  * You should edit source files in SPECTRE_ROOT in a separate terminal
-    outside the container, and use the container only for compiling and
-    running the code.
-  * If you exit the container (e.g. ctrl-d),
-    your compilation directories are still saved, as are any other changes to
-    the container that you have made.
+  * The changes you make to the `/work/spectre` directory will not be visible
+    outside the container.
+  * If you exit the container (e.g. ctrl-d), only the files you edited from
+    `$HOME/` will be changed outside the container.
     To restart the container, try the following commands
     (you may need `sudo`):
     1. `docker ps -a`,
       to list all containers with their CONTAINER_IDs and CONTAINER_NAMEs,
     2. `docker start -i CONTAINER_NAME` or `docker start -i CONTAINER_ID`,
-      to restart your container.
+      to restart your container (above, the CONTAINER_NAME was spectre_demo).
   * When the Docker container gets updated, you can stop it with
     `docker stop CONTAINER_NAME`, remove it with `docker rm CONTAINER_NAME`
     and then start at step 2 above to run it again.
@@ -207,14 +210,6 @@ To build with the Docker image:
     To add a new shell, run `docker exec -it CONTAINER_NAME /bin/bash`
     (or `docker exec -it CONTAINER_ID /bin/bash`) from
     a terminal outside the container.
-  * In step 4 above, technically docker allows you to say `-v
-    SPECTRE_ROOT:/my/new/path` to map SPECTRE_ROOT outside the container to any
-    path you want inside the container, but **do not do this**.  Compiling
-    inside the container sets up git hooks in SPECTRE_ROOT that contain
-    hardcoded pathnames to SPECTRE_ROOT *as seen from inside the container*. So
-    if your source paths inside and outside the container are different,
-    commands like `git commit` run *from outside the container* will die with
-    `No such file or directory`.
   * If you want to use Docker within VSCode, take a look at our
     [quick start guide](../DevGuide/QuickStartDockerVSCode.md) for using Docker
     with VSCode.
@@ -234,7 +229,10 @@ To build SpECTRE with Singularity you must:
    Singularity instructions on setting up additional [bind
    points](https://sylabs.io/guides/3.7/user-guide/bind_paths_and_mounts.html)
    (version 3.7. For other versions, see the [docs](https://sylabs.io/docs/)).
-   Once inside the WORKDIR, clone SpECTRE into `WORKDIR/SPECTRE_ROOT`.
+   Once inside the WORKDIR, clone SpECTRE into `WORKDIR/SPECTRE_ROOT`. (Note:
+   This is only if you want to use your own cloned version of SpECTRE that lives
+   on your filesystem. The container comes with a cloned version already located
+   at `/work/spectre` inside the container)
 3. Run `sudo singularity build spectre.img
    docker://sxscollaboration/spectrebuildenv:latest`.
 
