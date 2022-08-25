@@ -202,10 +202,9 @@ struct EvolutionMetavars {
     using horizon_find_failure_callback =
         intrp::callbacks::IgnoreFailedApparentHorizon;
     using post_horizon_find_callbacks = tmpl::list<
-        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhA>,
         intrp::callbacks::ObserveSurfaceData<surface_tags_to_observe, AhA,
                                              ::Frame::Grid>,
-        ah::callbacks::ObserveCenters<AhA>>;
+        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhA>>;
   };
 
   struct AhB : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
@@ -224,10 +223,9 @@ struct EvolutionMetavars {
     using horizon_find_failure_callback =
         intrp::callbacks::IgnoreFailedApparentHorizon;
     using post_horizon_find_callbacks = tmpl::list<
-        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB>,
         intrp::callbacks::ObserveSurfaceData<surface_tags_to_observe, AhB,
                                              ::Frame::Grid>,
-        ah::callbacks::ObserveCenters<AhB>>;
+        intrp::callbacks::ObserveTimeSeriesOnSurface<tags_to_observe, AhB>>;
   };
 
   using control_systems = tmpl::list<control_system::Systems::Rotation<3>,
