@@ -117,6 +117,7 @@
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "Time/Actions/AdvanceTime.hpp"
 #include "Time/Actions/ChangeSlabSize.hpp"
+#include "Time/Actions/LimitTimeStepToExpirationTimes.hpp"
 #include "Time/Actions/RecordTimeStepperData.hpp"
 #include "Time/Actions/SelfStartActions.hpp"
 #include "Time/Actions/UpdateU.hpp"
@@ -438,6 +439,7 @@ struct EvolutionMetavars {
               Parallel::Phase::Evolve,
               tmpl::list<::domain::Actions::CheckFunctionsOfTimeAreReady,
                          Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+                         Actions::LimitTimeStepToExpirationTimes,
                          step_actions, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
