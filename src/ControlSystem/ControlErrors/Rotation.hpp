@@ -54,12 +54,29 @@ namespace ControlErrors {
  *   control_system::Systems::Rotation Rotation \endlink control system
  */
 struct Rotation : tt::ConformsTo<protocols::ControlError> {
-  using options = tmpl::list<>;
+  struct OnlyAboutZAxis {
+    using type = bool;
+    static constexpr Options::String help = {
+        "Restrict rotation to only be about the z-axis"};
+  };
+
+  using options = tmpl::list<OnlyAboutZAxis>;
   static constexpr Options::String help{
       "Computes the control error for rotation control. This should not "
       "take any options."};
 
-  void pup(PUP::er& /*p*/) {}
+  Rotation() = default;
+  Rotation(Rotation&&) = default;
+  Rotation& operator=(Rotation&&) = default;
+  Rotation(const Rotation&) = default;
+  Rotation& operator=(const Rotation&) = default;
+
+  Rotation(const bool only_about_z_axis)
+      : only_about_z_axis_(only_about_z_axis) {}
+
+  void pup(PUP::er& p) {
+    p | only_about_z_axis_;
+  }
 
   template <typename Metavariables, typename... TupleTags>
   DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
@@ -87,8 +104,20 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
     const double grid_dot_current = dot(grid_diff, current_diff);
     const DataVector grid_cross_current = cross(grid_diff, current_diff);
 
-    return grid_cross_current / grid_dot_current;
+    DataVector result{};
+    if (only_about_z_axis_) {
+      result = DataVector{
+          1, (current_position_of_B[1] - current_position_of_A[1]) /
+                 (current_position_of_B[0] - current_position_of_A[0])};
+    } else {
+      result = grid_cross_current / grid_dot_current;
+    }
+
+    return result;
   }
+
+ private:
+  bool only_about_z_axis_{};
 };
 }  // namespace ControlErrors
 }  // namespace control_system

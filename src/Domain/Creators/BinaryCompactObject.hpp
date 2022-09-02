@@ -43,6 +43,8 @@ template <size_t VolumeDim>
 class DiscreteRotation;
 class Frustum;
 namespace TimeDependent {
+template <typename Map1, typename Map2>
+class ProductOf2Maps;
 template <size_t VolumeDim>
 class CubicScale;
 template <size_t VolumeDim>
@@ -153,7 +155,13 @@ class BinaryCompactObject : public DomainCreator<3> {
  private:
   using Affine = CoordinateMaps::Affine;
   using Affine3D = CoordinateMaps::ProductOf3Maps<Affine, Affine, Affine>;
+  using Identity1D = CoordinateMaps::Identity<1>;
   using Identity2D = CoordinateMaps::Identity<2>;
+  using RotationMap2D = domain::CoordinateMaps::TimeDependent::Rotation<2>;
+  using RotationMap3D = domain::CoordinateMaps::TimeDependent::Rotation<3>;
+  using RotationZ =
+      domain::CoordinateMaps::TimeDependent::ProductOf2Maps<RotationMap2D,
+                                                            Identity1D>;
   using Translation = CoordinateMaps::ProductOf2Maps<Affine, Identity2D>;
   using Equiangular = CoordinateMaps::Equiangular;
   using Equiangular3D =
@@ -186,7 +194,14 @@ class BinaryCompactObject : public DomainCreator<3> {
           Frame::Grid, Frame::Inertial,
           domain::CoordinateMaps::TimeDependent::SphericalCompression<false>,
           domain::CoordinateMaps::TimeDependent::CubicScale<3>,
-          domain::CoordinateMaps::TimeDependent::Rotation<3>>>;
+          domain::CoordinateMaps::TimeDependent::Rotation<3>>,
+      domain::CoordinateMap<
+          Frame::Grid, Frame::Inertial,
+          domain::CoordinateMaps::TimeDependent::CubicScale<3>, RotationZ>,
+      domain::CoordinateMap<
+          Frame::Grid, Frame::Inertial,
+          domain::CoordinateMaps::TimeDependent::SphericalCompression<false>,
+          domain::CoordinateMaps::TimeDependent::CubicScale<3>, RotationZ>>;
 
   /// Options for an excision region in the domain
   struct Excision {
@@ -474,6 +489,12 @@ class BinaryCompactObject : public DomainCreator<3> {
     static constexpr Options::String help = {"The angular velocity."};
     using group = RotationMap;
   };
+  struct OnlyAboutZAxis {
+    using type = bool;
+    static constexpr Options::String help = {
+        "Restrict rotation to only be about the z-axis"};
+    using group = RotationMap;
+  };
 
   struct SizeMap {
     static constexpr Options::String help = {
@@ -544,7 +565,7 @@ class BinaryCompactObject : public DomainCreator<3> {
       tmpl::list<InitialTime, ExpansionMapOuterBoundary, InitialExpansion,
                  InitialExpansionVelocity, AsymptoticVelocityOuterBoundary,
                  DecayTimescaleOuterBoundaryVelocity, InitialAngularVelocity,
-                 InitialSizeMapValues, InitialSizeMapVelocities,
+                 OnlyAboutZAxis, InitialSizeMapValues, InitialSizeMapVelocities,
                  InitialSizeMapAccelerations>;
 
   template <typename Metavariables>
@@ -621,7 +642,7 @@ class BinaryCompactObject : public DomainCreator<3> {
       double initial_expansion, double initial_expansion_velocity,
       double asymptotic_velocity_outer_boundary,
       double decay_timescale_outer_boundary_velocity,
-      std::array<double, 3> initial_angular_velocity,
+      std::array<double, 3> initial_angular_velocity, bool only_about_z_axis,
       std::array<double, 2> initial_size_map_values,
       std::array<double, 2> initial_size_map_velocities,
       std::array<double, 2> initial_size_map_accelerations, Object object_A,
@@ -709,6 +730,7 @@ class BinaryCompactObject : public DomainCreator<3> {
       std::numeric_limits<double>::signaling_NaN()};
   DataVector initial_angular_velocity_{3, 0.0};
   DataVector initial_quaternion_{4, 0.0};
+  bool only_about_z_axis_{false};
   inline static const std::string rotation_function_of_time_name_{"Rotation"};
   std::array<double, 2> initial_size_map_values_{
       std::numeric_limits<double>::signaling_NaN(),

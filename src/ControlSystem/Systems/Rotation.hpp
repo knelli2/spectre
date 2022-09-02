@@ -74,7 +74,7 @@ struct Rotation : tt::ConformsTo<protocols::ControlSystem> {
 
   static std::optional<std::string> component_name(
       const size_t component, const size_t num_components) {
-    ASSERT(num_components == 3,
+    ASSERT(num_components == 3 or num_components == 1,
            "Rotation control expects 3 components but there are "
                << num_components << " instead.");
     return component == 0 ? "x" : component == 1 ? "y" : "z";
