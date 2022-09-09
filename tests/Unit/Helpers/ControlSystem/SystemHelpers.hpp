@@ -664,22 +664,6 @@ struct SystemHelper {
 
     // Start loop
     while (time < final_time) {
-      //   std::stringstream ss{};
-      //   for (const auto& name_fot : functions_of_time) {
-      //     const auto* fot2 =
-      //         dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<2>*>(
-      //             name_fot.second.get());
-      //     const auto* fot3 =
-      //         dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<3>*>(
-      //             name_fot.second.get());
-      //     if (fot2 != nullptr) {
-      //       ss << name_fot.first << " " << fot2->get_deriv_info();
-      //     } else if (fot3 != nullptr) {
-      //       ss << name_fot.first << " " << fot3->get_deriv_info();
-      //     }
-      //     ss << "\n";
-      //     Parallel::printf("%s", ss.str());
-      //   }
       Parallel::printf(
           "Time stuff before:\n"
           " prev_time = %s\n"

@@ -84,9 +84,10 @@ std::string create_input_string(const std::string& name) {
 }
 
 std::pair<std::array<intrp::CubicSpline, 3>, std::array<intrp::CubicSpline, 3>>
-read_spec_horizons(const std::string& filename, const std::string& prefix) {
+read_spec_horizons(const std::string& filename, const std::string& /*prefix*/) {
   h5::H5File<h5::AccessType::ReadOnly> h5file{filename};
-  const auto& aha_dat = h5file.get<h5::Dat>("/spec_" + prefix + "AhA");
+  const auto& aha_dat =
+      h5file.get<h5::Dat>("/ApparentHorizons/ControlSystemAhA_Centers_sorted");
 
   const size_t num_rows = aha_dat.get_dimensions()[0];
 
@@ -101,16 +102,18 @@ read_spec_horizons(const std::string& filename, const std::string& prefix) {
   const Matrix aha_all_data = aha_dat.get_data();
   h5file.close_current_object();
 
-  const auto& ahb_dat = h5file.get<h5::Dat>("/spec_" + prefix + "AhB");
+  const auto& ahb_dat =
+      h5file.get<h5::Dat>("/ApparentHorizons/ControlSystemAhB_Centers_sorted");
   const Matrix ahb_all_data = ahb_dat.get_data();
   h5file.close_current_object();
 
+  const size_t inertial_x_idx = 4;
   for (size_t i = 0; i < num_rows; i++) {
     times[i] = aha_all_data(i, 0);
 
     for (size_t j = 0; j < 3; j++) {
-      gsl::at(aha_data, j)[i] = aha_all_data(i, j + 1);
-      gsl::at(ahb_data, j)[i] = ahb_all_data(i, j + 1);
+      gsl::at(aha_data, j)[i] = aha_all_data(i, inertial_x_idx + j);
+      gsl::at(ahb_data, j)[i] = ahb_all_data(i, inertial_x_idx + j);
     }
   }
 
@@ -123,7 +126,8 @@ read_spec_horizons(const std::string& filename, const std::string& prefix) {
   }
 
   // Swap aha and ahb because SpEC does it backwards
-  return std::make_pair(std::move(ahb_spline), std::move(aha_spline));
+  // But these are spectre so don't swap
+  return std::make_pair(std::move(aha_spline), std::move(ahb_spline));
 }
 
 template <size_t TranslationDerivOrder, size_t RotationDerivOrder,
@@ -149,7 +153,7 @@ void test_rotscaletrans_control_system() {
   const double initial_separation = 15.366;
   // This final time is chosen so that the damping timescales have adequate time
   // to reach the maximum damping timescale
-  const double final_time = 500.0;
+  const double final_time = 1.0;
 
   // Set up the system helper
   control_system::TestHelpers::SystemHelper<metavars> system_helper{};
@@ -220,7 +224,8 @@ void test_rotscaletrans_control_system() {
   ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
 
   const std::string spec_filename{
-      "/home/knelli/Documents/research/sims/mirror_spec/spec_centers.h5"};
+      "/home/knelli/Documents/research/sims/mirror_spec/"
+      "sorted_run_spectre_out.h5"};
 
   const auto horizons = read_spec_horizons(spec_filename, "Trajectory_"s);
 
