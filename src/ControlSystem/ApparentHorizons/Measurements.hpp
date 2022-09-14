@@ -19,6 +19,7 @@
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ErrorOnFailedApparentHorizon.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/FindApparentHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/ObserveSurfaceData.hpp"
 #include "ParallelAlgorithms/Interpolation/Interpolate.hpp"
 #include "ParallelAlgorithms/Interpolation/Protocols/InterpolationTargetTag.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/ApparentHorizon.hpp"
@@ -73,7 +74,9 @@ struct BothHorizons : tt::ConformsTo<protocols::Measurement> {
           intrp::callbacks::ErrorOnFailedApparentHorizon;
       using post_horizon_find_callbacks =
           tmpl::list<control_system::RunCallbacks<FindHorizon, ControlSystems>,
-                     ::ah::callbacks::ObserveCenters<InterpolationTarget>>;
+                     ::ah::callbacks::ObserveCenters<InterpolationTarget>,
+                     intrp::callbacks::ObserveSurfaceData<
+                         tmpl::list<>, InterpolationTarget, ::Frame::Grid>>;
     };
 
    public:

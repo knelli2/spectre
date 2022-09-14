@@ -64,6 +64,8 @@ struct ObserveSurfaceData
     const YlmSpherepack& ylm = strahlkorper.ylm_spherepack();
     const auto& inertial_strahlkorper_coords =
         get<StrahlkorperTags::CartesianCoords<::Frame::Inertial>>(box);
+    const auto& grid_strahlkorper_coords =
+        get<StrahlkorperTags::CartesianCoords<::Frame::Grid>>(box);
 
     // Output the inertial-frame coordinates of the Stralhlkorper.
     // Note that these coordinates are not
@@ -73,7 +75,10 @@ struct ObserveSurfaceData
     std::vector<TensorComponent> tensor_components{
         {"InertialCoordinates_x"s, get<0>(inertial_strahlkorper_coords)},
         {"InertialCoordinates_y"s, get<1>(inertial_strahlkorper_coords)},
-        {"InertialCoordinates_z"s, get<2>(inertial_strahlkorper_coords)}};
+        {"InertialCoordinates_z"s, get<2>(inertial_strahlkorper_coords)},
+        {"GridCoordinates_x"s, get<0>(grid_strahlkorper_coords)},
+        {"GridCoordinates_y"s, get<1>(grid_strahlkorper_coords)},
+        {"GridCoordinates_z"s, get<2>(grid_strahlkorper_coords)}};
 
     // Output each tag if it is a scalar. Otherwise, throw a compile-time
     // error. This could be generalized to handle tensors of nonzero rank by
