@@ -5,6 +5,7 @@
 
 #include <boost/functional/hash.hpp>
 #include <cmath>
+#include <iomanip>
 #include <ostream>
 #include <pup.h>
 #include <utility>
@@ -29,7 +30,15 @@ Time Time::with_slab(const Slab& new_slab) const {
     } else {
       ASSERT(slab_.start() == new_slab.end(),
              "Can't move " << fraction_ << " " << slab_ << " to slab "
-             << new_slab);
+                           << new_slab
+                           << " because at start of slab (fraction == 0) but "
+                              "start of old slab ("
+                           << std::setprecision(20) << slab_.start_
+                           << ") is not equal to the new slab start ("
+                           << new_slab.start_ << ") and slab start ("
+                           << slab_.start()
+                           << ") is not equal to the new slab end ("
+                           << new_slab.end() << ")");
       return new_slab.end();
     }
   } else {
