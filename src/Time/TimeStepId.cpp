@@ -4,6 +4,7 @@
 #include "Time/TimeStepId.hpp"
 
 #include <boost/functional/hash.hpp>
+#include <iomanip>
 #include <ostream>
 #include <pup.h>
 
@@ -42,7 +43,12 @@ bool operator==(const TimeStepId& a, const TimeStepId& b) {
   // method.  If we implement any of those the comparison operators
   // for TimeStepId will have to be revisited.
   ASSERT(not equal or a.substep_time() == b.substep_time(),
-         "IDs at same step and substep but different times");
+         "IDs at same step and substep but different times. (slab number, step "
+         "time, substep, substep time) a: ("
+             << std::setprecision(20) << a.slab_number() << ", "
+             << a.step_time() << ", " << a.substep() << ", " << a.substep_time()
+             << "). b: (" << b.slab_number() << ", " << b.step_time() << ", "
+             << b.substep() << ", " << b.substep_time() << ").");
   return equal;
 }
 
