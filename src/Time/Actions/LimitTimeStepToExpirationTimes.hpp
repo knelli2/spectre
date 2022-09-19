@@ -81,12 +81,23 @@ struct LimitTimeStepToExpirationTimes {
       const Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& array_index, ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {  // NOLINT const
-    auto debug_print = [&box, &array_index](const std::string& message) {
+    auto debug_print = [&box, &array_index,
+                        &cache](const std::string& message) {
+      double min_expiration_time{std::numeric_limits<double>::max()};
+      const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+      if (not functions_of_time.empty()) {
+        for (const auto& [name, f_of_t] : functions_of_time) {
+          if (f_of_t->time_bounds()[1] < min_expiration_time) {
+            min_expiration_time = f_of_t->time_bounds()[1];
+          }
+        }
+      }
       Parallel::printf(
-          "LimitTimeStepToExpirationTimes.hpp: i=%s t=%1.20f tstep=%1.20f "
+          "LimitTimeStepToExpirationTimes.hpp: i=%s texp=%1.20f t=%1.20f "
+          "tstep=%1.20f "
           "tsub=%1.20f "
           "dt=%1.20f next_trigger=%1.20f: %s\n",
-          array_index, db::get<::Tags::Time>(box),
+          array_index, min_expiration_time, db::get<::Tags::Time>(box),
           db::get<::Tags::TimeStepId>(box).step_time().value(),
           db::get<::Tags::TimeStepId>(box).substep_time().value(),
           db::get<::Tags::TimeStep>(box).value(),
@@ -121,7 +132,8 @@ struct LimitTimeStepToExpirationTimes {
                           << min_expiration_time << ") by an amount of "
                           << db::get<Tags::Time>(box) - min_expiration_time);
           if (db::get<Tags::Time>(box) == min_expiration_time) {
-            return {Parallel::AlgorithmExecution::Retry, std::nullopt};
+            debug_print("Time == expiration time, continue");
+            return {Parallel::AlgorithmExecution::Continue, std::nullopt};
           }
 
           const auto& initial_time_step{db::get<Tags::TimeStep>(box)};
@@ -130,6 +142,7 @@ struct LimitTimeStepToExpirationTimes {
           if (step_end + initial_time_step.value() <= min_expiration_time) {
             // The expiration times are far in the future (more than
             // two steps).  No need to adjust anything.
+            debug_print("Expiration times plenty far in the future, continue");
             return {Parallel::AlgorithmExecution::Continue, std::nullopt};
           }
 
@@ -140,6 +153,7 @@ struct LimitTimeStepToExpirationTimes {
             // The minimum expiration time is within the next step (or
             // within roundoff).  Step to it.
             new_slab = Slab(start, min_expiration_time);
+            debug_print("Min expiration time within next step, adjust step");
           } else {
             // The minimum expiration time is not within the next
             // step, but is within two steps.  Shrink the step size to
@@ -148,6 +162,7 @@ struct LimitTimeStepToExpirationTimes {
             // new_slab = initial_time_step.slab().with_duration_to_end(
             //     0.5 * (min_expiration_time - start));
             new_slab = Slab(start, start + 0.5 * (min_expiration_time - start));
+            debug_print("Min expiration time within two steps, adjust step");
           }
 
           ASSERT(initial_time_step.fraction() == 1,
