@@ -78,7 +78,7 @@ struct LimitTimeStepToExpirationTimes {
             typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
       db::DataBox<DbTags>& box, tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
-      const Parallel::GlobalCache<Metavariables>& cache,
+      Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& array_index, ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {  // NOLINT const
     auto debug_print = [&box, &array_index,
@@ -132,8 +132,29 @@ struct LimitTimeStepToExpirationTimes {
                           << min_expiration_time << ") by an amount of "
                           << db::get<Tags::Time>(box) - min_expiration_time);
           if (db::get<Tags::Time>(box) == min_expiration_time) {
-            debug_print("Time == expiration time, continue");
-            return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+            debug_print("Time == expiration time, retry");
+            // Pause the algorithm containing this action until the
+            // FunctionsOfTime get updated expiration times. The following
+            // returns Parallel::AlgorithmExecution::Retry, which pauses
+            // the algorithm. The call to mutuable_cache_item_is_ready
+            // sets a callback that will restart the algorithm once
+            // the FunctionsOfTime have been updated.
+            auto& proxy =
+                Parallel::get_parallel_component<ParallelComponent>(cache);
+            Parallel::mutable_cache_item_is_ready<
+                domain::Tags::FunctionsOfTime>(
+                cache,
+                [&proxy](const std::unordered_map<
+                         std::string,
+                         std::unique_ptr<
+                             domain::FunctionsOfTime::FunctionOfTime>>&
+                         /*functions_of_time*/)
+                    -> std::unique_ptr<Parallel::Callback> {
+                  return std::unique_ptr<Parallel::Callback>{
+                      new Parallel::PerformAlgorithmCallback<decltype(proxy)>(
+                          proxy)};
+                });
+            return {Parallel::AlgorithmExecution::Retry, std::nullopt};
           }
 
           const auto& initial_time_step{db::get<Tags::TimeStep>(box)};
