@@ -96,3 +96,11 @@ add_generalized_harmonic_cce_executable_without_horizon(
   true
   "${LIBS_TO_LINK};Cce;GeneralRelativitySolutions;Importers"
 )
+
+add_spectre_parallel_executable(
+  "EvolveGhBbhCce"
+  EvolveGhBbhCce
+  Evolution/Executables/GeneralizedHarmonic
+  "EvolutionMetavars"
+  "${LIBS_TO_LINK};Cce;ControlSystem;GeneralRelativitySolutions;Importers"
+)
