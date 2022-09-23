@@ -43,7 +43,7 @@
 #include "Evolution/Initialization/Evolution.hpp"
 #include "Evolution/Initialization/NonconservativeSystem.hpp"
 #include "Evolution/NumericInitialData.hpp"
-#include "Evolution/Systems/Cce/Actions/InterpolateDuringSelfStart.hpp"
+#include "Evolution/Systems/Cce/Actions/SendGhVarsToCce.hpp"
 #include "Evolution/Systems/Cce/BoundaryData.hpp"
 #include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
 #include "Evolution/Systems/Cce/Components/WorldtubeBoundary.hpp"
@@ -492,8 +492,7 @@ struct EvolutionMetavars : CharacteristicExtractDefaults {
   template <bool DuringSelfStart>
   struct CceWorldtubeTarget
       : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
-    using temporal_id = tmpl::conditional_t<DuringSelfStart, ::Tags::TimeStepId,
-                                            ::Tags::TimeAndPrevious>;
+    using temporal_id = ::Tags::TimeStepId;
 
     static std::string name() {
       return DuringSelfStart ? "SelfStartCceWorldtubeTarget"

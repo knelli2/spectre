@@ -4,6 +4,7 @@
 #pragma once
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "Evolution/Systems/Cce/Actions/BoundaryComputeAndSendToEvolution.hpp"
 #include "Evolution/Systems/Cce/Actions/ReceiveGhWorldtubeData.hpp"
 #include "Evolution/Systems/Cce/Components/WorldtubeBoundary.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
@@ -41,12 +42,21 @@ struct SendGhWorldtubeData
                     const TemporalId& temporal_id) {
     auto& cce_gh_boundary_component = Parallel::get_parallel_component<
         Cce::GhWorldtubeBoundary<Metavariables>>(cache);
-    Parallel::simple_action<typename Cce::Actions::ReceiveGhWorldtubeData<
-        CceEvolutionComponent, DuringSelfStart>>(
-        cce_gh_boundary_component, temporal_id,
-        db::get<::gr::Tags::SpacetimeMetric<3, Frame::Inertial>>(box),
-        db::get<::GeneralizedHarmonic::Tags::Phi<3, Frame::Inertial>>(box),
-        db::get<::GeneralizedHarmonic::Tags::Pi<3, Frame::Inertial>>(box));
+    if constexpr (DuringSelfStart) {
+      Parallel::simple_action<typename Cce::Actions::ReceiveGhWorldtubeData<
+          CceEvolutionComponent, DuringSelfStart>>(
+          cce_gh_boundary_component, temporal_id,
+          db::get<::gr::Tags::SpacetimeMetric<3, Frame::Inertial>>(box),
+          db::get<::GeneralizedHarmonic::Tags::Phi<3, Frame::Inertial>>(box),
+          db::get<::GeneralizedHarmonic::Tags::Pi<3, Frame::Inertial>>(box));
+    } else {
+      Parallel::simple_action<Cce::Actions::SendToEvolution<
+          Cce::GhWorldtubeBoundary<Metavariables>, CceEvolutionComponent>>(
+          cce_gh_boundary_component, temporal_id,
+          db::get<::gr::Tags::SpacetimeMetric<3, Frame::Inertial>>(box),
+          db::get<::GeneralizedHarmonic::Tags::Phi<3, Frame::Inertial>>(box),
+          db::get<::GeneralizedHarmonic::Tags::Pi<3, Frame::Inertial>>(box));
+    }
   }
 };
 }  // namespace callbacks
