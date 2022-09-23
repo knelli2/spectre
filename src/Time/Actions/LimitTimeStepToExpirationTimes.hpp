@@ -23,7 +23,6 @@
 #include "Time/TimeSteppers/TimeStepper.hpp"
 #include "Time/Utilities.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
-#include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/FractionUtilities.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TaggedTuple.hpp"
@@ -131,11 +130,11 @@ struct LimitTimeStepToExpirationTimes {
             }
           }
 
-          ERROR(db::get<Tags::Time>(box) <= min_expiration_time,
-                "Time (" << std::setprecision(20) << db::get<Tags::Time>(box)
-                         << ") is greater than expiration time ("
-                         << min_expiration_time << ") by an amount of "
-                         << db::get<Tags::Time>(box) - min_expiration_time);
+          ASSERT(db::get<Tags::Time>(box) <= min_expiration_time,
+                 "Time (" << std::setprecision(20) << db::get<Tags::Time>(box)
+                          << ") is greater than expiration time ("
+                          << min_expiration_time << ") by an amount of "
+                          << db::get<Tags::Time>(box) - min_expiration_time);
           if (db::get<Tags::Time>(box) == min_expiration_time) {
             debug_print("Time == expiration time, retry");
             // Pause the algorithm containing this action until the
