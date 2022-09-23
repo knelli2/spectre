@@ -23,6 +23,7 @@
 #include "Time/TimeSteppers/TimeStepper.hpp"
 #include "Time/Utilities.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
+#include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/FractionUtilities.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TaggedTuple.hpp"
