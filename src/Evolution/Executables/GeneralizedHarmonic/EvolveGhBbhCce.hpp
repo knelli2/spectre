@@ -412,7 +412,7 @@ struct EvolutionMetavars : CharacteristicExtractDefaults {
   using step_actions = tmpl::list<
       tmpl::conditional_t<
           DuringSelfStart,
-          Cce::Actions::InterpolateDuringSelfStart<CceWorldtubeTarget<true>>,
+          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
           tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<EvolutionMetavars>,
       tmpl::conditional_t<
