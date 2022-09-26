@@ -110,7 +110,7 @@ struct LimitTimeStepToExpirationTimes {
               .next_trigger(box),
           message);
     };
-    debug_print("start action"s);
+    // debug_print("start action"s);
 
     // First, check whether the time stepper uses substeps
     const TimeStepper& time_stepper = db::get<Tags::TimeStepper<>>(box);
@@ -168,7 +168,6 @@ struct LimitTimeStepToExpirationTimes {
               min_expiration_time) {
             // The expiration times are far in the future (more than
             // two steps).  No need to adjust anything.
-            debug_print("Expiration times plenty far in the future, continue");
             return {Parallel::AlgorithmExecution::Continue, std::nullopt};
           }
 
