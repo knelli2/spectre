@@ -11,6 +11,7 @@ spectre_target_sources(
   Averager.cpp
   Controller.cpp
   DataVectorHelpers.cpp
+  ExpirationTimes.cpp
   Tags.cpp
   TimescaleTuner.cpp
   )
@@ -24,7 +25,7 @@ spectre_target_headers(
   Controller.hpp
   DataVectorHelpers.hpp
   Event.hpp
-  InitialExpirationTimes.hpp
+  ExpirationTimes.hpp
   Metafunctions.hpp
   NamespaceDocs.hpp
   RunCallbacks.hpp

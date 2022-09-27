@@ -17,8 +17,10 @@
 #include "DataStructures/DataVector.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
+#include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Evolution/EventsAndDenseTriggers/DenseTrigger.hpp"
 #include "Parallel/CharmPupable.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -73,7 +75,8 @@ class Trigger : public DenseTrigger {
   Trigger() = default;
 
   using is_triggered_argument_tags =
-      tmpl::list<::Tags::Time, control_system::Tags::MeasurementTimescales>;
+      tmpl::list<::Tags::Time, control_system::Tags::MeasurementTimescales,
+                 domain::Tags::FunctionsOfTime>;
 
   template <typename Metavariables, typename ArrayIndex, typename Component>
   std::optional<bool> is_triggered(
@@ -83,7 +86,11 @@ class Trigger : public DenseTrigger {
       const std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          measurement_timescales) {
+          measurement_timescales,
+      const std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+          functions_of_time) {
     if (UNLIKELY(not next_trigger_.has_value())) {
       // First call
 
@@ -93,7 +100,7 @@ class Trigger : public DenseTrigger {
       // we only enter this branch on the first call to the trigger,
       // this is the initial time so we can assume the
       // measurement_timescales are ready.
-      if (next_measurement(time, measurement_timescales) ==
+      if (next_measurement(time, measurement_timescales, functions_of_time) ==
           std::numeric_limits<double>::infinity()) {
         next_trigger_ = std::numeric_limits<double>::infinity();
       } else {
@@ -105,7 +112,8 @@ class Trigger : public DenseTrigger {
   }
 
   using next_check_time_argument_tags =
-      tmpl::list<::Tags::Time, control_system::Tags::MeasurementTimescales>;
+      tmpl::list<::Tags::Time, control_system::Tags::MeasurementTimescales,
+                 domain::Tags::FunctionsOfTime>;
 
   template <typename Metavariables, typename ArrayIndex, typename Component>
   std::optional<double> next_check_time(
@@ -115,7 +123,11 @@ class Trigger : public DenseTrigger {
       const std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          measurement_timescales) {
+          measurement_timescales,
+      const std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+          functions_of_time) {
     // At least one control system is active
     const bool is_ready = tmpl::as_pack<ControlSystems>(
         [&array_index, &cache, &component, &time](auto... control_systems) {
@@ -131,7 +143,8 @@ class Trigger : public DenseTrigger {
 
     const bool triggered = time == *next_trigger_;
     if (triggered) {
-      *next_trigger_ = next_measurement(time, measurement_timescales);
+      *next_trigger_ =
+          next_measurement(time, measurement_timescales, functions_of_time);
     }
     return *next_trigger_;
   }
@@ -148,15 +161,53 @@ class Trigger : public DenseTrigger {
       const std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          measurement_timescales) {
-    return time +
-           tmpl::as_pack<ControlSystems>(
-               [&measurement_timescales, &time](auto... control_systems) {
-                 return std::min({min(
-                     measurement_timescales
-                         .at(tmpl::type_from<decltype(control_systems)>::name())
-                         ->func(time)[0])...});
-               });
+          measurement_timescales,
+      const std::unordered_map<
+          std::string,
+          std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+          functions_of_time) {
+    const double min_measure_time = tmpl::as_pack<ControlSystems>(
+        [&measurement_timescales, &time](auto... control_systems) {
+          return std::min(
+              {min(measurement_timescales
+                       .at(tmpl::type_from<decltype(control_systems)>::name())
+                       ->func(time)[0])...});
+        });
+    if (min_measure_time == std::numeric_limits<double>::infinity()) {
+      return min_measure_time;
+    }
+    const double calculated_next_measurement = time + min_measure_time;
+
+    double min_fot_expr_time = std::numeric_limits<double>::infinity();
+    for (const auto& [name, fot] : functions_of_time) {
+      (void)name;
+      min_fot_expr_time = std::min(min_fot_expr_time, fot->time_bounds()[1]);
+    }
+
+    // If the expiration time is infinity, don't bother checking if it's equal
+    // to the min measure time. We already returned above if it is infinity
+    if (min_fot_expr_time == std::numeric_limits<double>::infinity()) {
+      return calculated_next_measurement;
+    }
+
+    double next_measurement_time;
+    // Just take the average of the two things we are comparing. They'll always
+    // be super close
+    const double scale =
+        0.5 * (calculated_next_measurement + min_fot_expr_time);
+    // To avoid roundoff differences between expiration times and when
+    // measurements are supposed to happen, if the next measurement is within
+    // roundoff of the current expiration time, use the exact value of the
+    // expiration time as the measurement time.
+    if (equal_within_roundoff(calculated_next_measurement, min_fot_expr_time,
+                              std::numeric_limits<double>::epsilon() * 100.0,
+                              scale)) {
+      next_measurement_time = min_fot_expr_time;
+    } else {
+      next_measurement_time = calculated_next_measurement;
+    }
+
+    return next_measurement_time;
   }
 
   std::optional<double> next_trigger_{};

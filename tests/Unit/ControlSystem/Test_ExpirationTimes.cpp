@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ControlSystem/InitialExpirationTimes.hpp"
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "ControlSystem/Tags.hpp"
 #include "Helpers/ControlSystem/TestStructs.hpp"
@@ -54,7 +54,7 @@ void check_expiration_times(
 }
 }  // namespace
 
-SPECTRE_TEST_CASE("Unit.ControlSystem.ConstructInitialExpirationTimes",
+SPECTRE_TEST_CASE("Unit.ControlSystem.ConstructExpirationTimes",
                   "[ControlSystem][Unit]") {
   const double initial_time = 1.3;
   const double initial_time_step = 0.1;

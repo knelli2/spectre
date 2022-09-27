@@ -248,6 +248,7 @@ ApparentHorizons:
 
 ControlSystems:
   WriteDataToDisk: true
+  MeasurementsPerUpdate: 4
   Expansion:
     Averager:
       AverageTimescaleFraction: 0.25

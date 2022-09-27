@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "ControlSystem/InitialExpirationTimes.hpp"
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/Tags.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"

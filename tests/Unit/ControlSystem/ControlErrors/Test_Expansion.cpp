@@ -41,6 +41,7 @@ void test_expansion_control_error() {
       "      Expansion: 1\n"
       "ControlSystems:\n"
       "  WriteDataToDisk: false\n"
+      "  MeasurementsPerUpdate: 4\n"
       "  Expansion:\n"
       "    Averager:\n"
       "      AverageTimescaleFraction: 0.25\n"
@@ -75,7 +76,7 @@ void test_expansion_control_error() {
   // Setup runner and element component because it's the easiest way to get the
   // global cache
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
-  MockRuntimeSystem runner{{"DummyFileName", std::move(domain)},
+  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4},
                            {std::move(initial_functions_of_time),
                             std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_array_component<element_component>(

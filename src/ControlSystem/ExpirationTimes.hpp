@@ -58,4 +58,52 @@ std::unordered_map<std::string, double> initial_expiration_times(
 
   return initial_expiration_times;
 }
+
+/*!
+ * \ingroup ControlSystemGroup
+ * \brief Calculate the next expiration time for the FunctionsOfTime.
+ *
+ * This is done by multiplying the new measurement timescale by the number of
+ * measurements per update stored in the
+ * control_system::Tags::MeasurementsPerUpdate tag and adding it to the current
+ * time.
+ */
+double function_of_time_expiration_time(
+    const double time, const DataVector& measurement_timescales,
+    const int measurements_per_update);
+
+/*!
+ * \ingroup ControlSystemGroup
+ * \brief Calculate the next expiration time for the MeasurementTimescales.
+ *
+ * First the function_of_time_expiration_time() is calculated. Then, half of the
+ * minimum measurement timescale is subtracted off from that time and returned.
+ * The reason for this is as follows:
+ *
+ * The last measurement for updating the control system happens at the function
+ * of time expiration time \f$ t_{\mathrm{fot\ update}} \f$. Based on how dense
+ * triggers are set up, which control_system::Trigger is a dense trigger, you
+ * calculate the next trigger (measurement) time at the current measurement
+ * time. However, at \f$ t_{\mathrm{fot\ update}} \f$ we don't know when the
+ * next measurement time is because we haven't actually done the update and the
+ * new measurement timescales are based on the updated damping timescales. So
+ * since the measurement timescales are stored as 0th order
+ * PiecewisePolynomials, if they expire at \f$ t_{\mathrm{fot\ update}} \f$ and
+ * are also evaluated at \f$ t_{\mathrm{fot\ update}} \f$, they will give the
+ * *old* measurement timescale and that will be used as the next measurement
+ * after the update would happen.
+ *
+ * We don't want this. We want to wait until the control system has been updated
+ * in order to choose the next measurement time. Thus, we make the measurement
+ * timescales expire *earlier* than \f$ t_{\mathrm{fot\ update}} \f$ so that the
+ * calculation of the next measurement timescale waits until the control system
+ * (and the measurement timescales) have been updated. The fact that the
+ * expiration time of the measurement timescales is half a measurement before
+ * \f$ t_{\mathrm{fot\ update}} \f$ is just to ensure we are more than epsilon
+ * before the last measurement and more than epsilon after the second to last
+ * measurement (i.e. guaranteed to be between the last two measurements).
+ */
+double measurement_expiration_time(const double time,
+                                   const DataVector& measurement_timescales,
+                                   const int measurements_per_update);
 }  // namespace control_system

@@ -59,7 +59,12 @@ struct Initialize {
 
   using initialization_tags_to_keep = initialization_tags;
 
-  using simple_tags = typename ControlSystem::simple_tags;
+  using const_global_cache_tags =
+      tmpl::list<control_system::Tags::MeasurementsPerUpdate>;
+
+  using simple_tags =
+      tmpl::push_back<typename ControlSystem::simple_tags,
+                      control_system::Tags::CurrentNumberOfMeasurements>;
 
   using compute_tags = tmpl::list<>;
 
@@ -79,11 +84,20 @@ struct Initialize {
     const double initial_time = measurement_timescale_func.time_bounds()[0];
     const double measurement_timescale =
         min(measurement_timescale_func.func(initial_time)[0]);
-    db::mutate<control_system::Tags::Averager<ControlSystem>>(
+    db::mutate<control_system::Tags::Averager<ControlSystem>,
+               control_system::Tags::CurrentNumberOfMeasurements>(
         make_not_null(&box),
         [&measurement_timescale](
-            const gsl::not_null<::Averager<deriv_order - 1>*> averager) {
+            const gsl::not_null<::Averager<deriv_order - 1>*> averager,
+            const gsl::not_null<int*> current_number_of_measurements) {
           averager->assign_time_between_measurements(measurement_timescale);
+          // We set this to -1 because we technically haven't updated yet.
+          // current_number_of_measurements should be 0 *after* an update. The
+          // initial time is considered an update time, but we haven't actually
+          // found the horizons yet and had the info sent to the control system.
+          // So we set this to -1 so *after* the first horizon find it's at 0.
+          // Doing it this way is consistent with the behavior in SpEC.
+          *current_number_of_measurements = -1;
         });
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
