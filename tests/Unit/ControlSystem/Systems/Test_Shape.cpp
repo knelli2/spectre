@@ -77,7 +77,7 @@ void test_shape_control(
   const auto& init_shape_tuple = system_helper->template init_tuple<system>();
 
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<Metavars>;
-  MockRuntimeSystem runner{{"DummyFileName", std::move(domain)},
+  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4},
                            {std::move(initial_functions_of_time),
                             std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<shape_component>(
