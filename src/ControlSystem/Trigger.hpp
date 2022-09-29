@@ -20,6 +20,7 @@
 #include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Evolution/EventsAndDenseTriggers/DenseTrigger.hpp"
 #include "Parallel/CharmPupable.hpp"
+#include "Parallel/Printf.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
@@ -80,8 +81,8 @@ class Trigger : public DenseTrigger {
 
   template <typename Metavariables, typename ArrayIndex, typename Component>
   std::optional<bool> is_triggered(
-      Parallel::GlobalCache<Metavariables>& /*cache*/,
-      const ArrayIndex& /*array_index*/, const Component* /*component*/,
+      Parallel::GlobalCache<Metavariables>& cache,
+      const ArrayIndex& array_index, const Component* /*component*/,
       const double time,
       const std::unordered_map<
           std::string,
@@ -91,6 +92,26 @@ class Trigger : public DenseTrigger {
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
           functions_of_time) {
+    auto debug_print = [&time, &array_index, &cache,
+                        this](const std::string& message) {
+      if (not is_zeroth_element(array_index)) {
+        return;
+      }
+      double min_expiration_time{std::numeric_limits<double>::max()};
+      const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+      if (not functions_of_time.empty()) {
+        for (const auto& [name, f_of_t] : functions_of_time) {
+          if (f_of_t->time_bounds()[1] < min_expiration_time) {
+            min_expiration_time = f_of_t->time_bounds()[1];
+          }
+        }
+      }
+      Parallel::printf(
+          "Trigger.hpp is_triggered: i=%s texp=%1.20f time=%1.20f "
+          "is_triggered=%s: %s\n",
+          array_index, min_expiration_time, time,
+          time == *next_trigger_ ? "yep" : "nope", message);
+    };
     if (UNLIKELY(not next_trigger_.has_value())) {
       // First call
 
@@ -100,14 +121,15 @@ class Trigger : public DenseTrigger {
       // we only enter this branch on the first call to the trigger,
       // this is the initial time so we can assume the
       // measurement_timescales are ready.
-      if (next_measurement(time, measurement_timescales, functions_of_time) ==
+      if (next_measurement(time, measurement_timescales, functions_of_time,
+                           array_index) ==
           std::numeric_limits<double>::infinity()) {
         next_trigger_ = std::numeric_limits<double>::infinity();
       } else {
         next_trigger_ = time;
       }
     }
-
+    debug_print("is_triggered() called");
     return time == *next_trigger_;
   }
 
@@ -128,6 +150,25 @@ class Trigger : public DenseTrigger {
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
           functions_of_time) {
+    auto debug_print = [&time, &array_index, &cache,
+                        this](const std::string& message) {
+      if (not is_zeroth_element(array_index)) {
+        return;
+      }
+      double min_expiration_time{std::numeric_limits<double>::max()};
+      const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+      if (not functions_of_time.empty()) {
+        for (const auto& [name, f_of_t] : functions_of_time) {
+          if (f_of_t->time_bounds()[1] < min_expiration_time) {
+            min_expiration_time = f_of_t->time_bounds()[1];
+          }
+        }
+      }
+      Parallel::printf(
+          "Trigger.hpp next_check_time: i=%s texp=%1.20f "
+          "time=%1.20f next_trigger=%s: %s\n",
+          array_index, min_expiration_time, time, next_trigger_, message);
+    };
     // At least one control system is active
     const bool is_ready = tmpl::as_pack<ControlSystems>(
         [&array_index, &cache, &component, &time](auto... control_systems) {
@@ -138,14 +179,17 @@ class Trigger : public DenseTrigger {
                   tmpl::type_from<decltype(control_systems)>::name()...});
         });
     if (not is_ready) {
+      debug_print("NOT READY");
       return std::nullopt;
     }
 
     const bool triggered = time == *next_trigger_;
     if (triggered) {
-      *next_trigger_ =
-          next_measurement(time, measurement_timescales, functions_of_time);
+      debug_print("triggered, computing next trigger");
+      *next_trigger_ = next_measurement(time, measurement_timescales,
+                                        functions_of_time, array_index);
     }
+    debug_print("READY");
     return *next_trigger_;
   }
 
@@ -156,6 +200,7 @@ class Trigger : public DenseTrigger {
   }
 
  private:
+  template <typename ArrayIndex>
   static double next_measurement(
       const double time,
       const std::unordered_map<
@@ -165,7 +210,8 @@ class Trigger : public DenseTrigger {
       const std::unordered_map<
           std::string,
           std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
-          functions_of_time) {
+          functions_of_time,
+      const ArrayIndex& array_index) {
     const double min_measure_time = tmpl::as_pack<ControlSystems>(
         [&measurement_timescales, &time](auto... control_systems) {
           return std::min(
@@ -203,8 +249,20 @@ class Trigger : public DenseTrigger {
                               std::numeric_limits<double>::epsilon() * 100.0,
                               scale)) {
       next_measurement_time = min_fot_expr_time;
+      if (is_zeroth_element(array_index)) {
+        Parallel::printf(
+            "Trigger.hpp next_measurement: Time %1.20f *is* within roundoff of "
+            "texp=%1.20f. Next measurement at %1.20f\n",
+            time, min_fot_expr_time, next_measurement_time);
+      }
     } else {
       next_measurement_time = calculated_next_measurement;
+      if (is_zeroth_element(array_index)) {
+        Parallel::printf(
+            "Trigger.hpp next_measurement: Time %1.20f is *not* within "
+            "roundoff of texp=%1.20f. Next measurement at %1.20f\n",
+            time, min_fot_expr_time, next_measurement_time);
+      }
     }
 
     return next_measurement_time;

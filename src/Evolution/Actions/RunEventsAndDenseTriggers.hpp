@@ -170,6 +170,35 @@ struct RunEventsAndDenseTriggers {
       Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& array_index, const ActionList /*meta*/,
       const ParallelComponent* const component) {
+    auto debug_print = [&box, &array_index,
+                        &cache](const std::string& message) {
+      if (not is_zeroth_element(array_index)) {
+        return;
+      }
+      double min_expiration_time{std::numeric_limits<double>::max()};
+      const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+      if (not functions_of_time.empty()) {
+        for (const auto& [name, f_of_t] : functions_of_time) {
+          if (f_of_t->time_bounds()[1] < min_expiration_time) {
+            min_expiration_time = f_of_t->time_bounds()[1];
+          }
+        }
+      }
+      Parallel::printf(
+          "RunEventsAndDenseTriggers apply: i=%s texp=%1.20f t=%1.20f "
+          "tstep=%1.20f "
+          "tsub=%1.20f "
+          "dt=%1.20f next_trigger=%1.20f: %s\n",
+          array_index, min_expiration_time, db::get<::Tags::Time>(box),
+          db::get<::Tags::TimeStepId>(box).step_time().value(),
+          db::get<::Tags::TimeStepId>(box).substep_time().value(),
+          db::get<::Tags::TimeStep>(box).value(),
+          db::get_mutable_reference<::evolution::Tags::EventsAndDenseTriggers>(
+              make_not_null(&box))
+              .next_trigger(box),
+          message);
+    };
+    debug_print("start of RunEventsAndDenseTriggers");
     using system = typename Metavariables::system;
     using variables_tag = typename system::variables_tag;
 
@@ -207,7 +236,7 @@ struct RunEventsAndDenseTriggers {
       if (before(step_end.value(), next_trigger)) {
         return {Parallel::AlgorithmExecution::Continue, std::nullopt};
       }
-
+      debug_print("start of for loop");
       // This can only be true the first time through the loop,
       // because triggers are not allowed to reschedule for the time
       // they just triggered at.  This check is primarily to avoid
@@ -228,8 +257,10 @@ struct RunEventsAndDenseTriggers {
       using TriggeringState = std::decay_t<decltype(triggered)>;
       switch (triggered) {
         case TriggeringState::NotReady:
+          debug_print("TriggeringState::NotReady");
           return {Parallel::AlgorithmExecution::Retry, std::nullopt};
         case TriggeringState::NeedsEvolvedVariables:
+          debug_print("TriggeringState::NeedsEvolvedVariables");
           if (not already_at_correct_time) {
             bool ready = true;
             tmpl::for_each<Postprocessors>([&](auto postprocessor_v) {
@@ -246,6 +277,7 @@ struct RunEventsAndDenseTriggers {
               }
             });
             if (not ready) {
+              debug_print("not ready, retry");
               return {Parallel::AlgorithmExecution::Retry, std::nullopt};
             }
 
@@ -270,6 +302,7 @@ struct RunEventsAndDenseTriggers {
                 db::get<::Tags::TimeStepper<>>(box), db::get<history_tag>(box));
             if (not dense_output_succeeded) {
               // Need to take another time step
+              debug_print("Dense output didn't succeed, continue");
               return {Parallel::AlgorithmExecution::Continue, std::nullopt};
             }
 
@@ -283,10 +316,12 @@ struct RunEventsAndDenseTriggers {
         default:
           break;
       }
-
+      debug_print("about to call run_events");
       events_and_dense_triggers.run_events(box, cache, array_index, component);
+      debug_print("just called run_events");
       if (not events_and_dense_triggers.reschedule(box, cache, array_index,
                                                    component)) {
+        debug_print("reschedule, return retry");
         return {Parallel::AlgorithmExecution::Retry, std::nullopt};
       }
     }

@@ -192,10 +192,16 @@ struct UpdateControlSystem {
     const double new_measurement_expiration_time = measurement_expiration_time(
         time, new_measurement_timescale, measurements_per_update);
 
+    Parallel::printf(
+        "UpdateControlSystem: Mutate FOT: time=%1.20f, expr=%1.20f\n", time,
+        new_fot_expiration_time);
     Parallel::mutate<::domain::Tags::FunctionsOfTime, UpdateFunctionOfTime>(
         cache, function_of_time_name, current_fot_expiration_time,
         control_signal, new_fot_expiration_time);
 
+    Parallel::printf(
+        "UpdateControlSystem: Mutate Measure: time=%1.20f, expr=%1.20f\n", time,
+        new_measurement_expiration_time);
     Parallel::mutate<Tags::MeasurementTimescales, UpdateFunctionOfTime>(
         cache, function_of_time_name, current_measurement_expiration_time,
         new_measurement_timescale, new_measurement_expiration_time);

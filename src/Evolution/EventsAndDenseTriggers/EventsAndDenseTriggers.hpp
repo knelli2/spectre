@@ -29,6 +29,9 @@ namespace Tags {
 struct Time;
 struct TimeStepId;
 }  // namespace Tags
+namespace domain::Tags {
+struct FunctionsOfTime;
+}
 /// \endcond
 
 namespace evolution {
@@ -161,15 +164,42 @@ EventsAndDenseTriggers::TriggeringState EventsAndDenseTriggers::is_ready(
   ASSERT(initialized(), "Not initialized");
   ASSERT(not events_and_triggers_.empty(),
          "Should not be calling is_ready with no triggers");
+  auto debug_print = [&box, &array_index, &cache](const std::string& message) {
+    if (not is_zeroth_element(array_index)) {
+      return;
+    }
+    double min_expiration_time{std::numeric_limits<double>::max()};
+    const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+    if (not functions_of_time.empty()) {
+      for (const auto& [name, f_of_t] : functions_of_time) {
+        if (f_of_t->time_bounds()[1] < min_expiration_time) {
+          min_expiration_time = f_of_t->time_bounds()[1];
+        }
+      }
+    }
+    Parallel::printf(
+        "EventsAndDenseTriggers is_ready: i=%s texp=%1.20f t=%1.20f "
+        "tstep=%1.20f "
+        "tsub=%1.20f "
+        "dt=%1.20f: %s\n",
+        array_index, min_expiration_time, db::get<::Tags::Time>(box),
+        db::get<::Tags::TimeStepId>(box).step_time().value(),
+        db::get<::Tags::TimeStepId>(box).substep_time().value(),
+        db::get<::Tags::TimeStep>(box).value(), message);
+  };
+  debug_print("Start is_ready");
 
   for (auto& trigger_entry : events_and_triggers_) {
     if (trigger_entry.next_check != next_check_) {
+      debug_print("trigger_entry.next_check != next_check_, continue");
       continue;
     }
     if (not trigger_entry.is_triggered.has_value()) {
+      debug_print("not trigger_entry.is_triggered.has_value()");
       const auto is_triggered = trigger_entry.trigger->is_triggered(
           box, cache, array_index, component);
       if (not is_triggered.has_value()) {
+        debug_print("not is_triggered.has_value(), return NotReady");
         return TriggeringState::NotReady;
       }
 
@@ -177,24 +207,32 @@ EventsAndDenseTriggers::TriggeringState EventsAndDenseTriggers::is_ready(
     }
 
     if (not *trigger_entry.is_triggered) {
+      debug_print("not *trigger_entry.is_triggered, continue");
       continue;
     }
 
+    debug_print("checking ready events");
     for (; trigger_entry.num_events_ready < trigger_entry.events.size();
          ++trigger_entry.num_events_ready) {
       if (not trigger_entry.events[trigger_entry.num_events_ready]->is_ready(
               box, cache, array_index, component)) {
+        debug_print("event not ready, return NotReady");
         return TriggeringState::NotReady;
       }
     }
   }
 
+  debug_print("loop over triggers");
   for (auto& trigger_entry : events_and_triggers_) {
     if (trigger_entry.is_triggered != std::optional{true}) {
+      debug_print(
+          "trigger_entry.is_triggered != std::optional{true}, continue");
       continue;
     }
     for (const auto& event : trigger_entry.events) {
       if (event->needs_evolved_variables()) {
+        debug_print(
+            "event->needs_evolved_variables(), return NeedsEvolvedVariables");
         return TriggeringState::NeedsEvolvedVariables;
       }
     }
@@ -217,7 +255,31 @@ void EventsAndDenseTriggers::run_events(
                    Event>,
           get_tags<tmpl::_1>>>,
       db::is_compute_tag<tmpl::_1>>>;
+  auto debug_print = [&box, &array_index, &cache](const std::string& message) {
+    if (not is_zeroth_element(array_index)) {
+      return;
+    }
+    double min_expiration_time{std::numeric_limits<double>::max()};
+    const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+    if (not functions_of_time.empty()) {
+      for (const auto& [name, f_of_t] : functions_of_time) {
+        if (f_of_t->time_bounds()[1] < min_expiration_time) {
+          min_expiration_time = f_of_t->time_bounds()[1];
+        }
+      }
+    }
+    Parallel::printf(
+        "EventsAndDenseTriggers run_events: i=%s texp=%1.20f t=%1.20f "
+        "tstep=%1.20f "
+        "tsub=%1.20f "
+        "dt=%1.20f: %s\n",
+        array_index, min_expiration_time, db::get<::Tags::Time>(box),
+        db::get<::Tags::TimeStepId>(box).step_time().value(),
+        db::get<::Tags::TimeStepId>(box).substep_time().value(),
+        db::get<::Tags::TimeStep>(box).value(), message);
+  };
 
+  debug_print("Starting run_events");
   for (auto& trigger_entry : events_and_triggers_) {
     if (trigger_entry.is_triggered == std::optional{true}) {
       db::mutate<::evolution::Tags::PreviousTriggerTime>(
@@ -228,6 +290,8 @@ void EventsAndDenseTriggers::run_events(
                 trigger_entry.trigger->previous_trigger_time();
           });
       const auto observation_box = make_observation_box<compute_tags>(box);
+      debug_print(
+          "trigger_entry.is_triggered == std::optional{true}, running events");
       for (const auto& event : trigger_entry.events) {
         event->run(observation_box, cache, array_index, component);
       }
@@ -238,7 +302,9 @@ void EventsAndDenseTriggers::run_events(
                 std::numeric_limits<double>::signaling_NaN();
           });
     }
-    trigger_entry.is_triggered.reset();
+    // Outside above if statement
+    debug_print("trigger_entry.is_triggered = false");
+    trigger_entry.is_triggered = false;
   }
 }
 
@@ -250,22 +316,57 @@ bool EventsAndDenseTriggers::reschedule(
   ASSERT(initialized(), "Not initialized");
   ASSERT(not events_and_triggers_.empty(),
          "Should not be calling run_events with no triggers");
+  auto debug_print = [&box, &array_index, &cache](const std::string& message) {
+    if (not is_zeroth_element(array_index)) {
+      return;
+    }
+    double min_expiration_time{std::numeric_limits<double>::max()};
+    const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+    if (not functions_of_time.empty()) {
+      for (const auto& [name, f_of_t] : functions_of_time) {
+        if (f_of_t->time_bounds()[1] < min_expiration_time) {
+          min_expiration_time = f_of_t->time_bounds()[1];
+        }
+      }
+    }
+    Parallel::printf(
+        "EventsAndDenseTriggers reschedule: i=%s texp=%1.20f t=%1.20f "
+        "tstep=%1.20f "
+        "tsub=%1.20f "
+        "dt=%1.20f: %s\n",
+        array_index, min_expiration_time, db::get<::Tags::Time>(box),
+        db::get<::Tags::TimeStepId>(box).step_time().value(),
+        db::get<::Tags::TimeStepId>(box).substep_time().value(),
+        db::get<::Tags::TimeStep>(box).value(), message);
+  };
 
+  debug_print("Start reschedule");
   double new_next_check = before_.infinity();
   for (auto& trigger_entry : events_and_triggers_) {
     if (trigger_entry.next_check == next_check_) {
+      debug_print("trigger_entry.next_check == next_check_");
       const std::optional<double> next_check =
           trigger_entry.trigger->next_check_time(box, cache, array_index,
                                                  component);
       if (not next_check.has_value()) {
+        debug_print("not next_check.has_value(), return false");
         return false;
       }
       trigger_entry.next_check = *next_check;
       trigger_entry.num_events_ready = 0;
     }
+    // Outside above if statement
+    debug_print("trigger_entry.is_triggered.reset()");
+    trigger_entry.is_triggered.reset();
     if (before_(trigger_entry.next_check, new_next_check)) {
+      debug_print("before_(trigger_entry.next_check, new_next_check)");
       new_next_check = trigger_entry.next_check;
     }
+  }
+  if (is_zeroth_element(array_index)) {
+    Parallel::printf(
+        "EventsAndDenseTriggers reschedule: i=%s t=%1.20f next_check_=%1.20f\n",
+        array_index, db::get<::Tags::Time>(box), new_next_check);
   }
 
   next_check_ = new_next_check;
@@ -297,7 +398,7 @@ struct Options::create_from_yaml<evolution::EventsAndDenseTriggers> {
   using type = evolution::EventsAndDenseTriggers;
   template <typename Metavariables>
   static type create(const Options::Option& options) {
-    return type(options.parse_as<typename type::ConstructionType,
-                                 Metavariables>());
+    return type(
+        options.parse_as<typename type::ConstructionType, Metavariables>());
   }
 };
