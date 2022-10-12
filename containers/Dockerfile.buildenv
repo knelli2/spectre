@@ -39,6 +39,11 @@
 # someone who does. Since changes to this image effect our testing
 # infrastructure it is important all changes be carefully reviewed.
 
+# Kyle's build command:
+# docker buildx build --platform linux/amd64,linux/arm64 \
+#   --build-arg PARALLEL_MAKE_ARG=-j4 --target dev -t knelli/spectre_test:dev \
+#   -f ./Dockerfile.buildenv . --push
+
 FROM ubuntu:20.04 AS dev
 
 ARG PARALLEL_MAKE_ARG=-j2
@@ -100,13 +105,27 @@ RUN apt-get update -y \
 #   on CI. `nbconvert` is used to process ipynb files.
 # - We need `yapf` so the CI can check Python formatting. We use a specific
 # version of it in order to avoid formatting differences between versions.
+#
+# WARNING FOR ARM: Installing all these dependencies with pip (specifically
+# scipy, numpy, and matplotlib) takes a really long time (hours) when using
+# docker buildx to build the ARM architecture image on an AMD machine. This is
+# because we are emulating ARM on AMD which slows things down significantly in
+# general, but apparently *really* slows things down for python. Installing
+# things via the `deb`s seems to be much faster. See here:
+# https://stackoverflow.com/questions/70438392/why-does-my-buildx-dockerbuild-for-arm-takes-that-long
 RUN add-apt-repository universe \
     && apt-get update -y \
     && apt-get install -y python3-pip python-is-python3 \
     && pip3 --no-cache-dir install -U pip \
     && pip3 --no-cache-dir install pybind11~=2.6.1 \
-      numpy~=1.21.5 scipy h5py matplotlib \
-      coverxygen beautifulsoup4 pybtex pyyaml nbconvert \
+    && apt-get install -y python3-scipy \
+    && apt-get install -y python3-h5py \
+    && apt-get install -y python3-matplotlib \
+    && apt-get install -y python3-pybtex \
+    && apt-get install -y python3-nbconvert \
+    && apt-get install -y python3-numpy \
+    && pip3 --no-cache-dir install \
+      coverxygen beautifulsoup4 pyyaml \
     && pip3 --no-cache-dir install yapf==0.29.0
 
 # Add ruby gems and install coveralls using gem
@@ -164,7 +183,7 @@ RUN wget https://github.com/Libsharp/libsharp/archive/v1.0.0.tar.gz -O libsharp.
     && tar -xzf libsharp.tar.gz \
     && mv libsharp-* libsharp_build \
     && cd libsharp_build \
-    && sed -i 's/march=native/march=x86-64/' configure.ac \
+    # && sed -i 's/march=native/march=x86-64/' configure.ac \
     && autoconf \
     && ./configure --prefix=/usr/local --enable-pic --disable-openmp \
     && make $PARALLEL_MAKE_ARG \
@@ -174,14 +193,18 @@ RUN wget https://github.com/Libsharp/libsharp/archive/v1.0.0.tar.gz -O libsharp.
     && cd ../ \
     && rm -r libsharp*
 # - LibXSMM
-RUN wget https://github.com/hfp/libxsmm/archive/1.16.1.tar.gz -O libxsmm.tar.gz \
-    && tar -xzf libxsmm.tar.gz \
-    && mv libxsmm-* libxsmm \
+# WARNING FOR ARM: None of the libxsmm v1.XX release tags on GitHub support
+# building with ARM architecture. It says that libxsmm v2.0 will be the first
+# version to support it. For that reason, we grab the current `main` branch
+# which appears to support ARM arches. Need the PLATFORM=1 argument so make can
+# use the proper architecture.
+RUN git clone --single-branch --branch main --depth 1 \
+         https://github.com/libxsmm/libxsmm.git libxsmm \
     && cd libxsmm \
     && make $PARALLEL_MAKE_ARG PREFIX=/usr/local/ CXX=g++-9 CC=gcc-9 \
-        FC=gfortran-9 install \
+        FC=gfortran-9 PLATFORM=1 install \
     && cd .. \
-    && rm -rf libxsmm libxsmm.tar.gz
+    && rm -rf libxsmm
 # - Yaml-cpp
 RUN wget https://github.com/jbeder/yaml-cpp/archive/yaml-cpp-0.6.3.tar.gz -O yaml-cpp.tar.gz \
     && tar -xzf yaml-cpp.tar.gz \
@@ -231,12 +254,16 @@ RUN ln -s $(which clang++-10) /usr/local/bin/clang++ \
 # easier for people, and build with O2 to reduce build size.
 RUN wget https://raw.githubusercontent.com/sxs-collaboration/spectre/develop/support/Charm/v7.0.0.patch
 
+# Depending on ARM vs AMD, we have to build charm differently, s we need to know
+# which architecture we are on.
 RUN git clone --single-branch --branch v7.0.0 --depth 1 \
         https://github.com/UIUC-PPL/charm charm_7_0_0 \
+    && if [ "$(uname -m)" = "x86_64" ]; then export CHARM_ARCH_TYPE="multicore-linux-x86_64"; \
+       else export CHARM_ARCH_TYPE="multicore-linux-arm8"; fi \
     && cd /work/charm_7_0_0 \
     && git checkout v7.0.0 \
     && git apply /work/v7.0.0.patch \
-    && ./build LIBS multicore-linux-x86_64 gcc \
+    && ./build LIBS ${CHARM_ARCH_TYPE} gcc \
       ${PARALLEL_MAKE_ARG} -g -O2 --build-shared \
     && rm -r /work/charm_7_0_0/doc /work/charm_7_0_0/examples
 
@@ -247,7 +274,11 @@ RUN git clone --single-branch --branch v7.0.0 --depth 1 \
 # - Symlink gfortran-9 to gfortran so it we can just specify gfortran in CMake
 # - The singularity containers work better if the locale is set properly
 ENV SPECTRE_CONTAINER 0
-ENV CHARM_ROOT="/work/charm_7_0_0/multicore-linux-x86_64-gcc"
+# Docker doesn't allow you to set ENV variables from the result of a RUN
+# command, so we are stuck with making two ENV variables for the two different
+# architectures.
+ENV CHARM_ROOT_AMD="/work/charm_7_0_0/multicore-linux-x86_64-gcc"
+ENV CHARM_ROOT_ARM="/work/charm_7_0_0/multicore-linux-arm8-gcc"
 RUN ln -s $(which gfortran-9) /usr/local/bin/gfortran
 RUN apt-get update -y \
     && apt-get install -y locales language-pack-fi language-pack-en \
@@ -268,8 +299,10 @@ RUN wget http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz \
     && wget https://raw.githubusercontent.com/sxs-collaboration/spectre/develop/support/TeXLive/texlive.profile \
     && install-tl-*/install-tl -profile=texlive.profile \
     && rm -r install-tl-* texlive.profile install-tl.log \
-    && /work/texlive/bin/x86_64-linux/tlmgr install bibtex
-ENV PATH="${PATH}:/work/texlive/bin/x86_64-linux"
+# Different directory depending on architecture
+    && /work/texlive/bin/"$(uname -m)"-linux/tlmgr install bibtex
+# Add both so we don't have to worry
+ENV PATH="${PATH}:/work/texlive/bin/x86_64-linux:/work/texlive/bin/aarch64-linux"
 
 # Remove the apt-get cache in order to reduce image size
 RUN apt-get -y clean
@@ -317,7 +350,9 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.12.4/cmake-3.12.4
 # We build both Clang and GCC versions of Charm++ so that all our tests can
 # use the same build environment.
 WORKDIR /work/charm_7_0_0
-RUN ./build LIBS multicore-linux-x86_64 clang \
+RUN if [ "$(uname -m)" = "x86_64" ]; then export CHARM_ARCH_TYPE="multicore-linux-x86_64"; \
+       else export CHARM_ARCH_TYPE="multicore-linux-arm8"; fi \
+    && ./build LIBS ${CHARM_ARCH_TYPE} clang \
       ${PARALLEL_MAKE_ARG} -g -O2 --build-shared\
     && rm -rf /work/charm_7_0_0/doc /work/charm_7_0_0/examples
 
@@ -356,6 +391,7 @@ RUN apt-get update -y \
     && apt-get install -y vim emacs-nox ffmpeg curl
 
 # Install headless paraview so we can run pvserver in the container
+# This will need to change for ARM architecture...
 WORKDIR /work
 RUN wget -O paraview.tar.gz --no-check-certificate "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.10&type=binary&os=Linux&downloadFile=ParaView-5.10.1-osmesa-MPI-Linux-Python3.9-x86_64.tar.gz" \
   && tar -xzf paraview.tar.gz \
@@ -375,12 +411,14 @@ WORKDIR /work
 COPY . spectre/
 
 RUN mkdir spectre/build && cd spectre/build \
+  && if [ "$(uname -m)" = "x86_64" ]; then export CHARM_ARCH_TYPE="multicore-linux-x86_64"; \
+     else export CHARM_ARCH_TYPE="multicore-linux-arm8"; fi \
   && cmake \
     -D CMAKE_C_COMPILER=clang-10 \
     -D CMAKE_CXX_COMPILER=clang++-10 \
     -D CMAKE_Fortran_COMPILER=gfortran-9 \
     -D OVERRIDE_ARCH=x86-64 \
-    -D CHARM_ROOT=/work/charm_7_0_0/multicore-linux-x86_64-gcc \
+    -D CHARM_ROOT=/work/charm_7_0_0/${CHARM_ARCH_TYPE}-gcc \
     -D CMAKE_BUILD_TYPE=Release \
     -D DEBUG_SYMBOLS=OFF \
     -D BUILD_PYTHON_BINDINGS=ON \
