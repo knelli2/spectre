@@ -957,6 +957,17 @@ struct FromGlobalCache : CacheTag, db::ReferenceTag {
   using argument_tags = tmpl::list<parent_tag>;
 };
 }  // namespace Tags
+
+/// \ingroup ParallelGroup
+/// \brief A mutator intended to be used in a Parallel::mutate call where you
+/// want to just the value of the tag in the GlobalCache to something else.
+template <typename Tag>
+struct Mutator {
+  static void apply(const gsl::not_null<typename Tag::type*>& tag_value,
+                    const typename Tag::type& new_value) {
+    *tag_value = new_value;
+  }
+};
 }  // namespace Parallel
 
 namespace PUP {
