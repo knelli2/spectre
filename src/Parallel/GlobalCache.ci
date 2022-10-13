@@ -37,6 +37,9 @@ module GlobalCache {
     template <typename GlobalCacheTag, typename Function, typename... Args>
     entry void mutate(std::tuple<Args...> & args);
     entry void compute_size_for_memory_monitor(double time);
+    entry void set_resource_info(
+        const std::unordered_set<size_t>& procs_to_ignore,
+        const std::set<size_t>& procs_with_elements);
   }
   }  // namespace Parallel
 }

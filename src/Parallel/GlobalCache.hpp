@@ -43,6 +43,11 @@
 namespace Parallel {
 template <typename Metavariables>
 struct GlobalCache;
+namespace Tags {
+struct ProcsToIgnore;
+struct ProcsWithElements;
+struct FirstProcWithElements;
+}  // namespace Tags
 }  // namespace Parallel
 namespace mem_monitor {
 template <typename Metavariables>
@@ -467,6 +472,15 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
   /// framework. Trying to do either of these will result in an ERROR.
   void compute_size_for_memory_monitor(const double time);
 
+  /// Entry method that will set the values of the following tags (if they
+  /// exist) with the appropriate resource info that was passed in:
+  ///
+  /// - Parallel::Tags::ProcsToIgnore
+  /// - Parallel::Tags::ProcsWithElements
+  /// - Parallel::Tags::FirstProcWithElements
+  void set_resource_info(const std::unordered_set<size_t>& procs_to_ignore,
+                         const std::set<size_t>& procs_with_elements);
+
   /// Retrieve the proxy to the global cache
   proxy_type get_this_proxy();
 
@@ -659,6 +673,26 @@ void GlobalCache<Metavariables>::compute_size_for_memory_monitor(
         "GlobalCache::compute_size_for_memory_monitor can only be called if "
         "the MemoryMonitor is in the component list in the metavariables.\n");
   }
+}
+
+template <typename Metavariables>
+void GlobalCache<Metavariables>::set_resource_info(
+    const std::unordered_set<size_t>& procs_to_ignore,
+    const std::set<size_t>& procs_with_elements) {
+  if constexpr (tmpl::list_contains_v<tags_list, Tags::ProcsToIgnore>) {
+    tuples::get<Tags::ProcsToIgnore>(const_global_cache_) = procs_to_ignore;
+  }
+  if constexpr (tmpl::list_contains_v<tags_list, Tags::ProcsWithElements>) {
+    tuples::get<Tags::ProcsWithElements>(const_global_cache_) =
+        procs_with_elements;
+  }
+  if constexpr (tmpl::list_contains_v<tags_list, Tags::FirstProcWithElements>) {
+    tuples::get<Tags::FirstProcWithElements>(const_global_cache_) =
+        *std::min_element(procs_with_elements.begin(),
+                          procs_with_elements.end());
+  }
+  (void)procs_to_ignore;
+  (void)procs_with_elements;
 }
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
