@@ -3,7 +3,11 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <set>
 #include <string>
+#include <unordered_set>
 
 #include "DataStructures/DataBox/Tag.hpp"
 #include "Options/Options.hpp"
@@ -62,6 +66,37 @@ struct SingletonInfo : db::SimpleTag {
       const Parallel::ResourceInfo<Metavariables>& resource_info) {
     return resource_info.template get_singleton_info<ParallelComponent>();
   }
+};
+
+/// \ingroup ParallelGroup
+/// Tag that stores all the processors (cores) that should not have elements on
+/// them.
+struct ProcsToIgnore : db::SimpleTag {
+  using type = std::unordered_set<size_t>;
+
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<>;
+  static type create_from_options() { return type{}; }
+};
+
+/// \ingroup ParallelGroup
+/// First processor (core) with elements.
+struct FirstProcWithElements : db::SimpleTag {
+  using type = size_t;
+
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<>;
+  static type create_from_options() { return type{}; }
+};
+
+/// \ingroup ParallelGroup
+/// All processors (cores) with elements
+struct ProcsWithElements : db::SimpleTag {
+  using type = std::set<size_t>;
+
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<>;
+  static type create_from_options() { return type{}; }
 };
 }  // namespace Tags
 }  // namespace Parallel

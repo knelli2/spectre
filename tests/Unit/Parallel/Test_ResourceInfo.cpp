@@ -185,6 +185,11 @@ void test_tags() {
   TestHelpers::db::test_simple_tag<
       Tags::SingletonInfo<FakeSingleton<metavars, 0>>>("FakeSingleton0");
   TestHelpers::db::test_simple_tag<Tags::AvoidGlobalProc0>("AvoidGlobalProc0");
+  TestHelpers::db::test_simple_tag<Tags::ProcsToIgnore>("ProcsToIgnore");
+  TestHelpers::db::test_simple_tag<Tags::FirstProcWithElements>(
+      "FirstProcWithElements");
+  TestHelpers::db::test_simple_tag<Tags::ProcsWithElements>(
+      "ProcsWithElements");
 
   Parallel::MutableGlobalCache<metavars> mutable_cache{};
   Parallel::GlobalCache<metavars> cache{{}, &mutable_cache};
@@ -201,6 +206,11 @@ void test_tags() {
       FakeSingleton<metavars, 0>>::create_from_options<metavars>(resource_info);
   CHECK(info_holder.proc() == tag_info_holder.proc());
   CHECK(info_holder.is_exclusive() == tag_info_holder.is_exclusive());
+
+  CHECK(Tags::ProcsToIgnore::create_from_options() ==
+        std::unordered_set<size_t>{});
+  CHECK(Tags::ProcsWithElements::create_from_options() == std::set<size_t>());
+  CHECK(Tags::FirstProcWithElements::create_from_options() == size_t{});
 }
 
 void test_single_core() {
