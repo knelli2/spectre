@@ -426,6 +426,9 @@ struct ResourceInfo {
   /// `allocate_array` function of the array component
   const std::unordered_set<size_t>& procs_to_ignore() const;
 
+  /// Returns a `std::set<size_t>` that has all processors with elements on them
+  const std::set<size_t>& procs_with_elements() const;
+
   /// Returns the proc that the singleton `Component` should be placed on.
   template <typename Component>
   size_t proc_for() const;
@@ -462,6 +465,7 @@ struct ResourceInfo {
   std::unordered_multiset<size_t> requested_nonexclusive_procs_{};
   // Procs that are exclusive. These may or may not be specifically requested
   std::unordered_set<size_t> procs_to_ignore_{};
+  std::set<size_t> procs_with_elements_{};
   // For each singleton (whether it has a SingletonInfo or not), maps whether
   // it's exclusive and what proc it is on.
   tuples::tagged_tuple_from_typelist<local_tags> singleton_map_{};
@@ -611,6 +615,15 @@ const std::unordered_set<size_t>& ResourceInfo<Metavariables>::procs_to_ignore()
     singleton_map_not_built();
   }
   return procs_to_ignore_;
+}
+
+template <typename Metavariables>
+const std::set<size_t>& ResourceInfo<Metavariables>::procs_with_elements()
+    const {
+  if (not singleton_map_has_been_set_) {
+    singleton_map_not_built();
+  }
+  return procs_with_elements_;
 }
 
 template <typename Metavariables>
@@ -764,6 +777,13 @@ break_auto_exclusive_loops:
          "Not all auto exclusive singletons have been allocated. The remaining "
          "number of auto exclusive singletons to be allocated is "
              << alg::accumulate(auto_exclusive_singletons_on_each_node, 0_st));
+
+  // procs_to_ignore_ is now complete. Now construct procs_with_elements_
+  for (size_t i = 0; i < num_procs; i++) {
+    if (procs_to_ignore_.find(i) == procs_to_ignore_.end()) {
+      procs_with_elements_.insert(i);
+    }
+  }
 
   // At this point, all auto exclusive singletons have been allocated. Now the
   // only singletons left are auto non-exclusive. We use vectors of

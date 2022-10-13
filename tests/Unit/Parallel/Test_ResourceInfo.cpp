@@ -70,8 +70,7 @@ struct MetavariablesAvoidGlobalProc0 {
       tmpl::list<FakeSingletonAvoidGlobalProc0<MetavariablesAvoidGlobalProc0>>;
 };
 
-struct EmptyMetavars {
-};
+struct EmptyMetavars {};
 
 template <size_t Index>
 using fake_singleton = FakeSingleton<EmptyMetavars, Index>;
@@ -425,6 +424,21 @@ void test_errors() {
                 "  FakeSingleton0:\n"
                 "    Proc: 0\n"
                 "    Exclusive: false\n");
+        [[maybe_unused]] const auto& procs_to_ignore =
+            resource_info.procs_with_elements();
+      })(),
+      Catch::Contains("The singleton map has not been built yet. You must call "
+                      "build_singleton_map() before you call this function."));
+
+  CHECK_THROWS_WITH(
+      ([]() {
+        auto resource_info =
+            TestHelpers::test_option_tag<OptionTags::ResourceInfo<metavars>>(
+                "AvoidGlobalProc0: true\n"
+                "Singletons:\n"
+                "  FakeSingleton0:\n"
+                "    Proc: 0\n"
+                "    Exclusive: false\n");
         [[maybe_unused]] const auto singleton_info =
             resource_info.get_singleton_info<FakeSingleton<metavars, 0>>();
       })(),
@@ -465,8 +479,10 @@ void check_resource_info(
   auto resource_info =
       create_resource_info<metavars>(avoid_global_proc_0, singletons);
   resource_info.build_singleton_map(cache);
+  const size_t num_procs = Parallel::number_of_procs<size_t>(cache);
 
   std::unordered_set<size_t> expected_exclusive_procs{};
+  std::set<size_t> expected_procs_with_elements{};
   for (auto& exclusive_and_proc : expected_singletons) {
     if (exclusive_and_proc.first) {
       expected_exclusive_procs.insert(
@@ -478,13 +494,26 @@ void check_resource_info(
     expected_exclusive_procs.insert(0);
   }
 
+  // Construct the expected procs with elements slightly differently than inside
+  // ResourceInfo just to check we did it correctly. They should be equivalent
+  for (size_t i = 0; i < num_procs; i++) {
+    expected_procs_with_elements.insert(i);
+  }
+  for (size_t proc : expected_exclusive_procs) {
+    expected_procs_with_elements.erase(proc);
+  }
+
   const auto& procs_to_ignore = resource_info.procs_to_ignore();
+  const auto& procs_with_elements = resource_info.procs_with_elements();
 
   CHECK(resource_info.avoid_global_proc_0() == avoid_global_proc_0);
   CHECK(procs_to_ignore.size() == expected_exclusive_procs.size());
   for (auto& exclusive_proc : expected_exclusive_procs) {
     CHECK(procs_to_ignore.count(exclusive_proc) == 1);
   }
+  CHECK(procs_with_elements.size() ==
+        num_procs - expected_exclusive_procs.size());
+  CHECK(procs_with_elements == expected_procs_with_elements);
 
   tmpl::for_each<tmpl::range<size_t, 0, num_singletons>>(
       [&expected_singletons, &resource_info](const auto size_holder) {
