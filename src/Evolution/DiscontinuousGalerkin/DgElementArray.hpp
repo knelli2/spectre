@@ -56,7 +56,8 @@ struct DgElementArray {
 
   using const_global_cache_tags = tmpl::list<
       domain::Tags::Domain<volume_dim>, Parallel::Tags::ProcsToIgnore,
-      Parallel::Tags::ProcsWithElements, Parallel::Tags::FirstProcWithElements>;
+      Parallel::Tags::ProcsWithElements, Parallel::Tags::FirstProcWithElements,
+      Parallel::Tags::ResourceInfo<Metavariables>>;
 
   using array_allocation_tags =
       tmpl::list<domain::Tags::InitialRefinementLevels<volume_dim>>;

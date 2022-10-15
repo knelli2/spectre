@@ -474,8 +474,7 @@ Main<Metavariables>::Main(CkArgMsg* msg) {
   // GlobalCache before we pass it to any other parallel component rather than
   // having the tags in the MutableGlobalCache and using a mutate call to set
   // them.
-  global_cache_proxy_.set_resource_info(resource_info_.procs_to_ignore(),
-                                        resource_info_.procs_with_elements());
+  global_cache_proxy_.set_resource_info(resource_info_);
 
   // Now that the singleton map has been built, we have to replace the
   // ResourceInfo that was created from options with the one that has all the

@@ -206,7 +206,8 @@ struct TestMetavariables {
   using const_global_cache_tags =
       tmpl::list<Parallel::Tags::ProcsToIgnore,
                  Parallel::Tags::ProcsWithElements,
-                 Parallel::Tags::FirstProcWithElements>;
+                 Parallel::Tags::FirstProcWithElements,
+                 Parallel::Tags::ResourceInfo<TestMetavariables>>;
   using component_list =
       tmpl::list<SingletonParallelComponent<TestMetavariables>,
                  ArrayParallelComponent<TestMetavariables>,
@@ -292,10 +293,9 @@ void TestArrayChare<Metavariables>::run_test_two() {
           *Parallel::local_branch(global_cache_proxy_),
           [&callback](
               const double& weight_l) -> std::unique_ptr<Parallel::Callback> {
-            return weight_l == 150
-                       ? std::unique_ptr<Parallel::Callback>{}
-                       : std::unique_ptr<Parallel::Callback>(
-                             new UseCkCallbackAsCallback(callback));
+            return weight_l == 150 ? std::unique_ptr<Parallel::Callback>{}
+                                   : std::unique_ptr<Parallel::Callback>(
+                                         new UseCkCallbackAsCallback(callback));
           })) {
     auto& local_cache = *Parallel::local_branch(global_cache_proxy_);
     SPECTRE_PARALLEL_REQUIRE(150 == Parallel::get<weight>(local_cache));
@@ -389,12 +389,14 @@ template <typename Metavariables>
 void Test_GlobalCache<Metavariables>::run_single_core_test() {
   using const_tag_list =
       typename Parallel::get_const_global_cache_tags<TestMetavariables>;
-  static_assert(std::is_same_v<const_tag_list,
-                               tmpl::list<Parallel::Tags::ProcsToIgnore,
-                                          Parallel::Tags::ProcsWithElements,
-                                          Parallel::Tags::FirstProcWithElements,
-                                          name, age, height, shape_of_nametag>>,
-                "Wrong const_tag_list in GlobalCache test");
+  static_assert(
+      std::is_same_v<const_tag_list,
+                     tmpl::list<Parallel::Tags::ProcsToIgnore,
+                                Parallel::Tags::ProcsWithElements,
+                                Parallel::Tags::FirstProcWithElements,
+                                Parallel::Tags::ResourceInfo<TestMetavariables>,
+                                name, age, height, shape_of_nametag>>,
+      "Wrong const_tag_list in GlobalCache test");
 
   using mutable_tag_list =
       typename Parallel::get_mutable_global_cache_tags<TestMetavariables>;
@@ -403,8 +405,9 @@ void Test_GlobalCache<Metavariables>::run_single_core_test() {
       "Wrong mutable_tag_list in GlobalCache test");
 
   tuples::tagged_tuple_from_typelist<const_tag_list> const_data_to_be_cached(
-      std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{}, "Nobody", 178,
-      2.2, std::make_unique<Square>());
+      std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{},
+      Parallel::ResourceInfo<Metavariables>{}, "Nobody", 178, 2.2,
+      std::make_unique<Square>());
   tuples::tagged_tuple_from_typelist<mutable_tag_list>
       mutable_data_to_be_cached(160, std::make_unique<Arthropod>(6),
                                 "joe@somewhere.com");
@@ -454,8 +457,9 @@ void Test_GlobalCache<Metavariables>::run_single_core_test() {
 
   Parallel::GlobalCache<TestMetavariables> cache_with_serialized_mutable_cache(
       tuples::tagged_tuple_from_typelist<const_tag_list>{
-          std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{}, "Nobody",
-          178, 2.2, std::make_unique<Square>()},
+          std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{},
+          Parallel::ResourceInfo<Metavariables>{}, "Nobody", 178, 2.2,
+          std::make_unique<Square>()},
       &serialized_and_deserialized_mutable_cache);
   SPECTRE_PARALLEL_REQUIRE(
       150 == Parallel::get<weight>(cache_with_serialized_mutable_cache));
@@ -513,12 +517,14 @@ Test_GlobalCache<Metavariables>::Test_GlobalCache(CkArgMsg*
 
   using const_tag_list =
       typename Parallel::get_const_global_cache_tags<TestMetavariables>;
-  static_assert(std::is_same_v<const_tag_list,
-                               tmpl::list<Parallel::Tags::ProcsToIgnore,
-                                          Parallel::Tags::ProcsWithElements,
-                                          Parallel::Tags::FirstProcWithElements,
-                                          name, age, height, shape_of_nametag>>,
-                "Wrong const_tag_list in GlobalCache test");
+  static_assert(
+      std::is_same_v<const_tag_list,
+                     tmpl::list<Parallel::Tags::ProcsToIgnore,
+                                Parallel::Tags::ProcsWithElements,
+                                Parallel::Tags::FirstProcWithElements,
+                                Parallel::Tags::ResourceInfo<TestMetavariables>,
+                                name, age, height, shape_of_nametag>>,
+      "Wrong const_tag_list in GlobalCache test");
   static_assert(
       Parallel::is_in_const_global_cache<TestMetavariables, shape_of_nametag>);
   static_assert(
@@ -534,8 +540,9 @@ Test_GlobalCache<Metavariables>::Test_GlobalCache(CkArgMsg*
                                                shape_of_nametag_base>);
 
   tuples::tagged_tuple_from_typelist<const_tag_list> const_data_to_be_cached(
-      std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{}, "Nobody", 178,
-      2.2, std::make_unique<Square>());
+      std::unordered_set<size_t>{}, std::set<size_t>{}, size_t{},
+      Parallel::ResourceInfo<Metavariables>{}, "Nobody", 178, 2.2,
+      std::make_unique<Square>());
   global_cache_proxy_ = Parallel::CProxy_GlobalCache<TestMetavariables>::ckNew(
       const_data_to_be_cached, mutable_global_cache_proxy_, std::nullopt,
       &mutable_global_cache_dependency);
@@ -550,24 +557,15 @@ Test_GlobalCache<Metavariables>::Test_GlobalCache(CkArgMsg*
 
   resource_info.build_singleton_map(*local_cache);
 
-  local_cache->set_resource_info(resource_info.procs_to_ignore(),
-                                 resource_info.procs_with_elements());
+  local_cache->set_resource_info(resource_info);
 
-  const auto& procs_to_ignore =
-      Parallel::get<Parallel::Tags::ProcsToIgnore>(*local_cache);
-  const auto& procs_with_elements =
-      Parallel::get<Parallel::Tags::ProcsWithElements>(*local_cache);
-  const auto& first_proc_with_elements =
-      Parallel::get<Parallel::Tags::FirstProcWithElements>(*local_cache);
+  const auto& cache_resource_info =
+      Parallel::get<Parallel::Tags::ResourceInfo<Metavariables>>(*local_cache);
 
-  const auto& expected_procs_with_elements =
-      resource_info.procs_with_elements();
-  SPECTRE_PARALLEL_REQUIRE(procs_to_ignore == resource_info.procs_to_ignore());
-  SPECTRE_PARALLEL_REQUIRE(procs_with_elements == expected_procs_with_elements);
-  SPECTRE_PARALLEL_REQUIRE(
-      first_proc_with_elements ==
-      *std::min_element(expected_procs_with_elements.begin(),
-                        expected_procs_with_elements.end()));
+  SPECTRE_PARALLEL_REQUIRE(cache_resource_info.procs_to_ignore() ==
+                           resource_info.procs_to_ignore());
+  SPECTRE_PARALLEL_REQUIRE(cache_resource_info.procs_with_elements() ==
+                           resource_info.procs_with_elements());
 
   CkEntryOptions global_cache_dependency;
   global_cache_dependency.setGroupDepID(global_cache_proxy_.ckGetGroupID());
@@ -605,11 +603,11 @@ SPECTRE_TEST_CASE("Unit.Parallel.MutableGlobalCache.NullptrConstructError",
 // --------- registration stuff below -------
 
 PUPable_def(UseCkCallbackAsCallback)
-// clang-tidy: possibly throwing constructor static storage
-// clang-tidy: false positive: redundant declaration
-PUP::able::PUP_ID Triangle::my_PUP_ID = 0;   // NOLINT
-PUP::able::PUP_ID Square::my_PUP_ID = 0;     // NOLINT
-PUP::able::PUP_ID Arthropod::my_PUP_ID = 0;  // NOLINT
+    // clang-tidy: possibly throwing constructor static storage
+    // clang-tidy: false positive: redundant declaration
+    PUP::able::PUP_ID Triangle::my_PUP_ID = 0;  // NOLINT
+PUP::able::PUP_ID Square::my_PUP_ID = 0;        // NOLINT
+PUP::able::PUP_ID Arthropod::my_PUP_ID = 0;     // NOLINT
 
 static const std::vector<void (*)()> charm_init_node_funcs{
     &setup_error_handling, &setup_memory_allocation_failure_reporting};

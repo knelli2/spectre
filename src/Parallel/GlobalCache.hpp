@@ -47,6 +47,8 @@ namespace Tags {
 struct ProcsToIgnore;
 struct ProcsWithElements;
 struct FirstProcWithElements;
+template <typename Metavariables>
+struct ResourceInfo;
 }  // namespace Tags
 }  // namespace Parallel
 namespace mem_monitor {
@@ -478,8 +480,8 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
   /// - Parallel::Tags::ProcsToIgnore
   /// - Parallel::Tags::ProcsWithElements
   /// - Parallel::Tags::FirstProcWithElements
-  void set_resource_info(const std::unordered_set<size_t>& procs_to_ignore,
-                         const std::set<size_t>& procs_with_elements);
+  template <typename ResourceInfoObject>
+  void set_resource_info(const ResourceInfoObject& resource_info);
 
   /// Retrieve the proxy to the global cache
   proxy_type get_this_proxy();
@@ -676,23 +678,15 @@ void GlobalCache<Metavariables>::compute_size_for_memory_monitor(
 }
 
 template <typename Metavariables>
+template <typename ResourceInfoObject>
 void GlobalCache<Metavariables>::set_resource_info(
-    const std::unordered_set<size_t>& procs_to_ignore,
-    const std::set<size_t>& procs_with_elements) {
-  if constexpr (tmpl::list_contains_v<tags_list, Tags::ProcsToIgnore>) {
-    tuples::get<Tags::ProcsToIgnore>(const_global_cache_) = procs_to_ignore;
+    const ResourceInfoObject& resource_info) {
+  if constexpr (tmpl::list_contains_v<
+                    tags_list, Parallel::Tags::ResourceInfo<Metavariables>>) {
+    tuples::get<Tags::ResourceInfo<Metavariables>>(const_global_cache_) =
+        resource_info;
   }
-  if constexpr (tmpl::list_contains_v<tags_list, Tags::ProcsWithElements>) {
-    tuples::get<Tags::ProcsWithElements>(const_global_cache_) =
-        procs_with_elements;
-  }
-  if constexpr (tmpl::list_contains_v<tags_list, Tags::FirstProcWithElements>) {
-    tuples::get<Tags::FirstProcWithElements>(const_global_cache_) =
-        *std::min_element(procs_with_elements.begin(),
-                          procs_with_elements.end());
-  }
-  (void)procs_to_ignore;
-  (void)procs_with_elements;
+  (void)resource_info;
 }
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop

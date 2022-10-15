@@ -98,5 +98,14 @@ struct ProcsWithElements : db::SimpleTag {
   using option_tags = tmpl::list<>;
   static type create_from_options() { return type{}; }
 };
+
+template <typename Metavariables>
+struct ResourceInfo : db::SimpleTag {
+  using type = Parallel::ResourceInfo<Metavariables>;
+
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<>;
+  static type create_from_options() { return type{}; }
+};
 }  // namespace Tags
 }  // namespace Parallel
