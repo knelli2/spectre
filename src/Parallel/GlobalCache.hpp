@@ -23,6 +23,7 @@
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/PupStlCpp17.hpp"
+#include "Parallel/ResourceInfo.hpp"
 #include "Parallel/Serialize.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
@@ -480,8 +481,8 @@ class GlobalCache : public CBase_GlobalCache<Metavariables> {
   /// - Parallel::Tags::ProcsToIgnore
   /// - Parallel::Tags::ProcsWithElements
   /// - Parallel::Tags::FirstProcWithElements
-  template <typename ResourceInfoObject>
-  void set_resource_info(const ResourceInfoObject& resource_info);
+  void set_resource_info(
+      const Parallel::ResourceInfo<Metavariables>& resource_info);
 
   /// Retrieve the proxy to the global cache
   proxy_type get_this_proxy();
@@ -678,9 +679,8 @@ void GlobalCache<Metavariables>::compute_size_for_memory_monitor(
 }
 
 template <typename Metavariables>
-template <typename ResourceInfoObject>
 void GlobalCache<Metavariables>::set_resource_info(
-    const ResourceInfoObject& resource_info) {
+    const Parallel::ResourceInfo<Metavariables>& resource_info) {
   if constexpr (tmpl::list_contains_v<
                     tags_list, Parallel::Tags::ResourceInfo<Metavariables>>) {
     tuples::get<Tags::ResourceInfo<Metavariables>>(const_global_cache_) =

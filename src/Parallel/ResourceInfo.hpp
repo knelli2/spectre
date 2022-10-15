@@ -446,7 +446,8 @@ struct ResourceInfo {
   /// proc_for().
   ///
   /// This function should only be called once.
-  void build_singleton_map(const Parallel::GlobalCache<Metavariables>& cache);
+  template <typename Cache>
+  void build_singleton_map(const Cache& cache);
 
  private:
   void singleton_map_not_built() const {
@@ -636,8 +637,8 @@ size_t ResourceInfo<Metavariables>::proc_for() const {
 }
 
 template <typename Metavariables>
-void ResourceInfo<Metavariables>::build_singleton_map(
-    const Parallel::GlobalCache<Metavariables>& cache) {
+template <typename Cache>
+void ResourceInfo<Metavariables>::build_singleton_map(const Cache& cache) {
   const size_t num_procs = Parallel::number_of_procs<size_t>(cache);
   const size_t num_nodes = Parallel::number_of_nodes<size_t>(cache);
 
