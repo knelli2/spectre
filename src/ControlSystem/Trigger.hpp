@@ -191,17 +191,13 @@ class Trigger : public DenseTrigger {
     }
 
     double next_measurement_time;
-    // Just take the average of the two things we are comparing. They'll always
-    // be super close
-    const double scale =
-        0.5 * (calculated_next_measurement + min_fot_expr_time);
     // To avoid roundoff differences between expiration times and when
     // measurements are supposed to happen, if the next measurement is within
     // roundoff of the current expiration time, use the exact value of the
     // expiration time as the measurement time.
     if (equal_within_roundoff(calculated_next_measurement, min_fot_expr_time,
                               std::numeric_limits<double>::epsilon() * 100.0,
-                              scale)) {
+                              0.0)) {
       next_measurement_time = min_fot_expr_time;
     } else {
       next_measurement_time = calculated_next_measurement;
