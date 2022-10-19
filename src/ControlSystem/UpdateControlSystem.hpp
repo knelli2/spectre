@@ -22,6 +22,8 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace domain::Tags {
 struct FunctionsOfTime;
 }  // namespace domain::Tags
@@ -197,6 +199,19 @@ struct UpdateControlSystem {
     const double new_measurement_expiration_time = measurement_expiration_time(
         time, old_measurement_timescale, new_measurement_timescale,
         measurements_per_update);
+
+    Parallel::printf(
+        "Time = %.16f, Name = %s\n"
+        " old_measurement_timescale = %s\n"
+        " new_measurement_timescale = %s\n"
+        " old_fot_expr_time = %.16f\n"
+        " new_fot_expr_time = %.16f\n"
+        " old_measure_expr_time = %.16f\n"
+        " new_measure_expr_time = %.16f\n",
+        time, function_of_time_name, old_measurement_timescale,
+        new_measurement_timescale, current_fot_expiration_time,
+        new_fot_expiration_time, current_measurement_expiration_time,
+        new_measurement_expiration_time);
 
     Parallel::mutate<::domain::Tags::FunctionsOfTime, UpdateFunctionOfTime>(
         cache, function_of_time_name, current_fot_expiration_time,
