@@ -91,13 +91,7 @@ struct Initialize {
             const gsl::not_null<::Averager<deriv_order - 1>*> averager,
             const gsl::not_null<int*> current_number_of_measurements) {
           averager->assign_time_between_measurements(measurement_timescale);
-          // We set this to -1 because we technically haven't updated yet.
-          // current_number_of_measurements should be 0 *after* an update. The
-          // initial time is considered an update time, but we haven't actually
-          // found the horizons yet and had the info sent to the control system.
-          // So we set this to -1 so *after* the first horizon find it's at 0.
-          // Doing it this way is consistent with the behavior in SpEC.
-          *current_number_of_measurements = -1;
+          *current_number_of_measurements = 0;
         });
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};

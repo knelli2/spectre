@@ -177,20 +177,26 @@ struct UpdateControlSystem {
 
     const auto& measurement_timescales =
         Parallel::get<Tags::MeasurementTimescales>(cache);
+    const auto& measurement_timescale =
+        measurement_timescales.at(function_of_time_name);
     const double current_fot_expiration_time =
         function_of_time->time_bounds()[1];
     const double current_measurement_expiration_time =
-        measurement_timescales.at(function_of_time_name)->time_bounds()[1];
+        measurement_timescale->time_bounds()[1];
+    const DataVector old_measurement_timescale =
+        measurement_timescale->func(time)[0];
 
     // Begin step 8
     // Calculate the next expiration times for both the functions of time and
     // the measurement timescales based on the current time. Then, actually
     // update the functions of time and measurement timescales
     const double new_fot_expiration_time = function_of_time_expiration_time(
-        time, new_measurement_timescale, measurements_per_update);
+        time, old_measurement_timescale, new_measurement_timescale,
+        measurements_per_update);
 
     const double new_measurement_expiration_time = measurement_expiration_time(
-        time, new_measurement_timescale, measurements_per_update);
+        time, old_measurement_timescale, new_measurement_timescale,
+        measurements_per_update);
 
     Parallel::mutate<::domain::Tags::FunctionsOfTime, UpdateFunctionOfTime>(
         cache, function_of_time_name, current_fot_expiration_time,

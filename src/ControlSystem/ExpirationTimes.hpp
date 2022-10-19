@@ -75,7 +75,8 @@ std::unordered_map<std::string, double> initial_expiration_times(
  * time.
  */
 double function_of_time_expiration_time(
-    const double time, const DataVector& measurement_timescales,
+    const double time, const DataVector& old_measurement_timescales,
+    const DataVector& new_measurement_timescales,
     const int measurements_per_update);
 
 /*!
@@ -110,6 +111,7 @@ double function_of_time_expiration_time(
  * measurement (i.e. guaranteed to be between the last two measurements).
  */
 double measurement_expiration_time(const double time,
-                                   const DataVector& measurement_timescales,
+                                   const DataVector& old_measurement_timescales,
+                                   const DataVector& new_measurement_timescales,
                                    const int measurements_per_update);
 }  // namespace control_system
