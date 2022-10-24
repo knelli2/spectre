@@ -163,13 +163,13 @@ struct UpdateControlSystem {
     const double time_offset_0th =
         averager.using_average_0th_deriv_of_q() ? time_offset : 0.0;
 
-    tuner.update_timescale(q_and_dtq);
-
     // Calculate the control signal which will be used to update the highest
     // derivative of the FunctionOfTime
     const DataVector control_signal =
         controller(time, current_timescale, opt_avg_values.value(),
                    time_offset_0th, time_offset);
+
+    tuner.update_timescale(q_and_dtq);
 
     // Begin step 7
     // Calculate new measurement timescales with updated damping timescales
