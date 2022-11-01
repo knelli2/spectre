@@ -55,7 +55,10 @@ std::unordered_map<std::string, double> initial_expiration_times(
 
         const double update_fraction = controller.get_update_fraction();
         const double curr_timescale = min(tuner.current_timescale());
-        const double initial_expiration_time = update_fraction * curr_timescale;
+        const double measure_timescale =
+            0.25 * update_fraction * curr_timescale;
+        const double initial_expiration_time =
+            3 * measure_timescale + 0.1 * measure_timescale;
         initial_expiration_times[name] =
             initial_time + std::max(initial_time_step, initial_expiration_time);
       };

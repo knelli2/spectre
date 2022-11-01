@@ -119,9 +119,8 @@ struct MeasurementTimescales : db::SimpleTag {
                 std::max(initial_time_step, measurement_timescales[i]);
           }
 
-          double expr_time = measurement_expiration_time(
-              initial_time, DataVector{measurement_timescales.size(), 0.0},
-              measurement_timescales, measurements_per_update);
+          double expr_time = initial_time + 3.0 * min(measurement_timescales) +
+                             0.05 * min(measurement_timescales);
 
           // If we are reading this function of time in from a file, set the
           // measurement timescales to be infinity, and to never expire.
