@@ -218,7 +218,7 @@ BinaryCompactObject::BinaryCompactObject(
   if (need_cube_to_sphere_transition_) {
     add_outer_region("CubedShell");  // 10 blocks
   }
-  add_outer_region("OuterShell");         // 10 blocks
+  add_outer_region("OuterShell");  // 10 blocks
   if (not object_A_.is_excised()) {
     add_object_interior("ObjectA");  // 1 block
   }
@@ -298,9 +298,12 @@ BinaryCompactObject::BinaryCompactObject(
 BinaryCompactObject::BinaryCompactObject(
     double initial_time, double expansion_map_outer_boundary,
     double initial_expansion, double initial_expansion_velocity,
-    double asymptotic_velocity_outer_boundary,
+    double initial_expansion_accel, double asymptotic_velocity_outer_boundary,
     double decay_timescale_outer_boundary_velocity,
+    std::array<double, 4> initial_quaternion,
     std::array<double, 3> initial_angular_velocity,
+    std::array<double, 3> initial_angular_accel,
+    std::array<double, 3> initial_angular_jerk,
     std::array<double, 2> initial_size_map_values,
     std::array<double, 2> initial_size_map_velocities,
     std::array<double, 2> initial_size_map_accelerations, Object object_A,
@@ -324,18 +327,24 @@ BinaryCompactObject::BinaryCompactObject(
   expansion_map_outer_boundary_ = expansion_map_outer_boundary;
   initial_expansion_ = initial_expansion;
   initial_expansion_velocity_ = initial_expansion_velocity;
+  initial_expansion_accel_ = initial_expansion_accel;
   asymptotic_velocity_outer_boundary_ = asymptotic_velocity_outer_boundary;
   decay_timescale_outer_boundary_velocity_ =
       decay_timescale_outer_boundary_velocity;
   // quat = (cos(theta/2), nhat*sin(theta/2)) but we always take theta = 0
   // initially
-  initial_quaternion_ = DataVector{{1.0, 0.0, 0.0, 0.0}};
   initial_size_map_values_ = initial_size_map_values;
   initial_size_map_velocities_ = initial_size_map_velocities;
   initial_size_map_accelerations_ = initial_size_map_accelerations;
 
   for (size_t i = 0; i < initial_angular_velocity.size(); i++) {
     initial_angular_velocity_[i] = gsl::at(initial_angular_velocity, i);
+    initial_angular_accel_[i] = gsl::at(initial_angular_accel, i);
+    initial_angular_jerk_[i] = gsl::at(initial_angular_jerk, i);
+  }
+
+  for (size_t i = 0; i < 4; i++) {
+    initial_quaternion_[i] = gsl::at(initial_quaternion, i);
   }
 }
 
@@ -749,15 +758,16 @@ BinaryCompactObject::functions_of_time(
   result[expansion_function_of_time_name_] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
           initial_time_,
-          std::array<DataVector, 3>{
-              {{initial_expansion_}, {initial_expansion_velocity_}, {0.0}}},
+          std::array<DataVector, 3>{{{initial_expansion_},
+                                     {initial_expansion_velocity_},
+                                     {initial_expansion_accel_}}},
           expiration_times.at(expansion_function_of_time_name_));
 
   // ExpansionMap FunctionOfTime for the function \f$b(t)\f$ in the
   // domain::CoordinateMaps::TimeDependent::CubicScale map
   result[expansion_function_of_time_name_ + "OuterBoundary"s] =
       std::make_unique<FunctionsOfTime::FixedSpeedCubic>(
-          1.0, initial_time_, asymptotic_velocity_outer_boundary_,
+          1.0, 0.0, asymptotic_velocity_outer_boundary_,
           decay_timescale_outer_boundary_velocity_);
 
   // RotationMap FunctionOfTime for the rotation angles about each axis.
@@ -768,8 +778,10 @@ BinaryCompactObject::functions_of_time(
   result[rotation_function_of_time_name_] =
       std::make_unique<FunctionsOfTime::QuaternionFunctionOfTime<3>>(
           initial_time_, std::array<DataVector, 1>{initial_quaternion_},
-          std::array<DataVector, 4>{
-              {{3, 0.0}, initial_angular_velocity_, {3, 0.0}, {3, 0.0}}},
+          std::array<DataVector, 4>{{{3, 0.0},
+                                     initial_angular_velocity_,
+                                     initial_angular_accel_,
+                                     initial_angular_jerk_}},
           expiration_times.at(rotation_function_of_time_name_));
 
   // CompressionMap FunctionOfTime for objects A and B
