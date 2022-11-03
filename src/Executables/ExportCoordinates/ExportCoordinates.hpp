@@ -112,17 +112,25 @@ struct ExportCoordinates {
                                               Frame::Inertial>>(box);
     const auto& inertial_coordinates =
         db::get<domain::Tags::Coordinates<Dim, Frame::Inertial>>(box);
+    const auto& grid_coordinates =
+        db::get<domain::Tags::Coordinates<Dim, Frame::Grid>>(box);
     const auto deriv_inertial_coordinates =
         partial_derivative(inertial_coordinates, mesh, inv_jacobian);
     // Collect volume data
     // Remove tensor types, only storing individual components
     std::vector<TensorComponent> components;
-    components.reserve(Dim + 1);
+    components.reserve(1 + 2 * Dim + deriv_inertial_coordinates.size());
     for (size_t d = 0; d < Dim; d++) {
       components.emplace_back("InertialCoordinates_" +
                                   inertial_coordinates.component_name(
                                       inertial_coordinates.get_tensor_index(d)),
                               inertial_coordinates.get(d));
+    }
+    for (size_t d = 0; d < Dim; d++) {
+      components.emplace_back(
+          "GridCoordinates_" + grid_coordinates.component_name(
+                                   grid_coordinates.get_tensor_index(d)),
+          grid_coordinates.get(d));
     }
 
     for (size_t i = 0; i < deriv_inertial_coordinates.size(); ++i) {
@@ -269,7 +277,8 @@ struct Metavariables {
 };
 
 static const std::vector<void (*)()> charm_init_node_funcs{
-    &setup_error_handling, &setup_memory_allocation_failure_reporting,
+    &setup_error_handling,
+    &setup_memory_allocation_failure_reporting,
     &disable_openblas_multithreading,
     &domain::creators::register_derived_with_charm,
     &domain::creators::time_dependence::register_derived_with_charm,
