@@ -446,6 +446,12 @@ class BinaryCompactObject : public DomainCreator<3> {
     static constexpr Options::String help = {"The rate of expansion."};
     using group = ExpansionMap;
   };
+  /// \brief The velocity of the expansion factor.
+  struct InitialExpansionAcceleration {
+    using type = double;
+    static constexpr Options::String help = {"The acceleration of expansion."};
+    using group = ExpansionMap;
+  };
   /// \brief The asymptotic radial velocity of the outer boundary.
   struct AsymptoticVelocityOuterBoundary {
     using type = double;
@@ -468,10 +474,25 @@ class BinaryCompactObject : public DomainCreator<3> {
         "Options for a time-dependent rotation map about an arbitrary axis."};
     using group = TimeDependentMaps;
   };
+  struct InitialQuaternion {
+    using type = std::array<double, 4>;
+    static constexpr Options::String help = {"quaternion."};
+    using group = RotationMap;
+  };
   /// \brief The angular velocity of the rotation.
   struct InitialAngularVelocity {
     using type = std::array<double, 3>;
     static constexpr Options::String help = {"The angular velocity."};
+    using group = RotationMap;
+  };
+  struct InitialAngularAcceleration {
+    using type = std::array<double, 3>;
+    static constexpr Options::String help = {"The angular acceleration."};
+    using group = RotationMap;
+  };
+  struct InitialAngularJerk {
+    using type = std::array<double, 3>;
+    static constexpr Options::String help = {"The angular jerk."};
     using group = RotationMap;
   };
 
@@ -542,10 +563,12 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   using time_dependent_options =
       tmpl::list<InitialTime, ExpansionMapOuterBoundary, InitialExpansion,
-                 InitialExpansionVelocity, AsymptoticVelocityOuterBoundary,
-                 DecayTimescaleOuterBoundaryVelocity, InitialAngularVelocity,
-                 InitialSizeMapValues, InitialSizeMapVelocities,
-                 InitialSizeMapAccelerations>;
+                 InitialExpansionVelocity, InitialExpansionAcceleration,
+                 AsymptoticVelocityOuterBoundary,
+                 DecayTimescaleOuterBoundaryVelocity, InitialQuaternion,
+                 InitialAngularVelocity, InitialAngularAcceleration,
+                 InitialAngularJerk, InitialSizeMapValues,
+                 InitialSizeMapVelocities, InitialSizeMapAccelerations>;
 
   template <typename Metavariables>
   using options = tmpl::conditional_t<
@@ -619,9 +642,12 @@ class BinaryCompactObject : public DomainCreator<3> {
   BinaryCompactObject(
       double initial_time, double expansion_map_outer_boundary,
       double initial_expansion, double initial_expansion_velocity,
-      double asymptotic_velocity_outer_boundary,
+      double initial_expansion_accel, double asymptotic_velocity_outer_boundary,
       double decay_timescale_outer_boundary_velocity,
+      std::array<double, 4> initial_quaternion,
       std::array<double, 3> initial_angular_velocity,
+      std::array<double, 3> initial_angular_accel,
+      std::array<double, 3> initial_angular_jerk,
       std::array<double, 2> initial_size_map_values,
       std::array<double, 2> initial_size_map_velocities,
       std::array<double, 2> initial_size_map_accelerations, Object object_A,
@@ -702,12 +728,15 @@ class BinaryCompactObject : public DomainCreator<3> {
   double initial_expansion_{std::numeric_limits<double>::signaling_NaN()};
   double initial_expansion_velocity_{
       std::numeric_limits<double>::signaling_NaN()};
+  double initial_expansion_accel_{std::numeric_limits<double>::signaling_NaN()};
   inline static const std::string expansion_function_of_time_name_{"Expansion"};
   double asymptotic_velocity_outer_boundary_{
       std::numeric_limits<double>::signaling_NaN()};
   double decay_timescale_outer_boundary_velocity_{
       std::numeric_limits<double>::signaling_NaN()};
   DataVector initial_angular_velocity_{3, 0.0};
+  DataVector initial_angular_accel_{3, 0.0};
+  DataVector initial_angular_jerk_{3, 0.0};
   DataVector initial_quaternion_{4, 0.0};
   inline static const std::string rotation_function_of_time_name_{"Rotation"};
   std::array<double, 2> initial_size_map_values_{
