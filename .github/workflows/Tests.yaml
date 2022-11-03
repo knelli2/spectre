@@ -693,6 +693,10 @@ ${{ env.CACHE_KEY_SUFFIX }}"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.0.1
+      - name: Force Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
       - name: Install Homebrew dependencies
         run: |
           brew install $SPECTRE_BREW_DEPS
