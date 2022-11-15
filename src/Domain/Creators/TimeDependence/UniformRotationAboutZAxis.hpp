@@ -61,6 +61,8 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
       MeshDim > 1,
       "UniformRotationAboutZAxis<MeshDim> undefined for MeshDim == 1");
 
+  static std::string name() { return "RotationAboutZAxis"; }
+
  private:
   using Identity = domain::CoordinateMaps::Identity<1>;
   using Rotation = domain::CoordinateMaps::TimeDependent::Rotation<2>;
@@ -80,11 +82,20 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
     static constexpr Options::String help = {
         "The initial time of the function of time"};
   };
+  struct InitialAngle {
+    using type = double;
+    static constexpr Options::String help = {"The initial angle."};
+  };
   /// \brief The \f$x\f$-, \f$y\f$-, and \f$z\f$-velocity.
-  struct AngularVelocity {
+  struct InitialAngularVelocity {
     using type = double;
     static constexpr Options::String help = {
-        "The angular velocity of the map."};
+        "The initial angular velocity of the map."};
+  };
+  struct InitialAngularAcceleration {
+    using type = double;
+    static constexpr Options::String help = {
+        "The initial angular acceleration of the map."};
   };
 
   using GridToInertialMap = detail::generate_coordinate_map_t<
@@ -93,7 +104,8 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
                                      domain::CoordinateMaps::TimeDependent::
                                          ProductOf2Maps<Rotation, Identity>>>>;
 
-  using options = tmpl::list<InitialTime, AngularVelocity>;
+  using options = tmpl::list<InitialTime, InitialAngle, InitialAngularVelocity,
+                             InitialAngularAcceleration>;
 
   static constexpr Options::String help = {
       "A spatially uniform rotation about the z axis initialized with a "
@@ -107,7 +119,9 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
       delete;
   UniformRotationAboutZAxis& operator=(UniformRotationAboutZAxis&&) = default;
 
-  UniformRotationAboutZAxis(double initial_time, double angular_velocity);
+  UniformRotationAboutZAxis(double initial_time, double initial_angle,
+                            double initial_angular_velocity,
+                            double initial_angular_acceleration);
 
   auto get_clone() const -> std::unique_ptr<TimeDependence<MeshDim>> override;
 
@@ -146,7 +160,11 @@ class UniformRotationAboutZAxis final : public TimeDependence<MeshDim> {
   GridToInertialMap grid_to_inertial_map() const;
 
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
-  double angular_velocity_{std::numeric_limits<double>::signaling_NaN()};
+  double initial_angle_{std::numeric_limits<double>::signaling_NaN()};
+  double initial_angular_velocity_{
+      std::numeric_limits<double>::signaling_NaN()};
+  double initial_angular_acceleration_{
+      std::numeric_limits<double>::signaling_NaN()};
   inline static const std::string function_of_time_name_{"Rotation"};
 };
 
