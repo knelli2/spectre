@@ -114,6 +114,23 @@ class er;
 /// \endcond
 
 template <size_t Dim>
+struct SatisfyConstraints {
+  using argument_tags =
+      tmpl::list<ScalarWave::Tags::Psi, domain::Tags::Mesh<Dim>,
+                 domain::Tags::InverseJacobian<Dim, Frame::ElementLogical,
+                                               Frame::Inertial>>;
+  using return_tags = tmpl::list<ScalarWave::Tags::Phi<Dim>>;
+
+  static void apply(
+      const gsl::not_null<tnsr::i<DataVector, Dim>*> phi,
+      const Scalar<DataVector>& psi, const Mesh<Dim>& mesh,
+      const InverseJacobian<DataVector, Dim, Frame::ElementLogical,
+                            Frame::Inertial>& inv_jac) {
+    partial_derivative(phi, psi, mesh, inv_jac);
+  }
+};
+
+template <size_t Dim>
 struct EvolutionMetavars {
   static constexpr size_t volume_dim = Dim;
 
@@ -247,6 +264,7 @@ struct EvolutionMetavars {
       Initialization::Actions::NonconservativeSystem<system>,
       evolution::Initialization::Actions::SetVariables<
           domain::Tags::Coordinates<Dim, Frame::ElementLogical>>,
+      ::Actions::MutateApply<SatisfyConstraints<Dim>>,
       Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
       ScalarWave::Actions::InitializeConstraints<volume_dim>,
       Initialization::Actions::AddComputeTags<
