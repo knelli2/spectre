@@ -12,7 +12,9 @@
 #include "DataStructures/Tensor/EagerMath/Magnitude.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "Options/ParseOptions.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
+#include "Utilities/GetOutput.hpp"
 
 namespace ScalarWave::BoundaryConditions {
 namespace detail {
@@ -167,11 +169,24 @@ ConstraintPreservingSphericalRadiation<Dim>::dg_time_derivative(
       dt_phi_correction->get(i) *= -0.5 * get(negative_lambda0);
     }
     if (min(-get(negative_lambda0)) < 0.0) {
-      return {
-          "Incoming characteristic speeds for constraint preserving spherical "
-          "radiation boundary condition. It's unclear that proper boundary "
-          "conditions are imposed in this case. Please verify if you need this "
-          "feature."};
+      // If the min is equal to zero within roundoff and the max is also equal
+      // to zero within roundoff, set everything exactly equal to zero
+      if (equal_within_roundoff(min(-get(negative_lambda0)), 0.0) and
+          equal_within_roundoff(max(-get(negative_lambda0)), 0.0)) {
+        get(*dt_psi_correction) = 0.0;
+        for (size_t i = 0; i < Dim; ++i) {
+          dt_phi_correction->get(i) = 0.0;
+        }
+      }
+      // otherwise we actually have incoming char speeds
+      else {
+        return {
+            "Incoming characteristic speeds for constraint preserving "
+            "spherical radiation boundary condition. It's unclear that proper "
+            "boundary conditions are imposed in this case. Please verify if "
+            "you need this feature. The characteristic speeds are:\n" +
+            get_output(get(negative_lambda0))};
+      }
     }
   } else {
     // Since the constraint-preserving terms are all multiplied by the
