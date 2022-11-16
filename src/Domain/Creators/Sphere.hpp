@@ -10,6 +10,7 @@
 
 #include "Domain/BoundaryConditions/BoundaryCondition.hpp"
 #include "Domain/BoundaryConditions/GetBoundaryConditionsBase.hpp"
+#include "Domain/CoordinateMaps/BulgedCube.hpp"
 #include "Domain/Creators/DomainCreator.hpp"  // IWYU pragma: keep
 #include "Domain/Creators/TimeDependence/TimeDependence.hpp"
 #include "Domain/Domain.hpp"
@@ -45,17 +46,21 @@ namespace creators {
 /// this Domain, see the documentation for Shell.
 class Sphere : public DomainCreator<3> {
  private:
-  using Affine = CoordinateMaps::Affine;
-  using Affine3D = CoordinateMaps::ProductOf3Maps<Affine, Affine, Affine>;
-  using Equiangular = CoordinateMaps::Equiangular;
-  using Equiangular3D =
-      CoordinateMaps::ProductOf3Maps<Equiangular, Equiangular, Equiangular>;
+  //   using Affine = CoordinateMaps::Affine;
+  //   using Affine3D = CoordinateMaps::ProductOf3Maps<Affine, Affine, Affine>;
+  //   using Equiangular = CoordinateMaps::Equiangular;
+  //   using Equiangular3D =
+  //       CoordinateMaps::ProductOf3Maps<Equiangular, Equiangular,
+  //       Equiangular>;
+  using BulgedCube = CoordinateMaps::BulgedCube;
 
  public:
   using maps_list = tmpl::list<
-      domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial, Affine3D>,
-      domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
-                            Equiangular3D>,
+      domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial, BulgedCube>,
+      //   domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
+      //   Affine3D>, domain::CoordinateMap<Frame::BlockLogical,
+      //   Frame::Inertial,
+      //                         Equiangular3D>,
       domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
                             CoordinateMaps::Wedge<3>>>;
 
@@ -68,6 +73,13 @@ class Sphere : public DomainCreator<3> {
   struct OuterRadius {
     using type = double;
     static constexpr Options::String help = {"Radius of the Sphere."};
+  };
+
+  struct InnerCubeSphericity {
+    using type = double;
+    static constexpr Options::String help = {"Sphericity of inner cube."};
+    static double lower_bound() { return 0.0; }
+    static double upper_bound() { return 1.0; }
   };
 
   struct InitialRefinement {
@@ -104,8 +116,9 @@ class Sphere : public DomainCreator<3> {
   };
 
   using basic_options =
-      tmpl::list<InnerRadius, OuterRadius, InitialRefinement, InitialGridPoints,
-                 UseEquiangularMap, TimeDependence>;
+      tmpl::list<InnerRadius, OuterRadius, InnerCubeSphericity,
+                 InitialRefinement, InitialGridPoints, UseEquiangularMap,
+                 TimeDependence>;
 
   template <typename Metavariables>
   using options = tmpl::conditional_t<
@@ -131,7 +144,7 @@ class Sphere : public DomainCreator<3> {
       "spacings in the center block."};
 
   Sphere(typename InnerRadius::type inner_radius,
-         typename OuterRadius::type outer_radius,
+         typename OuterRadius::type outer_radius, double inner_cube_spericity,
          typename InitialRefinement::type initial_refinement,
          typename InitialGridPoints::type initial_number_of_grid_points,
          typename UseEquiangularMap::type use_equiangular_map,
@@ -163,6 +176,7 @@ class Sphere : public DomainCreator<3> {
  private:
   typename InnerRadius::type inner_radius_{};
   typename OuterRadius::type outer_radius_{};
+  double inner_cube_sphericity_{};
   typename InitialRefinement::type initial_refinement_{};
   typename InitialGridPoints::type initial_number_of_grid_points_{};
   typename UseEquiangularMap::type use_equiangular_map_ = false;
