@@ -14,6 +14,7 @@
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
+#include "Domain/Protocols/Metavariables.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/Actions/RunEventsAndDenseTriggers.hpp"
 #include "Evolution/ComputeTags.hpp"
@@ -131,6 +132,38 @@ struct SatisfyConstraints {
 };
 
 template <size_t Dim>
+struct JacobianError : db::SimpleTag {
+  using type =
+      Jacobian<DataVector, Dim, Frame::ElementLogical, Frame::Inertial>;
+};
+
+template <size_t Dim>
+struct JacobianErrorCompute : JacobianError<Dim>, db::ComputeTag {
+  using argument_tags = tmpl::list<
+      domain::Tags::Jacobian<Dim, Frame::ElementLogical, Frame::Inertial>,
+      domain::Tags::Coordinates<Dim, Frame::Inertial>, domain::Tags::Mesh<Dim>>;
+  using return_type =
+      Jacobian<DataVector, Dim, Frame::ElementLogical, Frame::Inertial>;
+  static void function(
+      const gsl::not_null<return_type*> result,
+      const Jacobian<DataVector, Dim, Frame::ElementLogical, Frame::Inertial>&
+          analytic_jac,
+      const tnsr::I<DataVector, Dim, Frame::Inertial>& inertial_coords,
+      const Mesh<3>& mesh) {
+    const auto numerical_jac =
+        logical_partial_derivative(inertial_coords, mesh);
+    destructive_resize_components(result, mesh.number_of_grid_points());
+
+    for (size_t i = 0; i < Dim; i++) {
+      for (size_t j = 0; j < Dim; j++) {
+        result->get(i, j) = analytic_jac.get(i, j) - numerical_jac.get(j, i);
+      }
+    }
+  }
+  using base = JacobianError<Dim>;
+};
+
+template <size_t Dim>
 struct EvolutionMetavars {
   static constexpr size_t volume_dim = Dim;
 
@@ -142,11 +175,15 @@ struct EvolutionMetavars {
   using temporal_id = Tags::TimeStepId;
   static constexpr bool local_time_stepping = true;
 
+  struct domain : tt::ConformsTo<::domain::protocols::Metavariables> {
+    static constexpr bool enable_time_dependent_maps = true;
+  };
+
   using analytic_solution_fields = typename system::variables_tag::tags_list;
   using deriv_compute = ::Tags::DerivCompute<
       typename system::variables_tag,
-      domain::Tags::InverseJacobian<volume_dim, Frame::ElementLogical,
-                                    Frame::Inertial>,
+      ::domain::Tags::InverseJacobian<volume_dim, Frame::ElementLogical,
+                                      Frame::Inertial>,
       typename system::gradient_variables>;
   using analytic_compute =
       evolution::Tags::AnalyticSolutionsCompute<Dim, analytic_solution_fields,
@@ -161,12 +198,16 @@ struct EvolutionMetavars {
       ScalarWave::Tags::MomentumDensityCompute<volume_dim>,
       ScalarWave::Tags::OneIndexConstraintCompute<volume_dim>,
       ScalarWave::Tags::TwoIndexConstraintCompute<volume_dim>,
+      ::domain::Tags::JacobianCompute<volume_dim, Frame::ElementLogical,
+                                      Frame::Inertial>,
+      JacobianErrorCompute<volume_dim>,
+      ::Tags::PointwiseL2NormCompute<JacobianError<volume_dim>>,
       ::Tags::PointwiseL2NormCompute<
           ScalarWave::Tags::OneIndexConstraint<volume_dim>>,
       ::Tags::PointwiseL2NormCompute<
           ScalarWave::Tags::TwoIndexConstraint<volume_dim>>,
-      domain::Tags::Coordinates<volume_dim, Frame::Grid>,
-      domain::Tags::Coordinates<volume_dim, Frame::Inertial>>;
+      ::domain::Tags::Coordinates<volume_dim, Frame::Grid>,
+      ::domain::Tags::Coordinates<volume_dim, Frame::Inertial>>;
   using non_tensor_compute_tags =
       tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>, deriv_compute,
                  analytic_compute, error_compute>;
@@ -263,7 +304,7 @@ struct EvolutionMetavars {
       evolution::dg::Initialization::Domain<volume_dim>,
       Initialization::Actions::NonconservativeSystem<system>,
       evolution::Initialization::Actions::SetVariables<
-          domain::Tags::Coordinates<Dim, Frame::ElementLogical>>,
+          ::domain::Tags::Coordinates<Dim, Frame::ElementLogical>>,
       ::Actions::MutateApply<SatisfyConstraints<Dim>>,
       Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
       ScalarWave::Actions::InitializeConstraints<volume_dim>,
@@ -322,9 +363,9 @@ static const std::vector<void (*)()> charm_init_node_funcs{
     &setup_error_handling,
     &setup_memory_allocation_failure_reporting,
     &disable_openblas_multithreading,
-    &domain::creators::register_derived_with_charm,
-    &domain::creators::time_dependence::register_derived_with_charm,
-    &domain::FunctionsOfTime::register_derived_with_charm,
+    &::domain::creators::register_derived_with_charm,
+    &::domain::creators::time_dependence::register_derived_with_charm,
+    &::domain::FunctionsOfTime::register_derived_with_charm,
     &ScalarWave::BoundaryCorrections::register_derived_with_charm,
     &Parallel::register_factory_classes_with_charm<metavariables>};
 
