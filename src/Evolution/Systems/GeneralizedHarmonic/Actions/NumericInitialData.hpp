@@ -221,11 +221,17 @@ struct SetNumericInitialData {
     if (std::holds_alternative<detail::GeneralizedHarmonic>(
             selected_initial_data_vars)) {
       // We have loaded the GH system variables from the file, so just move the
-      // data into the DataBox directly. No conversion needed.
+      // data for spacetime_metric and Pi into the DataBox directly, with no
+      // conversion needed. Set Phi to the spatial derivative of the spacetime
+      // metric to enforce the 3-index constraint.
+      const auto& mesh = db::get<domain::Tags::Mesh<Dim>>(box);
+      const auto& inv_jacobian =
+          db::get<domain::Tags::InverseJacobian<Dim, Frame::ElementLogical,
+                                                Frame::Inertial>>(box);
       db::mutate<gr::Tags::SpacetimeMetric<3, Frame::Inertial, DataVector>,
                  Tags::Pi<3, Frame::Inertial>, Tags::Phi<3, Frame::Inertial>>(
           make_not_null(&box),
-          [&numeric_initial_data](
+          [&numeric_initial_data, &mesh, &inv_jacobian](
               const gsl::not_null<tnsr::aa<DataVector, 3>*> spacetime_metric,
               const gsl::not_null<tnsr::aa<DataVector, 3>*> pi,
               const gsl::not_null<tnsr::iaa<DataVector, 3>*> phi) {
@@ -234,8 +240,8 @@ struct SetNumericInitialData {
                     numeric_initial_data));
             *pi = std::move(
                 get<Tags::Pi<3, Frame::Inertial>>(numeric_initial_data));
-            *phi = std::move(
-                get<Tags::Phi<3, Frame::Inertial>>(numeric_initial_data));
+            // Set Phi to the numerical spatial derivative of spacetime_metric
+            partial_derivative(phi, *spacetime_metric, mesh, inv_jacobian);
           });
     } else if (std::holds_alternative<detail::Adm>(
                    selected_initial_data_vars)) {
