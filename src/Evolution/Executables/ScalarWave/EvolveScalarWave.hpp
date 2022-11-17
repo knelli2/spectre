@@ -267,7 +267,7 @@ struct EvolutionMetavars {
   // possibly on certain deformed domains.  Here a filter is added in 2D for
   // testing purposes.  When performing numerical experiments with the scalar
   // wave system, the user should determine whether this filter can be removed.
-  static constexpr bool use_filtering = (2 == volume_dim);
+  static constexpr bool use_filtering = true;
 
   using step_actions = tmpl::flatten<tmpl::list<
       evolution::dg::Actions::ComputeTimeDerivative<volume_dim, system,
