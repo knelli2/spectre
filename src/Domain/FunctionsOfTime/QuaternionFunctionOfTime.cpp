@@ -90,13 +90,21 @@ void QuaternionFunctionOfTime<MaxDeriv>::solve_quaternion_ode(
     const gsl::not_null<boost::math::quaternion<double>*>
         quaternion_to_integrate,
     const double t0, const double t) const {
+  // Boost is stupid and assumes the times it's integrating between are order
+  // unity (for roundoff reasons). So if t or t0 is > 10, then you can't take
+  // t-t0 to machine precision causing roundoff error. It was found
+  // experimentally that an infinite loop is possible if such a condition is
+  // met. Thus, we rescale the times by this factor to avoid this infinite loop.
+  const double factor = std::max(1.0, std::max(t0, t));
+
   // lambda that stores the internals of the ode
   const auto quaternion_ode_system =
-      [this](const boost::math::quaternion<double>& state,
-             boost::math::quaternion<double>& dt_state, const double time) {
-        const boost::math::quaternion<double> omega =
-            datavector_to_quaternion(angle_f_of_t_.func_and_deriv(time)[1]);
-        dt_state = 0.5 * state * omega;
+      [this, &factor](const boost::math::quaternion<double>& state,
+                      boost::math::quaternion<double>& dt_state,
+                      const double time) {
+        const boost::math::quaternion<double> omega = datavector_to_quaternion(
+            angle_f_of_t_.func_and_deriv(time * factor)[1]);
+        dt_state = factor * 0.5 * state * omega;
       };
 
   // Dense stepper
@@ -109,8 +117,8 @@ void QuaternionFunctionOfTime<MaxDeriv>::solve_quaternion_ode(
 
   // Integrate from t0 to t, storing result in quaternion_to_integrate
   boost::numeric::odeint::integrate_adaptive(
-      dense_stepper, quaternion_ode_system, *quaternion_to_integrate, t0, t,
-      1e-4);
+      dense_stepper, quaternion_ode_system, *quaternion_to_integrate,
+      t0 / factor, t / factor, 1e-4);
 }
 
 template <size_t MaxDeriv>
