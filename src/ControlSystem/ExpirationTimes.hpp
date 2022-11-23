@@ -60,7 +60,10 @@ std::unordered_map<std::string, double> initial_expiration_times(
         const double initial_expiration_time =
             3 * measure_timescale + 0.1 * measure_timescale;
         initial_expiration_times[name] =
-            initial_time + std::max(initial_time_step, initial_expiration_time);
+            option_holder.is_active
+                ? initial_time +
+                      std::max(initial_time_step, initial_expiration_time)
+                : std::numeric_limits<double>::infinity();
       };
 
   EXPAND_PACK_LEFT_TO_RIGHT(gather_initial_expiration_times(option_holders));

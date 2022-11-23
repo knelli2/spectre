@@ -47,6 +47,7 @@ using CoordMap =
 std::string create_input_string(const std::string& name) {
   const std::string base_string1{"  "s + name +
                                  ":\n"
+                                 "    IsActive: true\n"
                                  "    Averager:\n"
                                  "      AverageTimescaleFraction: 0.25\n"
                                  "      Average0thDeriv: true\n"
