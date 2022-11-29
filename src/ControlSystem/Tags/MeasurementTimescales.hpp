@@ -74,11 +74,9 @@ struct MeasurementTimescales : db::SimpleTag {
   static constexpr bool pass_metavariables = true;
 
   template <typename Metavariables>
-  using option_tags = tmpl::push_front<
-      typename detail::OptionList<
-          Metavariables, true,
-          ::detail::has_override_functions_of_time_v<Metavariables>>::type,
-      control_system::OptionTags::MeasurementsPerUpdate>;
+  using option_tags = typename detail::OptionList<
+      Metavariables, true,
+      ::detail::has_override_functions_of_time_v<Metavariables>>::type;
 
   /// This version of create_from_options is used if the metavariables
   /// defined a constexpr bool `override_functions_of_time` and it is `true`,
