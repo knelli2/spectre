@@ -14,7 +14,6 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
-#include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Evolution/EventsAndDenseTriggers/DenseTrigger.hpp"
 #include "Framework/ActionTesting.hpp"
 #include "Framework/MockDistributedObject.hpp"
@@ -54,14 +53,10 @@ struct Component {
   using array_index = int;
 
   using simple_tags = tmpl::list<Tags::Time>;
-  using compute_tags =
-      tmpl::list<Parallel::Tags::FromGlobalCache<
-                     ::domain::Tags::FunctionsOfTimeInitialize>,
-                 Parallel::Tags::FromGlobalCache<
-                     control_system::Tags::MeasurementTimescales>>;
+  using compute_tags = tmpl::list<Parallel::Tags::FromGlobalCache<
+      control_system::Tags::MeasurementTimescales>>;
   using mutable_global_cache_tags =
-      tmpl::list<::domain::Tags::FunctionsOfTimeInitialize,
-                 control_system::Tags::MeasurementTimescales>;
+      tmpl::list<control_system::Tags::MeasurementTimescales>;
 
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       Parallel::Phase::Initialization,
@@ -94,14 +89,8 @@ void test_trigger_no_replace() {
       std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{0.5}}, 0.5);
   measurement_timescales["DifferentMeasurement"] =
       std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{1.0}}, 0.1);
-  ::domain::Tags::FunctionsOfTimeInitialize::type functions_of_time_init{};
-  const double one_plus_eps = 1.0 + std::numeric_limits<double>::epsilon();
-  functions_of_time_init["FakeFoT"] = std::make_unique<MeasurementFoT>(
-      0.0, std::array{DataVector{1.0}}, one_plus_eps);
 
-  MockRuntimeSystem runner{
-      {},
-      {std::move(functions_of_time_init), std::move(measurement_timescales)}};
+  MockRuntimeSystem runner{{}, {std::move(measurement_timescales)}};
   ActionTesting::emplace_array_component_and_initialize<component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, 0, {0.0});
@@ -137,14 +126,12 @@ void test_trigger_no_replace() {
 
   set_time(0.5);
 
-  // Now at the previous next check time, we should trigger. The new next check
-  // time should be within roundoff of the minimum function of time expiration
-  // time, so the next check time will be set to exactly the minimum expiration
-  // time
+  // Now at the previous next check time, we should trigger. We also know the
+  // new check time
   CHECK(trigger.is_triggered(box, cache, 0, component_p) ==
         std::optional{true});
   CHECK(trigger.next_check_time(box, cache, 0, component_p) ==
-        std::optional{one_plus_eps});
+        std::optional{1.0});
 
   set_time(0.75);
 
@@ -166,9 +153,9 @@ void test_trigger_no_replace() {
   // Now we should be able to calculate the next check time once again and it
   // should be the same as it was before, since the current time hasn't changed.
   CHECK(trigger.next_check_time(box, cache, 0, component_p) ==
-        std::optional{one_plus_eps});
+        std::optional{1.0});
 
-  set_time(one_plus_eps);
+  set_time(1.0);
 
   // Now the time is at the minimum function of time expiration time, so we
   // trigger. However, the functions of time haven't been updated yet so we
@@ -215,14 +202,8 @@ void test_trigger_with_replace() {
   measurement_timescales["LabelC"] = std::make_unique<MeasurementFoT>(
       0.0, std::array{DataVector{std::numeric_limits<double>::infinity()}},
       std::numeric_limits<double>::infinity());
-  ::domain::Tags::FunctionsOfTimeInitialize::type functions_of_time_init{};
-  functions_of_time_init["FakeFoT"] =
-      std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{1.0}},
-                                       std::numeric_limits<double>::infinity());
 
-  MockRuntimeSystem runner{
-      {},
-      {std::move(functions_of_time_init), std::move(measurement_timescales)}};
+  MockRuntimeSystem runner{{}, {std::move(measurement_timescales)}};
   ActionTesting::emplace_array_component_and_initialize<component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, 0, {0.0});
@@ -239,49 +220,9 @@ void test_trigger_with_replace() {
   const auto next_check = trigger.next_check_time(box, cache, 0, component_p);
   CHECK(next_check == std::optional{std::numeric_limits<double>::infinity()});
 }
-
-void test_fot_expr_infinity() {
-  Parallel::register_classes_with_charm<MeasurementFoT>();
-  const component* const component_p = nullptr;
-
-  control_system::Tags::MeasurementTimescales::type measurement_timescales{};
-  measurement_timescales["LabelA"] =
-      std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{0.1}},
-                                       std::numeric_limits<double>::infinity());
-  measurement_timescales["LabelB"] =
-      std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{0.2}},
-                                       std::numeric_limits<double>::infinity());
-  measurement_timescales["LabelC"] =
-      std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{0.3}},
-                                       std::numeric_limits<double>::infinity());
-  ::domain::Tags::FunctionsOfTimeInitialize::type functions_of_time_init{};
-  functions_of_time_init["FakeFoT"] =
-      std::make_unique<MeasurementFoT>(0.0, std::array{DataVector{1.0}},
-                                       std::numeric_limits<double>::infinity());
-
-  MockRuntimeSystem runner{
-      {},
-      {std::move(functions_of_time_init), std::move(measurement_timescales)}};
-  ActionTesting::emplace_array_component_and_initialize<component>(
-      make_not_null(&runner), ActionTesting::NodeId{0},
-      ActionTesting::LocalCoreId{0}, 0, {0.0});
-  ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
-
-  auto& box = ActionTesting::get_databox<component>(make_not_null(&runner), 0);
-  auto& cache = ActionTesting::cache<component>(runner, 0);
-
-  MeasureTrigger typed_trigger = serialize_and_deserialize(MeasureTrigger{});
-  DenseTrigger& trigger = typed_trigger;
-
-  const auto is_triggered = trigger.is_triggered(box, cache, 0, component_p);
-  CHECK(is_triggered == std::optional{true});
-  const auto next_check = trigger.next_check_time(box, cache, 0, component_p);
-  CHECK(next_check == std::optional{0.1});
-}
 }  // namespace
 
 SPECTRE_TEST_CASE("Unit.ControlSystem.Trigger", "[Domain][Unit]") {
   test_trigger_no_replace();
   test_trigger_with_replace();
-  test_fot_expr_infinity();
 }
