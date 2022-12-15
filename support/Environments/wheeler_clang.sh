@@ -33,6 +33,9 @@ spectre_unload_modules() {
 }
 
 spectre_load_modules() {
+    module purge
+    module use ~/tools/modules
+    module load charm/7.0.0-tracing
     module load gcc/9.3.0
     module load blaze/3.8
     module load boost/1.65.0-gcc-6.4.0
@@ -51,7 +54,6 @@ spectre_load_modules() {
     module load doxygen/1.8.13
     module load git/2.8.4
     module load llvm/13.0.1
-    module load charm/7.0.0-intelmpi-smp
     module load python/miniconda-3.9.7
     module load pybind11/2.6.1
     module load hdf5/1.12.2
@@ -79,6 +81,9 @@ spectre_run_cmake() {
           -D CMAKE_PREFIX_PATH="$PYTHON_HOME" \
           -D BOOTSTRAP_PY_DEPS=ON \
           -D MACHINE=Wheeler \
+          -D CHARM_TRACE_PROJECTIONS=ON \
+          -D CHARM_TRACE_SUMMARY=ON \
+          -D ENABLE_PROFILING=ON \
           "$@" \
           $SPECTRE_HOME
 }
