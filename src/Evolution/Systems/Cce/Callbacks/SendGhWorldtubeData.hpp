@@ -16,6 +16,8 @@
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace intrp {
 /// \cond
 namespace Tags {
@@ -57,6 +59,17 @@ struct SendGhWorldtubeData
             << Parallel::get<Tags::Sphere<InterpolationTargetTag>>(cache)
                    .radii.size());
     }
+
+    // if (Parallel::get<DebugToggle>(cache)) {
+    //   Parallel::printf(
+    //       "Interpolated Vars:\n"
+    //       "SpacetimeMetric:\n%s\n\n"
+    //       "Pi:\n%s\n\n"
+    //       "Phi:\n%s\n\n",
+    //       db::get<::gr::Tags::SpacetimeMetric<3, Frame::Inertial>>(box),
+    //       db::get<::GeneralizedHarmonic::Tags::Phi<3, Frame::Inertial>>(box),
+    //       db::get<::GeneralizedHarmonic::Tags::Pi<3, Frame::Inertial>>(box));
+    // }
 
     auto& cce_gh_boundary_component = Parallel::get_parallel_component<
         Cce::GhWorldtubeBoundary<Metavariables>>(cache);

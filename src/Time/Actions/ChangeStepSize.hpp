@@ -18,6 +18,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 class TimeDelta;
 class TimeStepId;
@@ -32,6 +34,9 @@ namespace Tags {
 template <typename Tag>
 struct Next;
 }  // namespace Tags
+namespace Cce::Tags {
+struct BondiBeta;
+}
 // IWYU pragma: no_forward_declare db::DataBox
 /// \endcond
 
@@ -49,6 +54,9 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
   const LtsTimeStepper& time_stepper = db::get<Tags::TimeStepper<>>(*box);
   const auto& step_choosers = db::get<Tags::StepChoosers>(*box);
 
+  constexpr bool is_cce =
+      db::tag_is_retrievable_v<Cce::Tags::BondiBeta, db::DataBox<DbTags>>;
+
   const auto& next_time_id = db::get<Tags::Next<Tags::TimeStepId>>(*box);
   using history_tags = ::Tags::get_all_history_tags<DbTags>;
   bool can_change_step_size = true;
@@ -59,9 +67,27 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
     }
     using tag = typename decltype(tag_v)::type;
     const auto& history = db::get<tag>(*box);
+    if constexpr (is_cce) {
+      time_stepper.change_print(true);
+    }
     can_change_step_size =
         time_stepper.can_change_step_size(next_time_id, history);
+    time_stepper.change_print(false);
+    if constexpr (is_cce) {
+      Parallel::printf("On CCE: For tag %s, can change step size: %s\n",
+                       db::tag_name<tag>(),
+                       can_change_step_size ? "yes" : "no");
+    }
   });
+
+  if constexpr (is_cce) {
+    const auto& current_time_id = db::get<Tags::TimeStepId>(*box);
+    Parallel::printf(
+        "On CCE: Current time = %f, next time = %f, Overall can change step "
+        "size: %s\n",
+        current_time_id.substep_time(), next_time_id.substep_time(),
+        can_change_step_size ? "yes" : "no");
+  }
   if (not can_change_step_size) {
     return true;
   }
@@ -84,6 +110,10 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
   }
   if (not current_step.is_positive()) {
     desired_step = -desired_step;
+  }
+
+  if constexpr (is_cce) {
+    Parallel::printf("Desired step size is %f\n", desired_step);
   }
 
   if (abs(desired_step / current_step.slab().duration().value()) < 1.0e-9) {

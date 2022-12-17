@@ -11,6 +11,8 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Executables/Cce/CharacteristicExtractBase.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
+#include "Evolution/Systems/Cce/Actions/InitializeCcmNextTime.hpp"
+#include "Evolution/Systems/Cce/Actions/ReceiveCcmNextTime.hpp"
 #include "Evolution/Systems/Cce/Actions/SendGhVarsToCce.hpp"
 #include "Evolution/Systems/Cce/Callbacks/SendGhWorldtubeData.hpp"
 #include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
@@ -39,8 +41,12 @@
 #include "Options/FactoryHelpers.hpp"
 #include "Options/Options.hpp"
 #include "Options/Protocols/FactoryCreation.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Parallel/PhaseControl/PhaseControlTags.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
+#include "ParallelAlgorithms/Actions/InitializeItems.hpp"
+#include "ParallelAlgorithms/Actions/MemoryMonitor/ContributeMemoryData.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/CleanUpInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
@@ -107,9 +113,12 @@ struct EvolutionMetavars
       tmpl::conditional_t<
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
-          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<false>>>,
+          tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           VolumeDim, system, dg_step_choosers, local_time_stepping>,
+      tmpl::conditional_t<
+          DuringSelfStart, tmpl::list<>,
+          Cce::Actions::ReceiveCcmNextTime<CceWorldtubeTarget<false>>>,
       tmpl::conditional_t<
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
@@ -158,6 +167,8 @@ struct EvolutionMetavars
                                         Frame::Inertial>,
           typename system::gradient_variables>>,
       Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
+      Initialization::Actions::InitializeItems<
+          Cce::Actions::InitializeCcmNextTime>,
       GeneralizedHarmonic::Actions::InitializeGhAnd3Plus1Variables<VolumeDim>,
       Initialization::Actions::AddComputeTags<
           tmpl::push_back<StepChoosers::step_chooser_compute_tags<
@@ -222,7 +233,8 @@ struct EvolutionMetavars
         intrp::TargetPoints::Sphere<CceWorldtubeTarget, ::Frame::Inertial>;
     using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
         Cce::CharacteristicEvolution<EvolutionMetavars>, CceWorldtubeTarget,
-        DuringSelfStart, local_time_stepping>;
+        // FIXME: This is a hack
+        false, false>;
     using vars_to_interpolate_to_target = interpolator_source_vars;
     template <typename Metavariables>
     using interpolating_component = gh_dg_element_array;
@@ -241,6 +253,7 @@ struct EvolutionMetavars
   using component_list = tmpl::flatten<tmpl::list<
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
+      mem_monitor::MemoryMonitor<EvolutionMetavars>,
       std::conditional_t<UseNumericalInitialData,
                          importers::ElementDataReader<EvolutionMetavars>,
                          tmpl::list<>>,

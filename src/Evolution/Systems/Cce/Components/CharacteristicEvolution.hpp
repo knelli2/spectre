@@ -17,6 +17,7 @@
 #include "Evolution/Systems/Cce/Actions/InsertInterpolationScriData.hpp"
 #include "Evolution/Systems/Cce/Actions/RequestBoundaryData.hpp"
 #include "Evolution/Systems/Cce/Actions/ScriObserveInterpolated.hpp"
+#include "Evolution/Systems/Cce/Actions/SendNextTimeToGh.hpp"
 #include "Evolution/Systems/Cce/Actions/TimeManagement.hpp"
 #include "Evolution/Systems/Cce/Actions/UpdateGauge.hpp"
 #include "Evolution/Systems/Cce/LinearSolve.hpp"
@@ -172,9 +173,9 @@ struct CharacteristicEvolution {
                      tmpl::list<typename Metavariables::evolved_swsh_tag>>>>;
 
   using self_start_extract_action_list = tmpl::list<
-      Actions::RequestBoundaryData<
-          typename Metavariables::cce_boundary_component,
-          CharacteristicEvolution<Metavariables>>,
+      //   Actions::RequestBoundaryData<
+      //       typename Metavariables::cce_boundary_component,
+      //       CharacteristicEvolution<Metavariables>>,
       Actions::ReceiveWorldtubeData<Metavariables>,
       // note that the initialization will only actually happen on the
       // iterations immediately following restarts
@@ -200,9 +201,10 @@ struct CharacteristicEvolution {
       record_time_stepper_data_and_step>;
 
   using extract_action_list = tmpl::list<
-      Actions::RequestBoundaryData<
-          typename Metavariables::cce_boundary_component,
-          CharacteristicEvolution<Metavariables>>,
+      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, true>,
+      //   Actions::RequestBoundaryData<
+      //       typename Metavariables::cce_boundary_component,
+      //       CharacteristicEvolution<Metavariables>>,
       ::Actions::Label<CceEvolutionLabelTag>,
       Actions::ReceiveWorldtubeData<Metavariables>,
       Actions::InitializeFirstHypersurface<
@@ -220,11 +222,12 @@ struct CharacteristicEvolution {
       Actions::FilterSwshVolumeQuantity<Tags::BondiH>,
       compute_scri_quantities_and_observe, record_time_stepper_data_and_step,
       ::Actions::ChangeStepSize<typename Metavariables::cce_step_choosers>,
+      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, false>,
       // We cannot know our next step for certain until after we've performed
       // step size selection, as we may need to reject a step.
-      Actions::RequestNextBoundaryData<
-          typename Metavariables::cce_boundary_component,
-          CharacteristicEvolution<Metavariables>>,
+      //   Actions::RequestNextBoundaryData<
+      //       typename Metavariables::cce_boundary_component,
+      //       CharacteristicEvolution<Metavariables>>,
       ::Actions::AdvanceTime, Actions::ExitIfEndTimeReached,
       ::Actions::Goto<CceEvolutionLabelTag>>;
 

@@ -17,6 +17,12 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include <iomanip>
+#include <sstream>
+#include "Parallel/Printf.hpp"
+
+struct DebugToggle;
+
 namespace Cce {
 namespace Actions {
 
@@ -47,14 +53,40 @@ struct ReceiveWorldtubeData {
             typename ActionList, typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
       db::DataBox<DbTags>& box, tuples::TaggedTuple<InboxTags...>& inboxes,
-      const Parallel::GlobalCache<Metavariables>& /*cache*/,
+      const Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& /*array_index*/, const ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     auto& inbox = tuples::get<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(inboxes);
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      std::stringstream ss{};
+      ss << "(";
+      for (const auto& [key, value] : inbox) {
+        (void)value;
+        ss << std::setprecision(16) << key.substep_time() << ",";
+      }
+      if (ss.str().size() != 1) {
+        ss.seekp(-1, ss.cur);
+      }
+      ss << ")";
+      Parallel::printf("CCE Evolution: At time %.16f, Inbox has %d times: %s\n",
+                       db::get<::Tags::TimeStepId>(box).substep_time(),
+                       inbox.size(), ss.str());
+    }
+
     if (inbox.count(db::get<::Tags::TimeStepId>(box)) != 1) {
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf("CCE Evolution: At time %f, pausing the algorithm.\n",
+                         db::get<::Tags::TimeStepId>(box).substep_time());
+      }
       return {Parallel::AlgorithmExecution::Pause,
               tmpl::index_of<ActionList, ReceiveWorldtubeData>::value};
+    }
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf("CCE Evolution: At time %f, continuing the algorithm.\n",
+                       db::get<::Tags::TimeStepId>(box).substep_time());
     }
 
     tmpl::for_each<typename Metavariables::cce_boundary_communication_tags>(

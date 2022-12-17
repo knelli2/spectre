@@ -19,6 +19,12 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include "Parallel/Printf.hpp"
+
+/// \cond
+struct DebugToggle;
+/// \endcond
+
 namespace Cce {
 namespace Actions {
 
@@ -64,9 +70,29 @@ struct InitializeFirstHypersurface {
     // In those cases, we do not want to alter the existing hypersurface data,
     // so we just exit. However, we do want to re-run the action each time
     // the self start 'reset's from the beginning
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf(
+          "CCE InitializeFirstHypersurface: At time %f, starting hypersurface "
+          "computation.\n",
+          db::get<::Tags::TimeStepId>(box).substep_time());
+    }
+
     if (db::get<::Tags::TimeStepId>(box).slab_number() > 0 or
         not db::get<::Tags::TimeStepId>(box).is_at_slab_boundary()) {
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf(
+            "CCE InitializeFirstHypersurface: At time %f, not altering "
+            "previous hypersurface computation. Continuing\n",
+            db::get<::Tags::TimeStepId>(box).substep_time());
+      }
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    }
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf(
+          "CCE InitializeFirstHypersurface: At time %f, actually doing "
+          "hypersurface calculation.\n",
+          db::get<::Tags::TimeStepId>(box).substep_time());
     }
     // some initialization schemes need the hdf5_lock so that they can read
     // their own input data from disk.
