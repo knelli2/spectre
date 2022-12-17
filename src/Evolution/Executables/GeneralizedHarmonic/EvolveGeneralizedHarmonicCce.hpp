@@ -41,6 +41,7 @@
 #include "Options/Protocols/FactoryCreation.hpp"
 #include "Parallel/PhaseControl/PhaseControlTags.hpp"
 #include "Parallel/RegisterDerivedClassesWithCharm.hpp"
+#include "ParallelAlgorithms/Actions/InitializeItems.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/CleanUpInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
@@ -141,7 +142,8 @@ struct EvolutionMetavars
   // initialization actions are the same as the default, with the single
   // addition of initializing the interpolation points (second-to-last action).
   using initialization_actions = tmpl::list<
-      Initialization::Actions::TimeAndTimeStep<EvolutionMetavars>,
+      Initialization::Actions::InitializeItems<
+          Initialization::TimeStepping<EvolutionMetavars, local_time_stepping>>,
       evolution::dg::Initialization::Domain<VolumeDim,
                                             override_functions_of_time>,
       Initialization::Actions::NonconservativeSystem<system>,
