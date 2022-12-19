@@ -38,6 +38,8 @@
 #include "Utilities/StdHelpers.hpp"
 #include "Utilities/TaggedTuple.hpp"
 #include "Utilities/TypeTraits.hpp"
+#include "Utilities/TypeTraits/CreateGetTypeAliasOrDefault.hpp"
+#include "Utilities/TypeTraits/CreateHasTypeAlias.hpp"
 #include "Utilities/TypeTraits/IsA.hpp"
 #include "Utilities/TypeTraits/IsMaplike.hpp"
 #include "Utilities/TypeTraits/IsStdArray.hpp"
@@ -84,12 +86,12 @@ inline void Option::set_node(YAML::Node node) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif  // defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 8
-template <typename T, typename Metavariables>
+template <typename T, typename Metavariables, typename Identifier>
 T Option::parse_as() const {
   try {
     // yaml-cpp's `as` method won't parse empty nodes, so we need to
     // inline a bit of its logic.
-    Options_detail::wrap_create_types<T, Metavariables> result{};
+    Options_detail::wrap_create_types<T, Identifier, Metavariables> result{};
     if (YAML::convert<decltype(result)>::decode(node(), result)) {
       return Options_detail::unwrap_create_types(std::move(result));
     }
@@ -1118,11 +1120,19 @@ struct create_from_yaml<std::variant<T...>> {
     return result;
   }
 };
+
+namespace Options_detail {
+CREATE_HAS_TYPE_ALIAS(type)
+CREATE_HAS_TYPE_ALIAS_V(type)
+CREATE_HAS_TYPE_ALIAS(identifier)
+CREATE_HAS_TYPE_ALIAS_V(identifier)
+}  // namespace Options_detail
 }  // namespace Options
 
 /// \cond
-template <typename T, typename Metavariables>
-struct YAML::convert<Options::Options_detail::CreateWrapper<T, Metavariables>> {
+template <typename T, typename Identifier, typename Metavariables>
+struct YAML::convert<
+    Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>> {
   static bool decode(
       const Node& node,
       Options::Options_detail::CreateWrapper<T, Metavariables>& rhs) {
@@ -1130,7 +1140,7 @@ struct YAML::convert<Options::Options_detail::CreateWrapper<T, Metavariables>> {
     context.top_level = false;
     context.append("While creating a " + pretty_type::name<T>());
     Options::Option options(node, std::move(context));
-    rhs = Options::Options_detail::CreateWrapper<T, Metavariables>{
+    rhs = Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>{
         Options::create_from_yaml<T>::template create<Metavariables>(options)};
     return true;
   }

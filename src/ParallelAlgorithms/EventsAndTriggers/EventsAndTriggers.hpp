@@ -93,8 +93,10 @@ class EventsAndTriggers {
 template <>
 struct Options::create_from_yaml<EventsAndTriggers> {
   using type = EventsAndTriggers;
-  template <typename Metavariables>
+  using identifier = ::Event;
+  template <typename Metavariables, typename Identifier>
   static type create(const Options::Option& options) {
-    return type(options.parse_as<typename type::Storage, Metavariables>());
+    return type(
+        options.parse_as<typename type::Storage, Metavariables, Identifier>());
   }
 };

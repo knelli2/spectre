@@ -113,7 +113,8 @@ class Option {
   void append_context(const std::string& context);
 
   /// Convert to an object of type `T`.
-  template <typename T, typename Metavariables = NoSuchType>
+  template <typename T, typename Metavariables = NoSuchType,
+            typename Identifier = T>
   T parse_as() const;
 
   /// \note This constructor overwrites the mark data in the supplied

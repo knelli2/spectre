@@ -64,21 +64,21 @@ std::string help_derived() {
 
 // This is for handling legacy code that still uses creatable_classes.
 // It should be inlined once everything is converted.
-template <typename BaseClass, typename Metavariables, typename = std::void_t<>>
+template <typename Identifier, typename Metavariables, typename = std::void_t<>>
 struct get_creatable_classes {
   using factory_creation = typename Metavariables::factory_creation;
   // This assertion is normally done in tests, but the executable
   // metavariables don't have tests, so we do it here.
   static_assert(tt::assert_conforms_to_v<factory_creation,
                                          Options::protocols::FactoryCreation>);
-  using type = tmpl::at<typename factory_creation::factory_classes, BaseClass>;
+  using type = tmpl::at<typename factory_creation::factory_classes, Identifier>;
 };
 
-template <typename BaseClass, typename Metavariables>
+template <typename Identifier, typename Metavariables>
 struct get_creatable_classes<
-  BaseClass, Metavariables,
-  std::void_t<typename BaseClass::creatable_classes>> {
-  using type = typename BaseClass::creatable_classes;
+    Identifier, Metavariables,
+    std::void_t<typename Identifier::creatable_classes>> {
+  using type = typename Identifier::creatable_classes;
 };
 
 CREATE_GET_STATIC_MEMBER_VARIABLE_OR_DEFAULT(factory_creatable)
@@ -87,10 +87,10 @@ template <typename T>
 struct is_factory_creatable
     : std::bool_constant<get_factory_creatable_or_default_v<T, true>> {};
 
-template <typename BaseClass, typename Metavariables>
+template <typename BaseClass, typename Identifier, typename Metavariables>
 std::unique_ptr<BaseClass> create(const Option& options) {
   using creatable_classes = tmpl::filter<
-      typename get_creatable_classes<BaseClass, Metavariables>::type,
+      typename get_creatable_classes<Identifier, Metavariables>::type,
       is_factory_creatable<tmpl::_1>>;
   static_assert(not std::is_same_v<creatable_classes, tmpl::no_such_type_>,
                 "List of creatable derived types for this class is missing "
@@ -142,9 +142,9 @@ std::unique_ptr<BaseClass> create(const Option& options) {
 
 template <typename T>
 struct create_from_yaml<std::unique_ptr<T>> {
-  template <typename Metavariables>
+  template <typename Metavariables, typename Identifier = T>
   static std::unique_ptr<T> create(const Option& options) {
-    return Factory_detail::create<T, Metavariables>(options);
+    return Factory_detail::create<T, Identifier, Metavariables>(options);
   }
 };
 }  // namespace Options
