@@ -11,6 +11,8 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Executables/Cce/CharacteristicExtractBase.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
+#include "Evolution/Systems/Cce/Actions/InitializeCcmNextTime.hpp"
+#include "Evolution/Systems/Cce/Actions/ReceiveCcmNextTime.hpp"
 #include "Evolution/Systems/Cce/Actions/SendGhVarsToCce.hpp"
 #include "Evolution/Systems/Cce/Callbacks/SendGhWorldtubeData.hpp"
 #include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
@@ -106,6 +108,7 @@ struct EvolutionMetavars
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<false>>>,
+      Cce::Actions::ReceiveCcmNextTime<EvolutionMetavars>,
       evolution::dg::Actions::ComputeTimeDerivative<
           VolumeDim, system, AllStepChoosers, local_time_stepping>,
       tmpl::conditional_t<
@@ -157,6 +160,8 @@ struct EvolutionMetavars
                                         Frame::Inertial>,
           typename system::gradient_variables>>,
       Initialization::Actions::TimeStepperHistory<EvolutionMetavars>,
+      Initialization::Actions::InitializeItems<
+          Cce::Actions::InitializeCcmNextTime>,
       GeneralizedHarmonic::Actions::InitializeGhAnd3Plus1Variables<VolumeDim>,
       Initialization::Actions::AddComputeTags<
           tmpl::push_back<StepChoosers::step_chooser_compute_tags<
