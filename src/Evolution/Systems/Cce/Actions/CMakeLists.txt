@@ -26,6 +26,7 @@ spectre_target_headers(
   RequestBoundaryData.hpp
   ScriObserveInterpolated.hpp
   SendGhVarsToCce.hpp
+  SendNextTimeToGh.hpp
   TimeManagement.hpp
   UpdateGauge.hpp
   )

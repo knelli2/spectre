@@ -19,5 +19,12 @@ struct BoundaryData
   using type = std::unordered_map<temporal_id, Variables<CommunicationTagList>>;
 };
 
+/// A receive tag for the next time sent to the GH component from the CCE
+/// evolution component
+struct CcmNextTimeToGH : Parallel::InboxInserters::Value<CcmNextTimeToGH> {
+  using temporal_id = TimeStepId;
+  using type = std::map<temporal_id, TimeStepId>;
+};
+
 }  // namespace ReceiveTags
 }  // namespace Cce
