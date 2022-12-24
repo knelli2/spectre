@@ -116,7 +116,7 @@ struct EvolutionMetavars
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
                          tmpl::list<evolution::dg::ApplyBoundaryCorrections<
-                             local_time_stepping, EvolutionMetavars, true>>>,
+                             local_time_stepping, system, 3, true>>>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, VolumeDim>>,
           tmpl::list<
@@ -225,7 +225,8 @@ struct EvolutionMetavars
         intrp::TargetPoints::Sphere<CceWorldtubeTarget, ::Frame::Inertial>;
     using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
         Cce::CharacteristicEvolution<EvolutionMetavars>, CceWorldtubeTarget,
-        DuringSelfStart, local_time_stepping>;
+        // FIXME: This is a hack
+        DuringSelfStart, false>;
     using vars_to_interpolate_to_target = interpolator_source_vars;
     template <typename Metavariables>
     using interpolating_component = gh_dg_element_array;

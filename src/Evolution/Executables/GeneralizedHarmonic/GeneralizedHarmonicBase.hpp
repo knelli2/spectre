@@ -336,7 +336,7 @@ struct GeneralizedHarmonicTemplateBase<
       EvolutionMetavarsDerived<VolumeDim, UseNumericalInitialData>;
   static constexpr size_t volume_dim = VolumeDim;
   using system = GeneralizedHarmonic::System<volume_dim>;
-  static constexpr bool local_time_stepping = false;
+  static constexpr bool local_time_stepping = true;
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& /*p*/) {}

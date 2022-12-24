@@ -46,21 +46,20 @@ struct ReceiveCcmNextTime {
 
     const auto& domain = Parallel::get<domain::Tags::Domain<3>>(cache);
     const auto& excision_spheres = domain.excision_spheres();
-    // The blocks abutting each excision sphere will be different, but the
-    // directions will be pointing inwards for both.
-    const auto& excision_sphere_a =
-        excision_spheres.at("ObjectAExcisionSphere");
-    const auto& abutting_directions = excision_sphere_a.abutting_directions();
 
     // If we are on the excision boundary, clear the inbox and continue on. We
     // are only concerned with the outer boundary.
-    for (const auto& element_direction : external_boundaries) {
-      if (alg::any_of(abutting_directions,
-                      [&element_direction](const auto& abutting_direction) {
-                        return element_direction == abutting_direction.second;
-                      })) {
-        inbox.clear();
-        return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    for (const auto& [name, excision_sphere] : excision_spheres) {
+      (void)name;
+      const auto& abutting_directions = excision_sphere.abutting_directions();
+      for (const auto& element_direction : external_boundaries) {
+        if (alg::any_of(abutting_directions,
+                        [&element_direction](const auto& abutting_direction) {
+                          return element_direction == abutting_direction.second;
+                        })) {
+          inbox.clear();
+          return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+        }
       }
     }
 
