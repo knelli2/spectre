@@ -44,6 +44,7 @@ namespace intrp {
 template <typename Metavariables, typename Tag>
 struct InterpolationTarget;
 }  // namespace intrp
+struct DebugToggle;
 /// \endcond
 
 namespace intrp::Events {
@@ -184,6 +185,14 @@ class InterpolateWithoutInterpComponent<VolumeDim, InterpolationTargetTag,
     // 2. Set up interpolator
     intrp::Irregular<VolumeDim> interpolator(
         mesh, element_coord_holder.element_logical_coords);
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf(
+          "InterpolateWithoutInterpComponent, %s: Sending interpolated data to "
+          "target %s at time %f.\n",
+          array_index, InterpolationTargetTag::name(),
+          InterpolationTarget_detail::get_temporal_id_value(temporal_id));
+    }
 
     // 3. Interpolate and send interpolated data to target
     auto& receiver_proxy = Parallel::get_parallel_component<

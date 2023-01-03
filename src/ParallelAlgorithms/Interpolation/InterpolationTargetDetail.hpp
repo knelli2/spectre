@@ -61,6 +61,7 @@ template <typename Id>
 struct LinkedMessageId;
 template <typename TagsList>
 struct Variables;
+struct DebugToggle;
 /// \endcond
 
 namespace intrp {
@@ -278,6 +279,15 @@ bool have_data_at_all_points(const db::DataBox<DbTags>& box,
       db::get<Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>>(box)
           .at(temporal_id)
           .number_of_grid_points();
+  if (db::get<Parallel::Tags::FromGlobalCache<DebugToggle>>(box)) {
+    Parallel::printf(
+        "Target %s: At time %f, invalid_size = %d, filled_size = %d, "
+        "interp_size = %d. We %shave data at all points.\n",
+        InterpolationTargetTag::name(),
+        InterpolationTarget_detail::get_temporal_id_value(temporal_id),
+        invalid_size, filled_size, interp_size,
+        (invalid_size + filled_size == interp_size) ? "" : "don't ");
+  }
   return (invalid_size + filled_size == interp_size);
 }
 

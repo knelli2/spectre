@@ -20,6 +20,11 @@
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
 
+#include "Parallel/Printf.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
+
+struct DebugToggle;
+
 namespace Cce {
 namespace Actions {
 
@@ -69,6 +74,10 @@ struct ReceiveCcmNextTime {
     // (meaning we can continue on). We do this after we know we are an outer
     // boundary element so we don't hold up volume elements.
     if (inbox.size() == 0) {
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf("ReceiveCcmNextTime, %s: No times in inbox, waiting\n",
+                         array_index);
+      }
       return {Parallel::AlgorithmExecution::Retry, std::nullopt};
     }
 
@@ -80,28 +89,80 @@ struct ReceiveCcmNextTime {
           db::get<::Tags::Next<::Tags::TimeStepId>>(box);
       const TimeStepId& next_cce_time = inbox.begin()->second;
 
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf(
+            "ReceiveCcmNextTime, %s: Inbox has %d times. Next gh time is "
+            "%.16f, "
+            "next CCE time is %.16f. We are%s doing dense output\n",
+            array_index, inbox.size(), next_gh_time.substep_time().value(),
+            next_cce_time.substep_time().value(),
+            (next_cce_time.substep_time().value() >=
+                     next_gh_time.substep_time().value()
+                 ? " not"
+                 : ""));
+      }
+
       // If the first next CCE time is after (or at) the next GH time, continue
       // on because we don't need to do dense output this GH time step.
-      if (next_cce_time >= next_gh_time) {
+      if (next_cce_time.substep_time().value() >=
+          next_gh_time.substep_time().value()) {
         return {Parallel::AlgorithmExecution::Continue, std::nullopt};
       }
+
+      using variables_tag = GeneralizedHarmonic::System<3>::variables_tag;
+      using evolved_vars_list = typename variables_tag::tags_list;
+      // using variables_of_evolved_vars = typename variables_tag::type;
 
       // The first next CCE time is before the next GH time which means we need
       // to do dense output
       const auto& time_stepper = db::get<::Tags::TimeStepper<>>(box);
       const auto& history_evolved_vars =
-          db::get<::Tags::HistoryEvolvedVariables<>>(box);
+          db::get<::Tags::HistoryEvolvedVariables<variables_tag>>(box);
+      const auto& variables_evolved_vars = db::get<variables_tag>(box);
 
-      using variables_tag = GeneralizedHarmonic::System<3>::variables_tag;
-      using evolved_vars_list = typename variables_tag::tags_list;
-      using variables_of_evolved_vars = typename variables_tag::type;
+      // variables_of_evolved_vars evolved_vars{
+      //     get<0,
+      //     0>(get<gr::Tags::SpacetimeMetric<3>>(variables_evolved_vars))
+      //         .size()};
+      const auto& evolved_vars = variables_evolved_vars;
+      (void)time_stepper;
+      (void)history_evolved_vars;
 
-      variables_of_evolved_vars evolved_vars{
-          get<0, 0>(db::get<gr::Tags::SpacetimeMetric<3>>(box)).size()};
+      // if (Parallel::get<DebugToggle>(cache)) {
+      //   Parallel::printf("ReceiveCcmNextTime: Vars:\n%s\nHistory Size: %d\n",
+      //                    variables_evolved_vars,
+      //                    history_evolved_vars.size());
+      //   auto iterator = history_evolved_vars.derivatives_begin();
+      //   for (size_t i = 0; i < history_evolved_vars.size(); i++) {
+      //     Parallel::printf("History[%d]: %s\n", i, *iterator);
+      //     iterator++;
+      //   }
+      // }
 
-      time_stepper.dense_update_u(make_not_null(&evolved_vars),
-                                  history_evolved_vars,
-                                  next_cce_time.substep_time().value());
+      // bool succeeded = false;
+      // if (next_cce_time.substep_time().value() ==
+      //     db::get<::Tags::TimeStepId>(box).substep_time().value()) {
+      //   evolved_vars.set_data_ref(make_not_null(
+      //     const_cast<variables_of_evolved_vars*>(&variables_evolved_vars)));
+      //   succeeded = true;
+      // } else {
+      //   succeeded = time_stepper.dense_update_u(
+      //       make_not_null(&evolved_vars), history_evolved_vars,
+      //       next_cce_time.substep_time().value());
+      // }
+
+      const bool succeeded = true;
+
+      // succeeded = time_stepper.dense_update_u(
+      //    make_not_null(&evolved_vars), history_evolved_vars,
+      //    next_cce_time.substep_time().value());
+
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf(
+            "ReceiveCcmNextTime, %s: Dense output to %f%s complete\n",
+            array_index, next_cce_time.substep_time().value(),
+            (succeeded ? "" : " not"));
+      }
 
       auto interpolate_event =
           ::intrp::Events::InterpolateWithoutInterpComponent<
@@ -116,8 +177,8 @@ struct ReceiveCcmNextTime {
       // because that's the order they are in the `evolved_vars_list` type alias
       const auto& spacetime_metric =
           get<gr::Tags::SpacetimeMetric<3>>(evolved_vars);
-      const auto& pi = get<GeneralizedHarmonic::Tags::Pi<3>>(box);
-      const auto& phi = get<GeneralizedHarmonic::Tags::Phi<3>>(box);
+      const auto& pi = get<GeneralizedHarmonic::Tags::Pi<3>>(evolved_vars);
+      const auto& phi = get<GeneralizedHarmonic::Tags::Phi<3>>(evolved_vars);
 
       // Actually do the interpolation to the worldtube target. The TimeStepId
       // associated with current inbox value is the TimeStepId we need to pass
@@ -133,6 +194,12 @@ struct ReceiveCcmNextTime {
       // Now that we have sent GH data at the next CCE time, remove it from the
       // inbox
       inbox.erase(inbox.begin());
+    }
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf(
+          "ReceiveCcmNextTime, %s: Finished with all CCE times. Waiting\n",
+          array_index);
     }
 
     // If we get here, we've sent GH data to all the next CCE times we have in

@@ -107,11 +107,11 @@ struct EvolutionMetavars
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
           tmpl::list<>>,
-      evolution::dg::Actions::ComputeTimeDerivative<
-          VolumeDim, system, AllStepChoosers, local_time_stepping>,
       tmpl::conditional_t<
           DuringSelfStart, tmpl::list<>,
           Cce::Actions::ReceiveCcmNextTime<CceWorldtubeTarget<false>>>,
+      evolution::dg::Actions::ComputeTimeDerivative<
+          VolumeDim, system, AllStepChoosers, local_time_stepping>,
       tmpl::conditional_t<
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<

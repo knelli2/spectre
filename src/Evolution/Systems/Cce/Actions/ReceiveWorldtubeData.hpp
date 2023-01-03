@@ -17,6 +17,10 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include "Parallel/Printf.hpp"
+
+struct DebugToggle;
+
 namespace Cce {
 namespace Actions {
 
@@ -47,11 +51,18 @@ struct ReceiveWorldtubeData {
             typename ActionList, typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
       db::DataBox<DbTags>& box, tuples::TaggedTuple<InboxTags...>& inboxes,
-      const Parallel::GlobalCache<Metavariables>& /*cache*/,
+      const Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& /*array_index*/, const ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     auto& inbox = tuples::get<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(inboxes);
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf("CCE Evolution: At time %f, Inbox has %d times.\n",
+                       db::get<::Tags::TimeStepId>(box).substep_time().value(),
+                       inbox.size());
+    }
+
     if (inbox.count(db::get<::Tags::TimeStepId>(box)) != 1) {
       return {Parallel::AlgorithmExecution::Pause,
               tmpl::index_of<ActionList, ReceiveWorldtubeData>::value};

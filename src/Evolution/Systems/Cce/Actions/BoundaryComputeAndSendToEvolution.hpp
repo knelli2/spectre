@@ -29,6 +29,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits.hpp"
 
+struct DebugToggle;
+
 namespace Cce {
 namespace Actions {
 
@@ -275,6 +277,12 @@ struct SendToEvolution<GhWorldtubeBoundary<Metavariables>, EvolutionComponent> {
         },
         db::get<InitializationTags::ExtractionRadius>(box),
         db::get<Tags::LMax>(box));
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf("SendToCceEvolution: Sending data to CCE at time %f.\n",
+                       time.substep_time().value());
+    }
+
     Parallel::receive_data<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(
         Parallel::get_parallel_component<EvolutionComponent>(cache), time,

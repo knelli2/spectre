@@ -25,12 +25,27 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+struct DebugToggleOption {
+  using type = bool;
+  static std::string name() { return "DebugToggle"; }
+  static constexpr Options::String help = {"Help"};
+};
+
+struct DebugToggle : db::SimpleTag {
+  using type = bool;
+
+  using option_tags = tmpl::list<DebugToggleOption>;
+  static constexpr bool pass_metavariables = false;
+
+  static bool create_from_options(const bool option) { return option; }
+};
+
 namespace Cce {
 namespace Actions {
 
 struct InitializeCcmNextTime {
   using simple_tags_from_options = tmpl::list<>;
-  using const_global_cache_tags = tmpl::list<>;
+  using const_global_cache_tags = tmpl::list<DebugToggle>;
   using mutable_global_cache_tags = tmpl::list<>;
   using return_tags = tmpl::list<Cce::Tags::NextCcmTime>;
   using argument_tags = tmpl::list<::Tags::TimeStepId>;
