@@ -93,7 +93,8 @@ T Option::parse_as() const {
     // inline a bit of its logic.
     Options_detail::wrap_create_types<T, Identifier, Metavariables> result{};
     if (YAML::convert<decltype(result)>::decode(node(), result)) {
-      return Options_detail::unwrap_create_types(std::move(result));
+      return Options_detail::unwrap_create_types<decltype(result), Identifier>(
+          std::move(result));
     }
     // clang-tidy: thrown exception is not nothrow copy constructible
     throw YAML::BadConversion(node().Mark());  // NOLINT
@@ -503,9 +504,19 @@ std::pair<int, std::vector<size_t>> choose_alternatives(
   });
   return {num_matched, std::move(alternative_choices)};
 }
-}  // namespace Options_detail
 
-namespace Options_detail {
+CREATE_GET_TYPE_ALIAS_OR_DEFAULT(identifier);
+
+template <typename T>
+struct get_thing {
+  using type = T;
+};
+
+template <typename T, typename U>
+struct get_thing<std::unique_ptr<T, U>> {
+  using type = T;
+};
+
 template <typename Tag, typename Metavariables, typename Subgroup>
 struct get_impl {
   template <typename OptionList, typename Group>
@@ -538,7 +549,10 @@ struct get_impl<Tag, Metavariables, Tag> {
     Option option(supplied_option->second, opts.context_);
     option.append_context("While parsing option " + label);
 
-    auto t = option.parse_as<typename Tag::type, Metavariables>();
+    using identifier = get_identifier_or_default_t<
+        Tag, typename get_thing<typename Tag::type>::type>;
+
+    auto t = option.parse_as<typename Tag::type, Metavariables, identifier>();
 
     if constexpr (Options_detail::has_suggested<Tag>::value) {
       static_assert(
@@ -1122,10 +1136,19 @@ struct create_from_yaml<std::variant<T...>> {
 };
 
 namespace Options_detail {
-CREATE_HAS_TYPE_ALIAS(type)
-CREATE_HAS_TYPE_ALIAS_V(type)
-CREATE_HAS_TYPE_ALIAS(identifier)
-CREATE_HAS_TYPE_ALIAS_V(identifier)
+template <typename T, typename Metavariables, typename,
+          typename = std::void_t<>>
+struct is_create_callable : std::false_type {};
+
+template <typename T, typename Metavariables, typename Identifier>
+struct is_create_callable<
+    T, Metavariables, Identifier,
+    std::void_t<decltype(T::template create<Metavariables, Identifier>(
+        std::declval<Options::Option>()))>> : std::true_type {};
+
+template <typename T, typename Metavariables, typename Identifier>
+constexpr bool is_create_callable_v =
+    is_create_callable<T, Metavariables, Identifier>::value;
 }  // namespace Options_detail
 }  // namespace Options
 
@@ -1133,15 +1156,26 @@ CREATE_HAS_TYPE_ALIAS_V(identifier)
 template <typename T, typename Identifier, typename Metavariables>
 struct YAML::convert<
     Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>> {
-  static bool decode(
-      const Node& node,
-      Options::Options_detail::CreateWrapper<T, Metavariables>& rhs) {
+  static bool decode(const Node& node, Options::Options_detail::CreateWrapper<
+                                           T, Identifier, Metavariables>& rhs) {
     Options::Context context;
     context.top_level = false;
     context.append("While creating a " + pretty_type::name<T>());
     Options::Option options(node, std::move(context));
-    rhs = Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>{
-        Options::create_from_yaml<T>::template create<Metavariables>(options)};
+    if constexpr (Options::Options_detail::is_create_callable_v<
+                      Options::create_from_yaml<T>, Metavariables,
+                      Identifier>) {
+      rhs =
+          Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>{
+              Options::create_from_yaml<T>::template create<Metavariables,
+                                                            Identifier>(
+                  options)};
+    } else {
+      rhs =
+          Options::Options_detail::CreateWrapper<T, Identifier, Metavariables>{
+              Options::create_from_yaml<T>::template create<Metavariables>(
+                  options)};
+    }
     return true;
   }
 };

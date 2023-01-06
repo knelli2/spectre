@@ -291,28 +291,29 @@ CREATE_WRAPPER_FORWARD_OP(<=)
 CREATE_WRAPPER_FORWARD_OP(>=)
 #undef CREATE_WRAPPER_FORWARD_OP
 
-template <typename T, typename Identifier = T, typename = std::nullptr_t>
+template <typename T, typename Identifier, typename = std::nullptr_t>
 struct wrap_create_types_impl;
 
 template <typename T, typename Identifier, typename Metavariables>
 using wrap_create_types = typename wrap_create_types_impl<
-    T, Identifier>::template wrapped_type<Metavariables, Identifier>;
+    T, Identifier>::template wrapped_type<Metavariables>;
 
 template <typename T, typename Identifier>
 auto unwrap_create_types(T wrapped) {
   return wrap_create_types_impl<T, Identifier>::unwrap(std::move(wrapped));
 }
 
-template <typename T, typename, typename>
+template <typename T, typename Identifier, typename>
 struct wrap_create_types_impl {
-  template <typename Metavariables, typename Identifier>
+  template <typename Metavariables>
   using wrapped_type = CreateWrapper<T, Identifier, Metavariables>;
 };
 
 template <typename T, typename Identifier, typename Metavariables>
-struct wrap_create_types_impl<CreateWrapper<T, Identifier, Metavariables>> {
+struct wrap_create_types_impl<CreateWrapper<T, Identifier, Metavariables>,
+                              Identifier> {
   // Never actually used, but instantiated during unwrapping
-  template <typename, typename>
+  template <typename>
   using wrapped_type = void;
 
   static T unwrap(CreateWrapper<T, Identifier, Metavariables> wrapped) {
@@ -323,77 +324,82 @@ struct wrap_create_types_impl<CreateWrapper<T, Identifier, Metavariables>> {
 template <typename T, typename Identifier>
 struct wrap_create_types_impl<T, Identifier,
                               Requires<std::is_fundamental<T>::value>> {
-  template <typename, typename>
+  template <typename>
   using wrapped_type = T;
 
   static T unwrap(T wrapped) { return wrapped; }
 };
 
 // Classes convertible by yaml-cpp
-template <>
-struct wrap_create_types_impl<std::string> {
-  template <typename, typename>
+template <typename Identifier>
+struct wrap_create_types_impl<std::string, Identifier> {
+  template <typename>
   using wrapped_type = std::string;
 
   static std::string unwrap(std::string wrapped) { return wrapped; }
 };
 
-template <typename K, typename V>
-struct wrap_create_types_impl<std::map<K, V>> {
-  template <typename Metavariables, typename Identifier>
+template <typename K, typename V, typename Identifier>
+struct wrap_create_types_impl<std::map<K, V>, Identifier> {
+  template <typename Metavariables>
   using wrapped_type =
       std::map<wrap_create_types<K, Identifier, Metavariables>,
                wrap_create_types<V, Identifier, Metavariables>>;
 
   static auto unwrap(std::map<K, V> wrapped) {
-    using UnwrappedK = decltype(unwrap_create_types<K>(std::declval<K>()));
-    using UnwrappedV = decltype(unwrap_create_types<V>(std::declval<V>()));
+    using UnwrappedK =
+        decltype(unwrap_create_types<K, Identifier>(std::declval<K>()));
+    using UnwrappedV =
+        decltype(unwrap_create_types<V, Identifier>(std::declval<V>()));
     std::map<UnwrappedK, UnwrappedV> result;
     for (auto it = wrapped.begin(); it != wrapped.end();) {
       auto node = wrapped.extract(it++);
-      result.emplace(unwrap_create_types<K>(std::move(node.key())),
-                     unwrap_create_types<V>(std::move(node.mapped())));
+      result.emplace(
+          unwrap_create_types<K, Identifier>(std::move(node.key())),
+          unwrap_create_types<V, Identifier>(std::move(node.mapped())));
     }
     return result;
   }
 };
 
-template <typename T>
-struct wrap_create_types_impl<std::vector<T>> {
-  template <typename Metavariables, typename Identifier>
+template <typename T, typename Identifier>
+struct wrap_create_types_impl<std::vector<T>, Identifier> {
+  template <typename Metavariables>
   using wrapped_type =
       std::vector<wrap_create_types<T, Identifier, Metavariables>>;
 
   static auto unwrap(std::vector<T> wrapped) {
-    using UnwrappedT = decltype(unwrap_create_types<T>(std::declval<T>()));
+    using UnwrappedT =
+        decltype(unwrap_create_types<T, Identifier>(std::declval<T>()));
     std::vector<UnwrappedT> result;
     result.reserve(wrapped.size());
     for (auto& w : wrapped) {
-      result.push_back(unwrap_create_types<T>(std::move(w)));
+      result.push_back(unwrap_create_types<T, Identifier>(std::move(w)));
     }
     return result;
   }
 };
 
-template <typename T>
-struct wrap_create_types_impl<std::list<T>> {
-  template <typename Metavariables, typename Identifier>
+template <typename T, typename Identifier>
+struct wrap_create_types_impl<std::list<T>, Identifier> {
+  template <typename Metavariables>
   using wrapped_type =
-      std::list<wrap_create_types<T, Identifier, , Metavariables>>;
+      std::list<wrap_create_types<T, Identifier, Metavariables>>;
 
   static auto unwrap(std::list<T> wrapped) {
-    using UnwrappedT = decltype(unwrap_create_types<T>(std::declval<T>()));
+    using UnwrappedT =
+        decltype(unwrap_create_types<T, Identifier>(std::declval<T>()));
     std::list<UnwrappedT> result;
     for (auto& w : wrapped) {
-      result.push_back(unwrap_create_types<T>(std::move(w)));
+      result.push_back(unwrap_create_types<T, Identifier>(std::move(w)));
     }
     return result;
   }
 };
 
-template <typename T, size_t N>
-struct wrap_create_types_impl<std::array<T, N>> {
-  template <typename Metavariables, typename Identifier>
+template <typename T, size_t N, typename Identifier>
+struct wrap_create_types_impl<std::array<T, N>, Identifier> {
+  template <typename Metavariables>
   using wrapped_type =
       std::array<wrap_create_types<T, Identifier, Metavariables>, N>;
 
@@ -404,26 +410,29 @@ struct wrap_create_types_impl<std::array<T, N>> {
   template <size_t... Is>
   static auto unwrap_helper(std::array<T, N> wrapped,
                             std::integer_sequence<size_t, Is...> /*meta*/) {
-    using UnwrappedT = decltype(unwrap_create_types<T>(std::declval<T>()));
+    using UnwrappedT =
+        decltype(unwrap_create_types<T, Identifier>(std::declval<T>()));
     static_cast<void>(wrapped);  // Work around broken GCC warning
     return std::array<UnwrappedT, N>{
-        {unwrap_create_types<T>(std::move(wrapped[Is]))...}};
+        {unwrap_create_types<T, Identifier>(std::move(wrapped[Is]))...}};
   }
 };
 
-template <typename T, typename U>
-struct wrap_create_types_impl<std::pair<T, U>> {
-  template <typename Metavariables, typename Identifier>
+template <typename T, typename U, typename Identifier>
+struct wrap_create_types_impl<std::pair<T, U>, Identifier> {
+  template <typename Metavariables>
   using wrapped_type =
       std::pair<wrap_create_types<T, Identifier, Metavariables>,
                 wrap_create_types<U, Identifier, Metavariables>>;
 
   static auto unwrap(std::pair<T, U> wrapped) {
-    using UnwrappedT = decltype(unwrap_create_types<T>(std::declval<T>()));
-    using UnwrappedU = decltype(unwrap_create_types<U>(std::declval<U>()));
+    using UnwrappedT =
+        decltype(unwrap_create_types<T, Identifier>(std::declval<T>()));
+    using UnwrappedU =
+        decltype(unwrap_create_types<U, Identifier>(std::declval<U>()));
     return std::pair<UnwrappedT, UnwrappedU>(
-        unwrap_create_types<T>(std::move(wrapped.first)),
-        unwrap_create_types<U>(std::move(wrapped.second)));
+        unwrap_create_types<T, Identifier>(std::move(wrapped.first)),
+        unwrap_create_types<U, Identifier>(std::move(wrapped.second)));
   }
 };
 }  // namespace Options::Options_detail

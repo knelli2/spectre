@@ -34,6 +34,7 @@ namespace OptionTags {
 /// \endcode
 struct EventsAndTriggers {
   using type = ::EventsAndTriggers;
+  using identifier = ::Event;
   static constexpr Options::String help = "Events to run at triggers";
   // When the template arguments to this struct are sufficiently
   // complicated, pretty_type::short_name() run on this struct returns
