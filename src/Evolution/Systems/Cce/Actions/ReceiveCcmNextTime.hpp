@@ -109,9 +109,11 @@ struct ReceiveCcmNextTime {
         return {Parallel::AlgorithmExecution::Continue, std::nullopt};
       }
 
+      // TODO: Check for boundary corrections data
+
       using variables_tag = GeneralizedHarmonic::System<3>::variables_tag;
       using evolved_vars_list = typename variables_tag::tags_list;
-      // using variables_of_evolved_vars = typename variables_tag::type;
+      using variables_of_evolved_vars = typename variables_tag::type;
 
       // The first next CCE time is before the next GH time which means we need
       // to do dense output
@@ -120,42 +122,15 @@ struct ReceiveCcmNextTime {
           db::get<::Tags::HistoryEvolvedVariables<variables_tag>>(box);
       const auto& variables_evolved_vars = db::get<variables_tag>(box);
 
-      // variables_of_evolved_vars evolved_vars{
-      //     get<0,
-      //     0>(get<gr::Tags::SpacetimeMetric<3>>(variables_evolved_vars))
-      //         .size()};
-      const auto& evolved_vars = variables_evolved_vars;
-      (void)time_stepper;
-      (void)history_evolved_vars;
+      variables_of_evolved_vars evolved_vars = variables_evolved_vars;
 
-      // if (Parallel::get<DebugToggle>(cache)) {
-      //   Parallel::printf("ReceiveCcmNextTime: Vars:\n%s\nHistory Size: %d\n",
-      //                    variables_evolved_vars,
-      //                    history_evolved_vars.size());
-      //   auto iterator = history_evolved_vars.derivatives_begin();
-      //   for (size_t i = 0; i < history_evolved_vars.size(); i++) {
-      //     Parallel::printf("History[%d]: %s\n", i, *iterator);
-      //     iterator++;
-      //   }
-      // }
+      bool succeeded = time_stepper.dense_update_u(
+          make_not_null(&evolved_vars), history_evolved_vars,
+          next_cce_time.substep_time().value());
 
-      // bool succeeded = false;
-      // if (next_cce_time.substep_time().value() ==
-      //     db::get<::Tags::TimeStepId>(box).substep_time().value()) {
-      //   evolved_vars.set_data_ref(make_not_null(
-      //     const_cast<variables_of_evolved_vars*>(&variables_evolved_vars)));
-      //   succeeded = true;
-      // } else {
-      //   succeeded = time_stepper.dense_update_u(
-      //       make_not_null(&evolved_vars), history_evolved_vars,
-      //       next_cce_time.substep_time().value());
-      // }
-
-      const bool succeeded = true;
-
-      // succeeded = time_stepper.dense_update_u(
-      //    make_not_null(&evolved_vars), history_evolved_vars,
-      //    next_cce_time.substep_time().value());
+      // TODO: boundary corrections, use ::is_ready, uses time in databox, so
+      // need to store current time, mutate it, then reset it afterwards. DOn't
+      // do extra copies. Call apply function
 
       if (Parallel::get<DebugToggle>(cache)) {
         Parallel::printf(
