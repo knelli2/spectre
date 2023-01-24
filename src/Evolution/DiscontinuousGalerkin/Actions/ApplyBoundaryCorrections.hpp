@@ -506,6 +506,22 @@ struct ApplyBoundaryCorrections {
           // to be the same size twice in a row, in which case holding
           // on to the allocation is a win.
           Scalar<DataVector> face_det_jacobian{};
+          // For LTS, face_det_jacobian will be non-owning. But for GTS an
+          // allocation needs to be done, so to avoid multiple resizes in the
+          // loop over mortars, just allocate it to the max size here and we'll
+          // have a view later on which is the proper size when work needs to be
+          // done
+          if constexpr (not local_time_stepping) {
+            size_t max_size = 0;
+            for (auto& mortar_id_and_data : *mortar_data) {
+              const auto& mortar_id = mortar_id_and_data.first;
+              const auto& direction = mortar_id.first;
+              max_size = std::max(max_size,
+                                  volume_mesh.slice_away(direction.dimension())
+                                      .number_of_grid_points());
+            }
+            get(face_det_jacobian).destructive_resize(max_size);
+          }
           Variables<mortar_tags_list> local_data_on_mortar{};
           Variables<mortar_tags_list> neighbor_data_on_mortar{};
 
@@ -653,8 +669,9 @@ struct ApplyBoundaryCorrections {
                 } else {
                   // Project the determinant of the Jacobian to the face. This
                   // could be optimized by caching in the time-independent case.
-                  get(face_det_jacobian)
-                      .destructive_resize(face_mesh.number_of_grid_points());
+                  Scalar<DataVector> face_det_jacobian_view{
+                      get(face_det_jacobian).data(),
+                      face_mesh.number_of_grid_points()};
                   const Matrix identity{};
                   auto interpolation_matrices =
                       make_array<volume_dim>(std::cref(identity));
@@ -664,7 +681,7 @@ struct ApplyBoundaryCorrections {
                   gsl::at(interpolation_matrices, direction.dimension()) =
                       direction.side() == Side::Upper ? matrices.second
                                                       : matrices.first;
-                  apply_matrices(make_not_null(&get(face_det_jacobian)),
+                  apply_matrices(make_not_null(&get(face_det_jacobian_view)),
                                  interpolation_matrices,
                                  get(volume_det_jacobian),
                                  volume_mesh.extents());
@@ -672,6 +689,12 @@ struct ApplyBoundaryCorrections {
 
                 volume_dt_correction.initialize(
                     volume_mesh.number_of_grid_points(), 0.0);
+                // Note that face_det_jacobian may be the wrong size here
+                // because it's allocated to be the max size for all mortars.
+                // However, this is ok *only* because
+                // lift_boundary_terms_gauss_points doesn't actually use the
+                // size of face_det_jacobian, but instead uses the mesh to get
+                // the number of grid points
                 evolution::dg::lift_boundary_terms_gauss_points(
                     make_not_null(&volume_dt_correction),
                     volume_det_inv_jacobian, volume_mesh, direction,
