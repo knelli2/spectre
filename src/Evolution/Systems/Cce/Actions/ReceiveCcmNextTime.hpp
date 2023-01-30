@@ -11,6 +11,7 @@
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Domain/Tags.hpp"
+#include "Evolution/DiscontinuousGalerkin/Actions/ApplyBoundaryCorrections.hpp"
 #include "Evolution/Systems/Cce/ReceiveTags.hpp"
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/System.hpp"
@@ -30,7 +31,11 @@ namespace Actions {
 
 template <typename WorldtubeTargetTag>
 struct ReceiveCcmNextTime {
-  using inbox_tags = tmpl::list<Cce::ReceiveTags::CcmNextTimeToGH>;
+  // CCE only works in 3D so don't bother templating this on the volume
+  // dimension
+  using inbox_tags =
+      tmpl::list<Cce::ReceiveTags::CcmNextTimeToGH,
+                 evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<3>>;
   template <typename DbTags, typename... InboxTags, typename Metavariables,
             typename ArrayIndex, typename ActionList,
             typename ParallelComponent>
@@ -103,15 +108,24 @@ struct ReceiveCcmNextTime {
       }
 
       // If the first next CCE time is after (or at) the next GH time, continue
-      // on because we don't need to do dense output this GH time step.
+      // on because we don't need to do dense output this GH time step. Don't
+      // clear the inbox because the next time through the action list we'll
+      // need it.
       if (next_cce_time.substep_time().value() >=
           next_gh_time.substep_time().value()) {
         return {Parallel::AlgorithmExecution::Continue, std::nullopt};
       }
 
-      // TODO: Check for boundary corrections data
+      // We have to have all boundary corrections before we can do dense output.
+      // We do this now so that we aren't unnecessarily waiting for boundary
+      // corrections if the next CCE time is after our current time step
+      if (not evolution::dg::receive_boundary_data_local_time_stepping<
+              Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
+        return {Parallel::AlgorithmExecution::Retry, std::nullopt};
+      }
 
-      using variables_tag = GeneralizedHarmonic::System<3>::variables_tag;
+      using system = GeneralizedHarmonic::System<3>;
+      using variables_tag = typename system::variables_tag;
       using evolved_vars_list = typename variables_tag::tags_list;
       using variables_of_evolved_vars = typename variables_tag::type;
 
@@ -128,9 +142,20 @@ struct ReceiveCcmNextTime {
           make_not_null(&evolved_vars), history_evolved_vars,
           next_cce_time.substep_time().value());
 
-      // TODO: boundary corrections, use ::is_ready, uses time in databox, so
-      // need to store current time, mutate it, then reset it afterwards. DOn't
-      // do extra copies. Call apply function
+      // Apply boundary corrections. We don't use db::apply because we need to
+      // pass in our own variables and dense output time.
+      evolution::dg::ApplyBoundaryCorrections<true, system, 3, true>::apply(
+          make_not_null(&evolved_vars),
+          db::get<evolution::dg::Tags::MortarDataHistory<
+              3, db::add_tag_prefix<::Tags::dt, variables_tag>::type>>(box),
+          db::get<domain::Tags::Mesh<3>>(box),
+          db::get<evolution::dg::Tags::MortarMesh<3>>(box),
+          db::get<evolution::dg::Tags::MortarSize<3>>(box),
+          db::get<::dg::Tags::Formulation>(box),
+          db::get<evolution::dg::Tags::NormalCovectorAndMagnitude<3>>(box),
+          db::get<::Tags::TimeStepper<>>(box),
+          db::get<evolution::Tags::BoundaryCorrection<system>>(box),
+          next_cce_time.substep_time().value());
 
       if (Parallel::get<DebugToggle>(cache)) {
         Parallel::printf(
