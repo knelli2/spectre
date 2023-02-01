@@ -192,6 +192,11 @@ class TimeStepper : public PUP::able {
                             const TimeSteppers::History<Vars>& history) const {
     return can_change_step_size_forward(time_id, history.untyped());
   }
+
+  void change_print(const bool in) const {
+    yes_print = in;
+  }
+  mutable bool yes_print{false};
 };
 
 /// \cond

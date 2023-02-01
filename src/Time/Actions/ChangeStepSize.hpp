@@ -67,8 +67,12 @@ bool change_step_size(const gsl::not_null<db::DataBox<DbTags>*> box) {
     }
     using tag = typename decltype(tag_v)::type;
     const auto& history = db::get<tag>(*box);
+    if constexpr (is_cce) {
+      time_stepper.change_print(true);
+    }
     can_change_step_size =
         time_stepper.can_change_step_size(next_time_id, history);
+    time_stepper.change_print(false);
     if constexpr (is_cce) {
       Parallel::printf("On CCE: For tag %s, can change step size: %s\n",
                        db::tag_name<tag>(),

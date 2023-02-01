@@ -28,6 +28,8 @@
 #include "Utilities/Math.hpp"
 #include "Utilities/Overloader.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace TimeSteppers {
 
 namespace {
@@ -311,6 +313,32 @@ bool AdamsBashforth::can_change_step_size_impl(
   // evolution until the self-start history has been replaced with
   // "real" values.
   const evolution_less<Time> less{time_id.time_runs_forward()};
+
+  const bool is_self_start = ::SelfStart::is_self_starting(time_id);
+  const bool zero_history_size = history.size() == 0;
+  const bool before =
+      less(history.back().time_step_id.step_time(), time_id.step_time());
+  const bool sorted =
+      std::is_sorted(history_time_iterator(history.begin()),
+                     history_time_iterator(history.end()), less);
+
+  const bool can_change_step_size =
+      not is_self_start and (zero_history_size or (before and sorted));
+
+  const auto is_true = [](const bool in) { return in ? "true" : "false"; };
+
+  if (yes_print) {
+    Parallel::printf(
+        "can_change_step_size for %f, %s\n"
+        " not is_self_start = %s\n"
+        " history.size() == 0 = %s\n"
+        " less(history.back(), time_id.step_time()) = %s\n"
+        " history is sorted = %s\n",
+        time_id.substep_time().value(), is_true(can_change_step_size),
+        is_true(not is_self_start), is_true(zero_history_size), is_true(before),
+        is_true(sorted));
+  }
+
   return not ::SelfStart::is_self_starting(time_id) and
          (history.size() == 0 or
           (less(history.back().time_step_id.step_time(),

@@ -226,7 +226,7 @@ struct EvolutionMetavars
     using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
         Cce::CharacteristicEvolution<EvolutionMetavars>, CceWorldtubeTarget,
         // FIXME: This is a hack
-        DuringSelfStart, false>;
+        false, false>;
     using vars_to_interpolate_to_target = interpolator_source_vars;
     template <typename Metavariables>
     using interpolating_component = gh_dg_element_array;
