@@ -19,6 +19,7 @@
 #include "Time/Tags.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Utilities/Algorithm.hpp"
+#include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/Gsl.hpp"
 
 #include "Parallel/Printf.hpp"
@@ -90,9 +91,15 @@ struct ReceiveCcmNextTime {
     // multiple next CCE times we have to do dense output to before the next GH
     // time.
     while (inbox.size() > 0) {
-      const TimeStepId next_gh_time =
+      const TimeStepId& current_gh_time = db::get<::Tags::TimeStepId>(box);
+      const TimeStepId& next_gh_time =
           db::get<::Tags::Next<::Tags::TimeStepId>>(box);
       const TimeStepId& next_cce_time = inbox.begin()->second;
+
+      // Use CCE next time as scale because that will always be equal to or
+      // larger than current GH time
+      const bool cce_next_time_at_current_gh_time =
+      current_gh_time.substep_time() == next_cce_time.substep_time();
 
       if (Parallel::get<DebugToggle>(cache)) {
         Parallel::printf(
@@ -119,9 +126,18 @@ struct ReceiveCcmNextTime {
       // We have to have all boundary corrections before we can do dense output.
       // We do this now so that we aren't unnecessarily waiting for boundary
       // corrections if the next CCE time is after our current time step
-      if (not evolution::dg::receive_boundary_data_local_time_stepping<
-              Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
-        return {Parallel::AlgorithmExecution::Retry, std::nullopt};
+      if (not cce_next_time_at_current_gh_time) {
+        if (not evolution::dg::receive_boundary_data_local_time_stepping<
+                Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
+          if (Parallel::get<DebugToggle>(cache)) {
+            Parallel::printf(
+                "ReceiveCcmNextTime, %s: Waiting for mortar data at time %f. "
+                "Next cce time is %f\n",
+                array_index, current_gh_time.substep_time().value(),
+                next_cce_time.substep_time().value());
+          }
+          return {Parallel::AlgorithmExecution::Retry, std::nullopt};
+        }
       }
 
       using system = GeneralizedHarmonic::System<3>;
@@ -138,31 +154,43 @@ struct ReceiveCcmNextTime {
 
       variables_of_evolved_vars evolved_vars = variables_evolved_vars;
 
-      bool succeeded = time_stepper.dense_update_u(
-          make_not_null(&evolved_vars), history_evolved_vars,
-          next_cce_time.substep_time().value());
+      // If we're already at the correct time, then we shouldn't do dense output
+      // or apply boundary corrections. Just use the variables in the DataBox
+      // right now.
+      if (not cce_next_time_at_current_gh_time) {
+        bool succeeded = time_stepper.dense_update_u(
+            make_not_null(&evolved_vars), history_evolved_vars,
+            next_cce_time.substep_time().value());
 
-      // Apply boundary corrections. We don't use db::apply because we need to
-      // pass in our own variables and dense output time.
-      evolution::dg::ApplyBoundaryCorrections<true, system, 3, true>::apply(
-          make_not_null(&evolved_vars),
-          db::get<evolution::dg::Tags::MortarDataHistory<
-              3, db::add_tag_prefix<::Tags::dt, variables_tag>::type>>(box),
-          db::get<domain::Tags::Mesh<3>>(box),
-          db::get<evolution::dg::Tags::MortarMesh<3>>(box),
-          db::get<evolution::dg::Tags::MortarSize<3>>(box),
-          db::get<::dg::Tags::Formulation>(box),
-          db::get<evolution::dg::Tags::NormalCovectorAndMagnitude<3>>(box),
-          db::get<::Tags::TimeStepper<>>(box),
-          db::get<evolution::Tags::BoundaryCorrection<system>>(box),
-          next_cce_time.substep_time().value());
+        // Apply boundary corrections. We don't use db::apply because we need to
+        // pass in our own variables and dense output time.
+        evolution::dg::ApplyBoundaryCorrections<true, system, 3, true>::apply(
+            make_not_null(&evolved_vars),
+            db::get<evolution::dg::Tags::MortarDataHistory<
+                3, db::add_tag_prefix<::Tags::dt, variables_tag>::type>>(box),
+            db::get<domain::Tags::Mesh<3>>(box),
+            db::get<evolution::dg::Tags::MortarMesh<3>>(box),
+            db::get<evolution::dg::Tags::MortarSize<3>>(box),
+            db::get<::dg::Tags::Formulation>(box),
+            db::get<evolution::dg::Tags::NormalCovectorAndMagnitude<3>>(box),
+            db::get<::Tags::TimeStepper<>>(box),
+            db::get<evolution::Tags::BoundaryCorrection<system>>(box),
+            next_cce_time.substep_time().value());
 
-      if (Parallel::get<DebugToggle>(cache)) {
-        Parallel::printf(
-            "ReceiveCcmNextTime, %s: Dense output to %f%s complete\n",
-            array_index, next_cce_time.substep_time().value(),
-            (succeeded ? "" : " not"));
-        // Parallel::printf("Vars:\n%s\n\n", evolved_vars);
+        if (Parallel::get<DebugToggle>(cache)) {
+          Parallel::printf(
+              "ReceiveCcmNextTime, %s: Dense output to %f%s complete\n",
+              array_index, next_cce_time.substep_time().value(),
+              (succeeded ? "" : " not"));
+          // Parallel::printf("Vars:\n%s\n\n", evolved_vars);
+        }
+      } else {
+        if (Parallel::get<DebugToggle>(cache)) {
+          Parallel::printf(
+              "ReceiveCcmNextTime, %s: No need to do dense output to %f "
+              "because we are already at that time\n",
+              array_index, next_cce_time.substep_time().value());
+        }
       }
 
       auto interpolate_event =
