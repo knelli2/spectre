@@ -162,7 +162,7 @@ struct ReceiveCcmNextTime {
             "ReceiveCcmNextTime, %s: Dense output to %f%s complete\n",
             array_index, next_cce_time.substep_time().value(),
             (succeeded ? "" : " not"));
-        Parallel::printf("Vars:\n%s\n\n", evolved_vars);
+        // Parallel::printf("Vars:\n%s\n\n", evolved_vars);
       }
 
       auto interpolate_event =
