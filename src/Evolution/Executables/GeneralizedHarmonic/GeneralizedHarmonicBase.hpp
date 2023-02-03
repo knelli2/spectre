@@ -159,6 +159,7 @@ constexpr auto make_default_phase_order() {
                       Parallel::Phase::InitializeInitialDataDependentQuantities,
                       Parallel::Phase::Register,
                       Parallel::Phase::InitializeTimeStepperHistory,
+                      Parallel::Phase::CheckTimeStepperHistory,
                       Parallel::Phase::Evolve,
                       Parallel::Phase::Exit};
   } else {
@@ -166,6 +167,7 @@ constexpr auto make_default_phase_order() {
                       Parallel::Phase::InitializeInitialDataDependentQuantities,
                       Parallel::Phase::Register,
                       Parallel::Phase::InitializeTimeStepperHistory,
+                      Parallel::Phase::CheckTimeStepperHistory,
                       Parallel::Phase::Evolve,
                       Parallel::Phase::Exit};
   }
