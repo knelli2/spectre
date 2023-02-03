@@ -26,12 +26,15 @@
 #include "Evolution/Systems/Cce/IntegrandInputSteps.hpp"
 #include "Evolution/Systems/Cce/InterfaceManagers/GhInterfaceManager.hpp"
 #include "Evolution/Systems/Cce/InterfaceManagers/GhLocalTimeStepping.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Evolution/Systems/Cce/InterfaceManagers/GhLockstep.hpp"
+#include "ParallelAlgorithms/Actions/MemoryMonitor/ContributeMemoryData.hpp"
 #include "Evolution/Systems/Cce/OptionTags.hpp"
 #include "Evolution/Systems/Cce/System.hpp"
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "Evolution/Systems/Cce/WorldtubeBufferUpdater.hpp"
 #include "Evolution/Systems/Cce/WorldtubeDataManager.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/RegisterDerived.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/ConstraintDamping/RegisterDerivedWithCharm.hpp"
 #include "NumericalAlgorithms/Interpolation/BarycentricRationalSpanInterpolator.hpp"
@@ -247,6 +250,7 @@ struct EvolutionMetavars
   using component_list = tmpl::flatten<tmpl::list<
       observers::Observer<EvolutionMetavars>,
       observers::ObserverWriter<EvolutionMetavars>,
+      mem_monitor::MemoryMonitor<EvolutionMetavars>,
       std::conditional_t<UseNumericalInitialData,
                          importers::ElementDataReader<EvolutionMetavars>,
                          tmpl::list<>>,

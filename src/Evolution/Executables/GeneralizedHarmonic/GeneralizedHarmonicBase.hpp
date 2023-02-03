@@ -28,12 +28,15 @@
 #include "Evolution/EventsAndDenseTriggers/DenseTriggers/Factory.hpp"
 #include "Evolution/Initialization/DgDomain.hpp"
 #include "Evolution/Initialization/Evolution.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Evolution/Initialization/NonconservativeSystem.hpp"
 #include "Evolution/Initialization/SetVariables.hpp"
 #include "Evolution/NumericInitialData.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Actions/NumericInitialData.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryConditions/Factory.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/Factory.hpp"
+#include "ParallelAlgorithms/Actions/MemoryMonitor/ContributeMemoryData.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Equations.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/GaugeSourceFunctions/Factory.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/GaugeSourceFunctions/Gauges.hpp"
@@ -298,6 +301,7 @@ struct FactoryCreation : tt::ConformsTo<Options::protocols::FactoryCreation> {
       tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
       tmpl::pair<Event,
                  tmpl::flatten<tmpl::list<Events::Completion,
+                                          Events::MonitorMemory<3, ::Tags::Time>,
                                           typename detail::ObserverTags<
                                               volume_dim>::field_observations,
                                           Events::time_events<system>>>>,
