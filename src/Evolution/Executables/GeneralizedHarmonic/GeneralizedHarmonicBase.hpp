@@ -333,7 +333,8 @@ struct GeneralizedHarmonicTemplateBase {
        Parallel::Phase::ImportInitialData,
        Parallel::Phase::InitializeInitialDataDependentQuantities,
        Parallel::Phase::Register, Parallel::Phase::InitializeTimeStepperHistory,
-       Parallel::Phase::Evolve, Parallel::Phase::Exit}};
+       Parallel::Phase::CheckTimeStepperHistory, Parallel::Phase::Evolve,
+       Parallel::Phase::Exit}};
 
   using step_actions = tmpl::list<
       evolution::dg::Actions::ComputeTimeDerivative<
