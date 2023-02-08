@@ -51,21 +51,28 @@ struct SendNextTimeToGh {
             current_time.substep_time().value());
       }
 
+      // if constexpr (FirstTime) {
+      //   Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
+      //     Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
+      //           cache),
+      //       TimeStepId{current_time.time_runs_forward(),
+      //                  current_time.slab_number(),
+      //                  Time{current_time.substep_time().slab().retreat(),
+      //                       current_time.substep_time().fraction()}},
+      //       current_time, false);
+      // }
+
       if constexpr (FirstTime) {
         Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
             Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
                 cache),
-            TimeStepId{current_time.time_runs_forward(),
-                       current_time.slab_number(),
-                       Time{current_time.substep_time().slab().retreat(),
-                            current_time.substep_time().fraction()}},
-            current_time, false);
+            current_time, current_time, false);
+      } else {
+        Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
+            Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
+                cache),
+            current_time, next_time, false);
       }
-
-      Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
-          Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
-              cache),
-          current_time, next_time, false);
     }
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
