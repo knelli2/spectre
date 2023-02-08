@@ -17,6 +17,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include <sstream>
 #include "Parallel/Printf.hpp"
 
 struct DebugToggle;
@@ -58,14 +59,34 @@ struct ReceiveWorldtubeData {
         typename Metavariables::cce_boundary_communication_tags>>(inboxes);
 
     if (Parallel::get<DebugToggle>(cache)) {
-      Parallel::printf("CCE Evolution: At time %f, Inbox has %d times.\n",
+      std::stringstream ss{};
+      ss << "(";
+      for (const auto& [key, value] : inbox) {
+        (void)value;
+        ss << key.substep_time().value() << ",";
+      }
+      if (ss.str().size() != 1) {
+        ss.seekp(-1, ss.cur);
+      }
+      ss << ")";
+      Parallel::printf("CCE Evolution: At time %f, Inbox has %d times: %s\n",
                        db::get<::Tags::TimeStepId>(box).substep_time().value(),
-                       inbox.size());
+                       inbox.size(), ss.str());
     }
 
     if (inbox.count(db::get<::Tags::TimeStepId>(box)) != 1) {
+      if (Parallel::get<DebugToggle>(cache)) {
+        Parallel::printf(
+            "CCE Evolution: At time %f, pausing the algorithm.\n",
+            db::get<::Tags::TimeStepId>(box).substep_time().value());
+      }
       return {Parallel::AlgorithmExecution::Pause,
               tmpl::index_of<ActionList, ReceiveWorldtubeData>::value};
+    }
+
+    if (Parallel::get<DebugToggle>(cache)) {
+      Parallel::printf("CCE Evolution: At time %f, continuing the algorithm.\n",
+                       db::get<::Tags::TimeStepId>(box).substep_time().value());
     }
 
     tmpl::for_each<typename Metavariables::cce_boundary_communication_tags>(
