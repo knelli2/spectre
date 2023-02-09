@@ -4,18 +4,19 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <unordered_set>
 #include <vector>
 
 #include "Domain/Block.hpp"
-#include "Domain/Creators/DomainCreator.hpp"
 #include "Domain/DiagnosticInfo.hpp"
 #include "Domain/Domain.hpp"
-#include "Domain/ElementDistribution.hpp"
-#include "Domain/OptionTags.hpp"
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Structure/InitialElementIds.hpp"
 #include "Domain/Tags.hpp"
+#include "Domain/WeightedElementDistribution.hpp"
+#include "Domain/ZCurve.hpp"
+#include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
 #include "Parallel/Algorithms/AlgorithmArray.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
@@ -23,6 +24,8 @@
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/Printf.hpp"
+#include "Utilities/Literals.hpp"
+#include "Utilities/Numeric.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/CreateHasStaticMemberVariable.hpp"
@@ -40,12 +43,12 @@ CREATE_HAS_STATIC_MEMBER_VARIABLE_V(use_z_order_distribution)
  * `PhaseDepActionList`.
  *
  * The element assignment to processors is performed by
- * `domain::BlockZCurveProcDistribution` (using a Morton space-filling curve),
- * unless `static constexpr bool use_z_order_distribution = false;` is specified
- * in the `Metavariables`, in which case elements are assigned to processors via
- * round-robin assignment. In both cases, an unordered set of `size_t`s can be
- * passed to the `allocate_array` function which represents physical processors
- * to avoid placing elements on.
+ * `domain::WeightedBlockZCurveProcDistribution` (using a Morton space-filling
+ * curve), unless `static constexpr bool use_z_order_distribution = false;` is
+ * specified in the `Metavariables`, in which case elements are assigned to
+ * processors via round-robin assignment. In both cases, an unordered set of
+ * `size_t`s can be passed to the `allocate_array` function which represents
+ * physical processors to avoid placing elements on.
  */
 template <class Metavariables, class PhaseDepActionList>
 struct DgElementArray {
@@ -93,6 +96,8 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
           initialization_items);
   const auto& initial_extents =
       get<domain::Tags::InitialExtents<volume_dim>>(initialization_items);
+  const auto& quadrature =
+      get<evolution::dg::Tags::Quadrature>(initialization_items);
 
   bool use_z_order_distribution = true;
   if constexpr (detail::has_use_z_order_distribution_v<Metavariables>) {
@@ -101,10 +106,6 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
 
   const size_t number_of_procs = Parallel::number_of_procs<size_t>(local_cache);
   const size_t number_of_nodes = Parallel::number_of_nodes<size_t>(local_cache);
-  const size_t num_of_procs_to_use = number_of_procs - procs_to_ignore.size();
-
-  const domain::BlockZCurveProcDistribution<volume_dim> element_distribution{
-      num_of_procs_to_use, initial_refinement_levels, procs_to_ignore};
 
   // Will be used to print domain diagnostic info
   std::vector<size_t> elements_per_core(number_of_procs, 0_st);
@@ -112,16 +113,20 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
   std::vector<size_t> grid_points_per_core(number_of_procs, 0_st);
   std::vector<size_t> grid_points_per_node(number_of_nodes, 0_st);
 
-  size_t which_proc = 0;
-  for (const auto& block : domain.blocks()) {
-    const auto& initial_ref_levs = initial_refinement_levels[block.id()];
-    const size_t grid_points_per_element = alg::accumulate(
-        initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+  if (use_z_order_distribution) {
+    const size_t num_of_procs_to_use = number_of_procs - procs_to_ignore.size();
+    const domain::WeightedBlockZCurveProcDistribution<volume_dim>
+        element_distribution(num_of_procs_to_use, domain.blocks(),
+                             initial_refinement_levels, initial_extents,
+                             quadrature, procs_to_ignore);
 
-    const std::vector<ElementId<volume_dim>> element_ids =
-        initial_element_ids(block.id(), initial_ref_levs);
-
-    if (use_z_order_distribution) {
+    for (const auto& block : domain.blocks()) {
+      const size_t grid_points_per_element = alg::accumulate(
+          initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+      const auto initial_ref_levs = initial_refinement_levels[block.id()];
+      const std::vector<ElementId<volume_dim>> element_ids =
+          domain::initial_element_ids_in_z_curve_order(block.id(),
+                                                       initial_ref_levs);
       for (const auto& element_id : element_ids) {
         const size_t target_proc =
             element_distribution.get_proc_for_element(element_id);
@@ -135,7 +140,15 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
         grid_points_per_core[target_proc] += grid_points_per_element;
         grid_points_per_node[target_node] += grid_points_per_element;
       }
-    } else {
+    }
+  } else {
+    size_t which_proc = 0;
+    for (const auto& block : domain.blocks()) {
+      const size_t grid_points_per_element = alg::accumulate(
+          initial_extents[block.id()], 1_st, std::multiplies<size_t>());
+      const auto initial_ref_levs = initial_refinement_levels[block.id()];
+      const std::vector<ElementId<volume_dim>> element_ids =
+          initial_element_ids(block.id(), initial_ref_levs);
       while (procs_to_ignore.find(which_proc) != procs_to_ignore.end()) {
         which_proc = which_proc + 1 == number_of_procs ? 0 : which_proc + 1;
       }
@@ -153,7 +166,6 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
       }
     }
   }
-
   dg_element_array.doneInserting();
 
   Parallel::printf(
