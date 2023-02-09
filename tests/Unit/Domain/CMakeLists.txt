@@ -32,6 +32,7 @@ set(LIBRARY_SOURCES
   Test_Tags.cpp
   Test_TagsCharacteristicSpeeds.cpp
   Test_TagsTimeDependent.cpp
+  Test_WeightedElementDistribution.cpp
   Test_ZCurve.cpp
 )
 
