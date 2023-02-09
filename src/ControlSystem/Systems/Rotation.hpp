@@ -64,7 +64,9 @@ namespace control_system::Systems {
  * `QuaternionFunctionOfTime::update()` function takes care of everything
  * automatically.
  */
-template <size_t DerivOrder>
+// To have compatibility with BNS, we will add a new template parameter here
+// (and to translation/expansion) for the measurement
+template <size_t DerivOrder, typename Measurement>
 struct Rotation : tt::ConformsTo<protocols::ControlSystem> {
   static constexpr size_t deriv_order = DerivOrder;
 
@@ -80,7 +82,7 @@ struct Rotation : tt::ConformsTo<protocols::ControlSystem> {
     return component == 0 ? "x" : component == 1 ? "y" : "z";
   }
 
-  using measurement = ah::BothHorizons;
+  using measurement = Measurement;
   static_assert(
       tt::conforms_to_v<measurement, control_system::protocols::Measurement>);
 
@@ -98,9 +100,13 @@ struct Rotation : tt::ConformsTo<protocols::ControlSystem> {
   using simple_tags = tmpl::list<MeasurementQueue>;
 
   struct process_measurement {
+    // For BNS, use a conditional to get the proper tag out of the box.
+    // Otherwise just use the BBH one
     template <typename Submeasurement>
-    using argument_tags =
-        tmpl::list<StrahlkorperTags::Strahlkorper<Frame::Grid>>;
+    using argument_tags = tmpl::conditional_t<
+        std::is_same_v<Submeasurement, BNSSubmeasurement>,
+        tmpl::list<BNSCenterTags...>,
+        tmpl::list<StrahlkorperTags::Strahlkorper<Frame::Grid>>>;
 
     template <::domain::ObjectLabel Horizon, typename Metavariables>
     static void apply(ah::BothHorizons::FindHorizon<Horizon> /*meta*/,
