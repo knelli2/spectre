@@ -396,10 +396,11 @@ struct GeneralizedHarmonicTemplateBase<
                              GeneralizedHarmonic::Tags::Phi<
                                  volume_dim, Frame::Inertial>>>>>>;
 
+  template <bool UseControlSystems = false>
   using initialization_actions = tmpl::list<
       Initialization::Actions::InitializeItems<
           Initialization::TimeStepping<derived_metavars, local_time_stepping>,
-          evolution::dg::Initialization::Domain<volume_dim>>,
+          evolution::dg::Initialization::Domain<volume_dim, UseControlSystems>>,
       Initialization::Actions::NonconservativeSystem<system>,
       std::conditional_t<
           UseNumericalInitialData, tmpl::list<>,
