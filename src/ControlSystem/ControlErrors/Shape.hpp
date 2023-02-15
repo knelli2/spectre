@@ -22,6 +22,8 @@
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
+#include "Parallel/Printf.hpp"
+
 /// \cond
 namespace domain::Tags {
 template <size_t Dim>
@@ -156,6 +158,22 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
     Q[iter.set(1, -1)()] = 0.0;
     Q[iter.set(1, 0)()] = 0.0;
     Q[iter.set(1, 1)()] = 0.0;
+
+    iter.set(2, 0);
+    Parallel::printf(
+        "t = %f\n"
+        " size = %f\n"
+        " excision radius = %.16e\n"
+        " excision radius grid = %.16e\n"
+        " Y00 = %.16e\n"
+        " relative size factor = %.16e\n"
+        " shape (2,0) = %.16e\n"
+        " ah coefs (2,0) = %.16e\n"
+        " control error (2,0) = %.16e\n",
+        time, lambda_00_coef,
+        excision_spheres.at(detail::excision_sphere_name<Horizon>()).radius(),
+        radius_excision_sphere_grid_frame, Y00, relative_size_factor,
+        lambda_lm_coefs[iter()], ah_coefs[iter()], Q[iter()]);
 
     return Q;
   }
