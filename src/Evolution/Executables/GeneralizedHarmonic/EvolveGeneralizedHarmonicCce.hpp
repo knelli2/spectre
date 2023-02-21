@@ -89,7 +89,6 @@ struct EvolutionMetavars
   using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
 
   static constexpr bool local_time_stepping = gh_base::local_time_stepping;
-  static constexpr bool use_z_order_distribution = false;
 
   template <bool DuringSelfStart>
   struct CceWorldtubeTarget;
