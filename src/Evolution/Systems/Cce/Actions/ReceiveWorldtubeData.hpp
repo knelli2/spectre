@@ -17,6 +17,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
+#include <iomanip>
 #include <sstream>
 #include "Parallel/Printf.hpp"
 
@@ -63,13 +64,13 @@ struct ReceiveWorldtubeData {
       ss << "(";
       for (const auto& [key, value] : inbox) {
         (void)value;
-        ss << key.substep_time().value() << ",";
+        ss << std::setprecision(16) << key.substep_time().value() << ",";
       }
       if (ss.str().size() != 1) {
         ss.seekp(-1, ss.cur);
       }
       ss << ")";
-      Parallel::printf("CCE Evolution: At time %f, Inbox has %d times: %s\n",
+      Parallel::printf("CCE Evolution: At time %.16f, Inbox has %d times: %s\n",
                        db::get<::Tags::TimeStepId>(box).substep_time().value(),
                        inbox.size(), ss.str());
     }
