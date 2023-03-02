@@ -6,6 +6,7 @@
 
 ResourceInfo:
   AvoidGlobalProc0: false
+  Singletons: Auto
 
 InitialData:
   PlaneWave:
@@ -21,24 +22,16 @@ PhaseChangeAndTriggers:
 
 Evolution:
   InitialTime: 0.0
-  # Test backwards evolution in an integration test
-  InitialTimeStep: -0.001
-  InitialSlabSize: 0.01
+  InitialTimeStep: 0.001
   TimeStepper:
     AdamsBashforth:
       Order: 3
-  StepChoosers:
-    - Constant: 0.05
-    - Increase:
-        Factor: 2
-    - Cfl:
-        SafetyFactor: 0.2
 
 DomainCreator:
   Brick:
     LowerBound: [0.0, 0.0, 0.0]
     UpperBound: [6.283185307179586, 6.283185307179586, 6.283185307179586]
-    InitialRefinement: [1, 1, 1]
+    InitialRefinement: [2, 2, 2]
     InitialGridPoints: [5, 5, 5]
     TimeDependence: None
     BoundaryConditionInX: Periodic
@@ -61,9 +54,26 @@ SpatialDiscretization:
 #     BlocksToFilter: All
 
 EventsAndTriggers:
-  - - Times:
-        Specified:
-          Values: [&final_time -0.05]
+  - - Slabs:
+        EvenlySpaced:
+          Interval: 10
+          Offset: 0
+    - - ObserveTimeStep:
+          PrintTimeToTerminal: true
+          ObservePerCore: false
+          SubfileName: GhTimeStep
+  - - Slabs:
+        EvenlySpaced:
+          Interval: 5
+          Offset: 0
+    - - MonitorMemory:
+          ComponentsToMonitor:
+            - DgElementArray
+            - Observer
+            - ObserverWriter
+  - - TimeCompares:
+        Comparison: GreaterThanOrEqualTo
+        Value: 1.0
     - - Completion
   - - Always
     - - ChangeSlabSize:
