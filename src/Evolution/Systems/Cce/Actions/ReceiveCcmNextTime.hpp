@@ -133,8 +133,24 @@ struct ReceiveCcmNextTime {
       // We do this now so that we aren't unnecessarily waiting for boundary
       // corrections if the next CCE time is after our current time step
       if (not cce_next_time_at_current_gh_time) {
+        const double current_time = db::get<::Tags::Time>(box);
+
+        const auto set_time_to = [&box](const double new_time) {
+          db::mutate<::Tags::Time>(
+              make_not_null(&box),
+              [&new_time](const gsl::not_null<double*> time) {
+                *time = new_time;
+              });
+        };
+
+        // The receive_boundary_data_lts function uses the value of ::Tags::Time
+        // to represent the dense output time, so we need to set it to the
+        // correct time before we call the function and then set it back after.
+        set_time_to(next_cce_time.substep_time().value());
+
         if (not evolution::dg::receive_boundary_data_local_time_stepping<
                 Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
+          set_time_to(current_time);
           if (Parallel::get<DebugToggle>(cache)) {
             Parallel::printf(
                 "ReceiveCcmNextTime, %s: Current gh time is %.16f. Waiting for "
@@ -143,6 +159,8 @@ struct ReceiveCcmNextTime {
           }
           return {Parallel::AlgorithmExecution::Retry, std::nullopt};
         }
+
+        set_time_to(current_time);
       }
 
       using system = GeneralizedHarmonic::System<3>;
@@ -159,14 +177,14 @@ struct ReceiveCcmNextTime {
 
       variables_of_evolved_vars evolved_vars = variables_evolved_vars;
 
-      // If we're already at the correct time, then we shouldn't do dense output
-      // or apply boundary corrections. Just use the variables in the DataBox
-      // right now.
-      if (not cce_next_time_at_current_gh_time) {
-        bool succeeded = time_stepper.dense_update_u(
-            make_not_null(&evolved_vars), history_evolved_vars,
-            next_cce_time.substep_time().value());
+      // Even if we are at the correct time, since ComputeTimeDerivative has
+      // already been called, we have to do a dense update. Otherwise the
+      // variables are not in the state we need them to be
+      bool succeeded = time_stepper.dense_update_u(
+          make_not_null(&evolved_vars), history_evolved_vars,
+          next_cce_time.substep_time().value());
 
+      if (not cce_next_time_at_current_gh_time) {
         // Apply boundary corrections. We don't use db::apply because we need to
         // pass in our own variables and dense output time.
         evolution::dg::ApplyBoundaryCorrections<true, system, 3, true>::apply(
