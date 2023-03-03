@@ -255,6 +255,9 @@ void MortarData<Dim>::pup(PUP::er& p) {
   p | mortar_index_;
   p | time_step_id_;
   p | local_mortar_data_;
+  // This may contain non-owning DataVectors which means we can't pup it. An
+  // ASSERT should be hit in VectorImpl in Debug mode if something calls this
+  // pup function
   p | neighbor_mortar_data_;
   p | local_geometric_quantities_;
   p | using_volume_and_face_jacobians_;
