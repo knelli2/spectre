@@ -17,6 +17,7 @@
 #include "Evolution/Systems/Cce/Actions/InsertInterpolationScriData.hpp"
 #include "Evolution/Systems/Cce/Actions/RequestBoundaryData.hpp"
 #include "Evolution/Systems/Cce/Actions/ScriObserveInterpolated.hpp"
+#include "Evolution/Systems/Cce/Actions/SendNextTimeToGh.hpp"
 #include "Evolution/Systems/Cce/Actions/TimeManagement.hpp"
 #include "Evolution/Systems/Cce/Actions/UpdateGauge.hpp"
 #include "Evolution/Systems/Cce/LinearSolve.hpp"
@@ -197,7 +198,8 @@ struct CharacteristicEvolution {
       tmpl::transform<typename metavariables::cce_scri_tags,
                       tmpl::bind<::Actions::MutateApply,
                                  tmpl::bind<CalculateScriPlusValue, tmpl::_1>>>,
-      record_time_stepper_data_and_step>;
+      record_time_stepper_data_and_step,
+      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>>>;
 
   using extract_action_list = tmpl::list<
       Actions::RequestBoundaryData<
@@ -220,6 +222,7 @@ struct CharacteristicEvolution {
       Actions::FilterSwshVolumeQuantity<Tags::BondiH>,
       compute_scri_quantities_and_observe, record_time_stepper_data_and_step,
       ::Actions::ChangeStepSize<typename Metavariables::cce_step_choosers>,
+      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>>,
       // We cannot know our next step for certain until after we've performed
       // step size selection, as we may need to reject a step.
       Actions::RequestNextBoundaryData<

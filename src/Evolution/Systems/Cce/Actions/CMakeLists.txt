@@ -15,17 +15,20 @@ spectre_target_headers(
   CalculateScriInputs.hpp
   CharacteristicEvolutionBondiCalculations.hpp
   FilterSwshVolumeQuantity.hpp
+  InitializeCcmNextTime.hpp
   InitializeCharacteristicEvolutionScri.hpp
   InitializeCharacteristicEvolutionTime.hpp
   InitializeCharacteristicEvolutionVariables.hpp
   InitializeFirstHypersurface.hpp
   InitializeWorldtubeBoundary.hpp
   InsertInterpolationScriData.hpp
+  ReceiveCcmNextTime.hpp
   ReceiveGhWorldtubeData.hpp
   ReceiveWorldtubeData.hpp
   RequestBoundaryData.hpp
   ScriObserveInterpolated.hpp
   SendGhVarsToCce.hpp
+  SendNextTimeToGh.hpp
   TimeManagement.hpp
   UpdateGauge.hpp
   )

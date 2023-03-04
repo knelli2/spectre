@@ -433,5 +433,10 @@ struct SelfStartGhInterfaceManager : db::SimpleTag {
     return Cce::InterfaceManagers::GhLockstep();
   }
 };
+
+/// The next time computed by the CCE time stepper.
+struct NextCcmTime : db::SimpleTag {
+  using type = double;
+};
 }  // namespace Tags
 }  // namespace Cce
