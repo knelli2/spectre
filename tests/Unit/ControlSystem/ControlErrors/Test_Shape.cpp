@@ -45,14 +45,14 @@
 #include "Utilities/TaggedTuple.hpp"
 
 namespace Frame {
-struct Grid;
+struct Distorted;
 }  // namespace Frame
 
 namespace control_system {
 namespace {
 using FoTMap = std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>;
-using Strahlkorper = Strahlkorper<Frame::Grid>;
+using Strahlkorper = Strahlkorper<Frame::Distorted>;
 
 void test_shape_control_error() {
   constexpr size_t deriv_order = 2;
@@ -65,7 +65,7 @@ void test_shape_control_error() {
   MAKE_GENERATOR(generator);
   domain::FunctionsOfTime::register_derived_with_charm();
 
-  const tnsr::I<double, 3, Frame::Grid> origin{0.0};
+  const tnsr::I<double, 3, Frame::Distorted> origin{0.0};
   const double ah_radius = 1.5;
   const double initial_time = 0.0;
   Strahlkorper fake_ah{10, 10, make_array<double, 3>(origin)};
@@ -121,11 +121,12 @@ void test_shape_control_error() {
       initial_time, initial_size_func, std::numeric_limits<double>::infinity());
 
   // Fake domain
+  const tnsr::I<double, 3, Frame::Grid> origin_grid{0.0};
   Domain<3> fake_domain{
       {},
       {{excision_sphere_A_name,
         ExcisionSphere<3>{excision_radius,
-                          origin,
+                          origin_grid,
                           {{0, Direction<3>::lower_zeta()},
                            {1, Direction<3>::lower_zeta()},
                            {2, Direction<3>::lower_zeta()},
@@ -134,7 +135,7 @@ void test_shape_control_error() {
                            {5, Direction<3>::lower_zeta()}}}},
        {excision_sphere_B_name,
         ExcisionSphere<3>{excision_radius,
-                          origin,
+                          origin_grid,
                           {{0, Direction<3>::lower_zeta()},
                            {1, Direction<3>::lower_zeta()},
                            {2, Direction<3>::lower_zeta()},
@@ -142,17 +143,24 @@ void test_shape_control_error() {
                            {4, Direction<3>::lower_zeta()},
                            {5, Direction<3>::lower_zeta()}}}}}};
 
-  auto grid_center_A =
+  const auto grid_center_A =
       fake_domain.excision_spheres().at("ExcisionSphereA").center();
-  auto grid_center_B =
+  const auto grid_center_B =
       fake_domain.excision_spheres().at("ExcisionSphereA").center();
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_A{};
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_B{};
+  for (size_t i = 0; i < 3; i++) {
+    distorted_center_A.get(i) = grid_center_A.get(i);
+    distorted_center_B.get(i) = grid_center_B.get(i);
+  }
 
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   // Excision centers aren't used so their values can be anything
-  MockRuntimeSystem runner{{"DummyFilename", std::move(fake_domain), 4, false,
-                            std::move(grid_center_A), std::move(grid_center_B)},
-                           {std::move(initial_functions_of_time),
-                            std::move(initial_measurement_timescales)}};
+  MockRuntimeSystem runner{
+      {"DummyFilename", std::move(fake_domain), 4, false,
+       std::move(distorted_center_A), std::move(distorted_center_B)},
+      {std::move(initial_functions_of_time),
+       std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_array_component<element_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, 0);
@@ -167,8 +175,8 @@ void test_shape_control_error() {
       make_not_null(&generator), coef_dist, fake_ah_coefs);
   fake_ah_coefs = measurement_coefs;
 
-  using QueueTuple =
-      tuples::TaggedTuple<control_system::QueueTags::Strahlkorper<Frame::Grid>>;
+  using QueueTuple = tuples::TaggedTuple<
+      control_system::QueueTags::Strahlkorper<Frame::Distorted>>;
   QueueTuple fake_measurement_tuple{fake_ah};
 
   const DataVector control_error =

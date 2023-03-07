@@ -24,7 +24,7 @@
 #include "Utilities/TMPL.hpp"
 
 namespace Frame {
-struct Grid;
+struct Distorted;
 struct Inertial;
 }  // namespace Frame
 
@@ -37,7 +37,7 @@ namespace {
 using RotationMap = domain::CoordinateMaps::TimeDependent::Rotation<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Grid, Frame::Inertial, RotationMap>;
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, RotationMap>;
 
 template <size_t DerivOrder>
 void test_rotation_control_system(const bool newtonian) {
@@ -103,15 +103,24 @@ void test_rotation_control_system(const bool newtonian) {
   const auto& init_rot_tuple =
       system_helper.template init_tuple<rotation_system>();
 
-  auto grid_center_A = domain.excision_spheres().at("ExcisionSphereA").center();
-  auto grid_center_B = domain.excision_spheres().at("ExcisionSphereB").center();
+  const auto grid_center_A =
+      domain.excision_spheres().at("ExcisionSphereA").center();
+  const auto grid_center_B =
+      domain.excision_spheres().at("ExcisionSphereB").center();
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_A{};
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_B{};
+  for (size_t i = 0; i < 3; i++) {
+    distorted_center_A.get(i) = grid_center_A.get(i);
+    distorted_center_B.get(i) = grid_center_B.get(i);
+  }
 
   // Setup runner and all components
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
-  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4, false,
-                            std::move(grid_center_A), std::move(grid_center_B)},
-                           {std::move(initial_functions_of_time),
-                            std::move(initial_measurement_timescales)}};
+  MockRuntimeSystem runner{
+      {"DummyFileName", std::move(domain), 4, false,
+       std::move(distorted_center_A), std::move(distorted_center_B)},
+      {std::move(initial_functions_of_time),
+       std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<rotation_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, init_rot_tuple);

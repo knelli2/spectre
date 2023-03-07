@@ -30,7 +30,7 @@
 #include "Utilities/TMPL.hpp"
 
 namespace Frame {
-struct Grid;
+struct Distorted;
 struct Inertial;
 }  // namespace Frame
 
@@ -41,7 +41,7 @@ using RotationMap = domain::CoordinateMaps::TimeDependent::Rotation<3>;
 using ExpansionMap = domain::CoordinateMaps::TimeDependent::CubicScale<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Grid, Frame::Inertial, ExpansionMap,
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, ExpansionMap,
                           RotationMap, TranslationMap>;
 
 std::string create_input_string(const std::string& name) {
@@ -157,12 +157,13 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
 
   // Setup runner and all components
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
-  MockRuntimeSystem runner{
-      {"DummyFileName", std::move(domain), 4, false,
-       tnsr::I<double, 3, Frame::Grid>{{0.5 * initial_separation, 0.0, 0.0}},
-       tnsr::I<double, 3, Frame::Grid>{{-0.5 * initial_separation, 0.0, 0.0}}},
-      {std::move(initial_functions_of_time),
-       std::move(initial_measurement_timescales)}};
+  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4, false,
+                            tnsr::I<double, 3, Frame::Distorted>{
+                                {0.5 * initial_separation, 0.0, 0.0}},
+                            tnsr::I<double, 3, Frame::Distorted>{
+                                {-0.5 * initial_separation, 0.0, 0.0}}},
+                           {std::move(initial_functions_of_time),
+                            std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<
       translation_component>(make_not_null(&runner), ActionTesting::NodeId{0},
                              ActionTesting::LocalCoreId{0}, init_trans_tuple);

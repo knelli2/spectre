@@ -79,10 +79,10 @@ struct Rotation : tt::ConformsTo<protocols::ControlError> {
     using center_B =
         control_system::QueueTags::Center<::domain::ObjectLabel::B>;
 
-    const tnsr::I<double, 3, Frame::Grid>& grid_position_of_A =
+    const tnsr::I<double, 3, Frame::Distorted>& grid_position_of_A =
         Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::A>>(
             cache);
-    const tnsr::I<double, 3, Frame::Grid>& grid_position_of_B =
+    const tnsr::I<double, 3, Frame::Distorted>& grid_position_of_B =
         Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::B>>(
             cache);
     const DataVector& current_position_of_A = get<center_A>(measurements);

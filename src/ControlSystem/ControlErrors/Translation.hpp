@@ -99,7 +99,7 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
     using center_A =
         control_system::QueueTags::Center<::domain::ObjectLabel::A>;
 
-    const tnsr::I<double, 3, Frame::Grid>& grid_position_of_A_tnsr =
+    const tnsr::I<double, 3, Frame::Distorted>& grid_position_of_A_tnsr =
         Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::A>>(
             cache);
     const DataVector grid_position_of_A{{grid_position_of_A_tnsr[0],

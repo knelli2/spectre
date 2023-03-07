@@ -48,14 +48,14 @@
 #include "Utilities/TaggedTuple.hpp"
 
 namespace Frame {
-struct Grid;
+struct Distorted;
 }  // namespace Frame
 
 namespace control_system {
 namespace {
 using FoTMap = std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>;
-using Strahlkorper = Strahlkorper<Frame::Grid>;
+using Strahlkorper = Strahlkorper<Frame::Distorted>;
 template <typename Metavars>
 using SystemHelper = control_system::TestHelpers::SystemHelper<Metavars>;
 
@@ -76,17 +76,26 @@ void test_shape_control(
   auto& initial_measurement_timescales =
       system_helper->initial_measurement_timescales();
 
-  auto grid_center_A = domain.excision_spheres().at("ExcisionSphereA").center();
-  auto grid_center_B = domain.excision_spheres().at("ExcisionSphereB").center();
+  const auto grid_center_A =
+      domain.excision_spheres().at("ExcisionSphereA").center();
+  const auto grid_center_B =
+      domain.excision_spheres().at("ExcisionSphereB").center();
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_A{};
+  tnsr::I<double, 3, Frame::Distorted> distorted_center_B{};
+  for (size_t i = 0; i < 3; i++) {
+    distorted_center_A.get(i) = grid_center_A.get(i);
+    distorted_center_B.get(i) = grid_center_B.get(i);
+  }
 
   const auto& init_shape_tuple = system_helper->template init_tuple<system>();
 
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<Metavars>;
   // Excision centers aren't used so their values can be anything
-  MockRuntimeSystem runner{{"DummyFileName", std::move(domain), 4, false,
-                            std::move(grid_center_A), std::move(grid_center_B)},
-                           {std::move(initial_functions_of_time),
-                            std::move(initial_measurement_timescales)}};
+  MockRuntimeSystem runner{
+      {"DummyFileName", std::move(domain), 4, false,
+       std::move(distorted_center_A), std::move(distorted_center_B)},
+      {std::move(initial_functions_of_time),
+       std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<shape_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, init_shape_tuple);
@@ -105,9 +114,13 @@ void test_shape_control(
   SpherepackIterator iter{l_max, l_max};
   const double ah_radius =
       ah_coefs_function_of_time.func(initial_time)[0][iter.set(0, 0)()];
-  const tnsr::I<double, 3, Frame::Grid>& center = excision_sphere.center();
+  const tnsr::I<double, 3, Frame::Grid>& grid_center = excision_sphere.center();
+  tnsr::I<double, 3, Frame::Distorted> distorted_center{};
+  for (size_t i = 0; i < 3; i++) {
+    distorted_center.get(i) = grid_center.get(i);
+  }
   Strahlkorper horizon_a{l_max, l_max, ah_radius,
-                         make_array<double, 3>(center)};
+                         make_array<double, 3>(distorted_center)};
   // B just needs to exist. Doesn't have to be valid
   const Strahlkorper horizon_b{};
 
