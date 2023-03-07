@@ -202,11 +202,11 @@ struct MockControlComponent {
 
   using simple_tags = init_simple_tags<ControlSystem>;
 
-  using const_global_cache_tags =
-      tmpl::list<control_system::Tags::MeasurementsPerUpdate,
-                 control_system::Tags::WriteDataToDisk,
-                 domain::Tags::ExcisionCenter<domain::ObjectLabel::A>,
-                 domain::Tags::ExcisionCenter<domain::ObjectLabel::B>>;
+  using const_global_cache_tags = tmpl::list<
+      control_system::Tags::MeasurementsPerUpdate,
+      control_system::Tags::WriteDataToDisk,
+      domain::Tags::ExcisionCenter<domain::ObjectLabel::A, Frame::Grid>,
+      domain::Tags::ExcisionCenter<domain::ObjectLabel::B, Frame::Grid>>;
 
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       Parallel::Phase::Initialization,

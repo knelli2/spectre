@@ -37,10 +37,11 @@ void test_center_tags() {
       "ObjectCenter");
   TestHelpers::db::test_base_tag<Tags::ObjectCenter<ObjectLabel::B>>(
       "ObjectCenter");
-  TestHelpers::db::test_simple_tag<Tags::ExcisionCenter<ObjectLabel::A>>(
-      "CenterObjectA");
-  TestHelpers::db::test_simple_tag<Tags::ExcisionCenter<ObjectLabel::B>>(
-      "CenterObjectB");
+  TestHelpers::db::test_simple_tag<
+      Tags::ExcisionCenter<ObjectLabel::A, ::Frame::Grid>>("GridCenterObjectA");
+  TestHelpers::db::test_simple_tag<
+      Tags::ExcisionCenter<ObjectLabel::B, ::Frame::Distorted>>(
+      "DistortedCenterObjectB");
 
   using Object = domain::creators::BinaryCompactObject::Object;
 
@@ -50,12 +51,14 @@ void test_center_tags() {
           100.0, 500.0, 1_st, 5_st);
 
   const auto grid_center_A =
-      Tags::ExcisionCenter<ObjectLabel::A>::create_from_options(domain_creator);
-  const auto grid_center_B =
-      Tags::ExcisionCenter<ObjectLabel::B>::create_from_options(domain_creator);
+      Tags::ExcisionCenter<ObjectLabel::A, ::Frame::Grid>::create_from_options(
+          domain_creator);
+  const auto grid_center_B = Tags::ExcisionCenter<
+      ObjectLabel::B, ::Frame::Distorted>::create_from_options(domain_creator);
 
   CHECK(grid_center_A == tnsr::I<double, 3, Frame::Grid>{{8.0, 0.0, 0.0}});
-  CHECK(grid_center_B == tnsr::I<double, 3, Frame::Grid>{{-5.5, 0.0, 0.0}});
+  CHECK(grid_center_B ==
+        tnsr::I<double, 3, Frame::Distorted>{{-5.5, 0.0, 0.0}});
 
   const std::unique_ptr<DomainCreator<3>> creator_no_excision =
       std::make_unique<domain::creators::Brick>(
@@ -64,8 +67,8 @@ void test_center_tags() {
           std::array{false, false, false});
 
   CHECK_THROWS_WITH(
-      Tags::ExcisionCenter<ObjectLabel::B>::create_from_options(
-          creator_no_excision),
+      (Tags::ExcisionCenter<ObjectLabel::B, ::Frame::Grid>::create_from_options(
+          creator_no_excision)),
       Catch::Contains(" is not in the domains excision spheres but is needed "
                       "to generate the ExcisionCenter"));
 }

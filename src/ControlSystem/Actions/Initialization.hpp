@@ -26,7 +26,8 @@ struct get_center_tags;
 
 template <domain::ObjectLabel... Object>
 struct get_center_tags<domain::object_list<Object...>> {
-  using type = tmpl::list<domain::Tags::ExcisionCenter<Object>...>;
+  using type =
+      tmpl::list<domain::Tags::ExcisionCenter<Object, ::Frame::Grid>...>;
 };
 
 template <>
@@ -45,8 +46,8 @@ struct get_center_tags<domain::object_list<>> {
  *   - `control_system::Tags::MeasurementTimescales`
  *   - `control_system::Tags::WriteDataToDisk`
  *   - `control_system::Tags::ObserveCenters`
- *   - `domain::Tags::ExcisionCenter<domain::ObjectLabel::A>`
- *   - `domain::Tags::ExcisionCenter<domain::ObjectLabel::B>`
+ *   - `domain::Tags::ExcisionCenter<domain::ObjectLabel::A, Frame::Grid>`
+ *   - `domain::Tags::ExcisionCenter<domain::ObjectLabel::B, Frame::Grid>`
  *
  * DataBox:
  * - Uses: Nothing
