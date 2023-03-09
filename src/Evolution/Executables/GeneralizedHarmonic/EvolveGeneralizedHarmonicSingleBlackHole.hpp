@@ -123,12 +123,7 @@ struct EvolutionMetavars
   };
 
   using interpolation_target_tags = tmpl::list<AhA, ExcisionBoundaryA>;
-  using interpolator_source_vars_excision_boundary = tmpl::list<
-      gr::Tags::SpacetimeMetric<volume_dim, Frame::Inertial>,
-      GeneralizedHarmonic::ConstraintDamping::Tags::ConstraintGamma1>;
-  using interpolator_source_vars = tmpl::remove_duplicates<
-      tmpl::append<interpolator_source_vars_excision_boundary,
-                   ::ah::source_vars<volume_dim>>>;
+  using interpolator_source_vars = ::ah::source_vars<volume_dim>;
 
   // The interpolator_source_vars need to be the same in both the Interpolate
   // event and the InterpolateWithoutInterpComponent event.  The Interpolate
