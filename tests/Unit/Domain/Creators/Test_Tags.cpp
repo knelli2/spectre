@@ -20,6 +20,22 @@
 #include "Domain/FunctionsOfTime/OptionTags.hpp"
 #include "Helpers/DataStructures/DataBox/TestHelpers.hpp"
 
+#include <memory>
+#include <unordered_map>
+
+#include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/SphericalCompression.hpp"
+#include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
+#include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
+#include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/SpherepackIterator.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/YlmSpherepack.hpp"
+#include "Utilities/MakeWithValue.hpp"
+#include "Utilities/StdArrayHelpers.hpp"
+#include "Utilities/StdHelpers.hpp"
+
 namespace domain {
 namespace {
 template <size_t Dim>
@@ -93,6 +109,64 @@ void test_functions_of_time() {
             Metavariables<false>::volume_dim>>>);
 }
 
+void test_size_shape() {
+  domain::FunctionsOfTime::register_derived_with_charm();
+
+  using ShapeTrans = domain::CoordinateMaps::ShapeMapTransitionFunctions::
+      ShapeMapTransitionFunction;
+  using SphereTrans =
+      domain::CoordinateMaps::ShapeMapTransitionFunctions::SphereTransition;
+  using Shape = domain::CoordinateMaps::TimeDependent::Shape;
+  using Size =
+      domain::CoordinateMaps::TimeDependent::SphericalCompression<false>;
+  using FoT = domain::FunctionsOfTime::FunctionOfTime;
+  using PP = domain::FunctionsOfTime::PiecewisePolynomial<1>;
+
+  const double initial_time = 0.0;
+  const double expr_time = 10.0;
+
+  const double inner_radius = 1.5;
+  const double outer_radius = 2.0;
+
+  const std::array<double, 3> center{0.0, 0.0, 0.0};
+  const size_t l_max = 10;
+  std::unique_ptr<ShapeTrans> shape_trans =
+      std::make_unique<SphereTrans>(inner_radius, outer_radius);
+
+  Shape shape_map{center, l_max, l_max, std::move(shape_trans), "Shape"};
+  Size size_map{"Size", inner_radius, outer_radius, center};
+
+  DataVector shape_coefs{YlmSpherepack::spectral_size(l_max, l_max), 0.0};
+  DataVector size_coefs{1, 0.0};
+  SpherepackIterator iter{l_max, l_max};
+
+  const double initial_size = 4.0;
+
+  shape_coefs[iter.set(0, 0)()] =
+      sqrt(2.0 / M_PI) * initial_size / inner_radius;
+  size_coefs[0] = initial_size;
+
+  std::unordered_map<std::string, std::unique_ptr<FoT>> functions_of_time{};
+
+  functions_of_time["Shape"] = std::make_unique<PP>(
+      initial_time,
+      std::array<DataVector, 2>{
+          {shape_coefs, DataVector{shape_coefs.size(), 0.0}}},
+      expr_time);
+  functions_of_time["Size"] = std::make_unique<PP>(
+      initial_time, std::array<DataVector, 2>{{size_coefs, DataVector{1, 0.0}}},
+      expr_time);
+
+  const std::array<double, 3> input_coord{1.6, 0.0, 0.0};
+
+  const std::array<double, 3> size_output_coord =
+      size_map(input_coord, initial_time, functions_of_time);
+  const std::array<double, 3> shape_output_coord =
+      shape_map(input_coord, initial_time, functions_of_time);
+
+  CHECK(shape_output_coord == size_output_coord);
+}
+
 SPECTRE_TEST_CASE("Unit.Domain.Creators.Tags", "[Unit][Domain]") {
   test_simple_tags<1>();
   test_simple_tags<2>();
@@ -101,6 +175,8 @@ SPECTRE_TEST_CASE("Unit.Domain.Creators.Tags", "[Unit][Domain]") {
   test_center_tags();
 
   test_functions_of_time();
+
+  test_size_shape();
 }
 }  // namespace
 }  // namespace domain

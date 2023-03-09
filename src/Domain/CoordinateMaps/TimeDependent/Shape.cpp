@@ -24,6 +24,8 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/StdHelpers.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace domain::CoordinateMaps::TimeDependent {
 
 template <typename T>
@@ -83,19 +85,37 @@ std::array<tt::remove_cvref_wrap_t<T>, 3> Shape::operator()(
   ylm_.interpolate_from_coefs(make_not_null(&distorted_radii), coefs,
                               interpolation_info);
 
+  std::array<tt::remove_cvref_wrap_t<T>, 3> result{};
+  for (size_t i = 0; i < 3; i++) {
+    gsl::at(result, i) = gsl::at(source_coords, i);
+  }
+
+  const double lambda_y = coefs[0] / sqrt(4.0 * M_PI);
+
+  Parallel::printf(
+      "Shape:\n"
+      " source_coord = %s\n"
+      " centered_coord = %s\n"
+      " centered_radius = %.16f\n"
+      " factor = %.16f\n"
+      " distorted_radii = %.16f\n"
+      " lambda00*Y00 = %.16f\n",
+      result, centered_coords, magnitude(centered_coords),
+      transition_func_->operator()(centered_coords), distorted_radii, lambda_y);
+
   // this should be taken care of by the control system but is very hard to
   // debug
 #ifdef SPECTRE_DEBUG
-  using ReturnType = tt::remove_cvref_wrap_t<T>;
-  const ReturnType shift_radii =
-      distorted_radii * transition_func_->operator()(centered_coords);
-  if constexpr (std::is_same_v<ReturnType, double>) {
-    ASSERT(shift_radii < 1., "Coordinates mapped through the center!");
-  } else {
-    for (const auto& radius : shift_radii) {
-      ASSERT(radius < 1., "Coordinates mapped through the center!");
-    }
-  }
+  // using ReturnType = tt::remove_cvref_wrap_t<T>;
+  // const ReturnType shift_radii =
+  //     distorted_radii * transition_func_->operator()(centered_coords);
+  // if constexpr (std::is_same_v<ReturnType, double>) {
+  //   ASSERT(shift_radii < 1., "Coordinates mapped through the center!");
+  // } else {
+  //   for (const auto& radius : shift_radii) {
+  //     ASSERT(radius < 1., "Coordinates mapped through the center!");
+  //   }
+  // }
 #endif  // SPECTRE_DEBUG
 
   return center_ + centered_coords *

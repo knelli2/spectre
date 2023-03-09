@@ -174,6 +174,7 @@ Shape<Label>::functions_of_time(const std::unordered_map<std::string, double>&
   result[size_name] = std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
       initial_time_,
       std::array<DataVector, 4>{
+        // FIXME:
           {{radial_distortion_coefs[0]}, zeros_size, zeros_size, zeros_size}},
       std::numeric_limits<double>::infinity());
   return result;

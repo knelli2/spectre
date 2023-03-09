@@ -26,6 +26,8 @@
 #include "Utilities/MakeWithValue.hpp"
 #include "Utilities/StdHelpers.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace {
 template <typename T>
 using ResultType = tt::remove_cvref_wrap_t<T>;
@@ -157,8 +159,24 @@ std::array<ResultType<T>, 3> SphericalCompression<InteriorMap>::operator()(
   const ResultType<T> source_radius{magnitude(source_rad_position)};
   check_source_radius<InteriorMap>(source_radius, min_radius_, max_radius_);
   std::array<ResultType<T>, 3> result{};
-  for (size_t i = 0; i < 3; ++i) {
+  const double lambda_y = lambda00_y00(f_of_t_name_, time, functions_of_time);
+  const ResultType<T> factor =
+      (max_radius_ / source_radius - 1) / (max_radius_ - min_radius_);
+
+  for (size_t i = 0; i < 3; i++) {
     gsl::at(result, i) = gsl::at(source_coords, i);
+  }
+
+  Parallel::printf(
+      "Size:\n"
+      " source_coord = %s\n"
+      " centered_coord = %s\n"
+      " centered_radius = %.16f\n"
+      " factor = %.16f\n"
+      " lambda00*Y00 = %.16f\n",
+      result, source_rad_position, source_radius, factor, lambda_y);
+
+  for (size_t i = 0; i < 3; ++i) {
     correct_mapped_coordinate_or_frame_velocity<InteriorMap>(
         make_not_null(&gsl::at(result, i)), gsl::at(source_rad_position, i),
         source_radius, lambda00_y00(f_of_t_name_, time, functions_of_time),
@@ -347,6 +365,5 @@ GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false),
 GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false))
 #undef INTERIOR_MAP
 #undef INSTANTIATE
-
 
 }  // namespace domain::CoordinateMaps::TimeDependent
