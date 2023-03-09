@@ -148,11 +148,12 @@ Shape<Label>::functions_of_time(const std::unordered_map<std::string, double>&
   }
 
   const YlmSpherepack ylm{l_max_, l_max_};
-  const DataVector radial_distortion =
-      1.0 - get(gr::Solutions::kerr_schild_radius_from_boyer_lindquist(
-                inner_radius_, ylm.theta_phi_points(), mass_, spin_)) /
-                inner_radius_;
-  const auto radial_distortion_coefs = ylm.phys_to_spec(radial_distortion);
+  // const DataVector radial_distortion =
+  //     1.0 - get(gr::Solutions::kerr_schild_radius_from_boyer_lindquist(
+  //               inner_radius_, ylm.theta_phi_points(), mass_, spin_)) /
+  //               inner_radius_;
+  const DataVector radial_distortion_coefs{ylm.spectral_size(l_max_, l_max_),
+                                           0.0};
   const DataVector zeros =
       make_with_value<DataVector>(radial_distortion_coefs, 0.0);
   result[function_of_time_name_] =
@@ -174,7 +175,10 @@ Shape<Label>::functions_of_time(const std::unordered_map<std::string, double>&
   result[size_name] = std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
       initial_time_,
       std::array<DataVector, 4>{
-          {{radial_distortion_coefs[0]}, zeros_size, zeros_size, zeros_size}},
+          {{radial_distortion_coefs[0] * sqrt(0.5 * M_PI)},
+           zeros_size,
+           zeros_size,
+           zeros_size}},
       std::numeric_limits<double>::infinity());
   return result;
 }

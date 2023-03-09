@@ -20,6 +20,7 @@
 #include "ControlSystem/Trigger.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
@@ -149,6 +150,8 @@ struct EvolutionMetavars
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = Options::add_factory_classes<
         typename gh_base::factory_creation::factory_classes,
+        tmpl::pair<DenseTrigger,
+                   control_system::control_system_triggers<control_systems>>,
         tmpl::pair<
             Event,
             tmpl::flatten<tmpl::list<
@@ -215,7 +218,8 @@ struct EvolutionMetavars
                                             Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
-              tmpl::list<Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+              tmpl::list<::domain::Actions::CheckFunctionsOfTimeAreReady,
+                         Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                          step_actions, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 

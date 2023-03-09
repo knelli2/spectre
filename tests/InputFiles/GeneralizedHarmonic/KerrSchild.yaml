@@ -61,7 +61,7 @@ DomainCreator:
     UseEquiangularMap: true
     EquatorialCompression: None
     RadialPartitioning: [6.0, 12.0, 20.0, 30.0]
-    RadialDistribution: [6.0, 12.0, 20.0, 30.0]
+    RadialDistribution: [Logarithmic, Logarithmic, Logarithmic, Logarithmic, Logarithmic]
     WhichWedges: All
     TimeDependence:
       Shape:

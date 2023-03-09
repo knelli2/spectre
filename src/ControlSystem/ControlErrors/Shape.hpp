@@ -135,14 +135,13 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
 
     // See above docs for why we have the sqrt(pi/2)
     const double radius_excision_sphere_grid_frame =
-        sqrt(0.5 * M_PI) *
         excision_spheres.at(detail::excision_sphere_name<Horizon>()).radius();
 
     const double Y00 = sqrt(0.25 / M_PI);
     SpherepackIterator iter{ah.l_max(), ah.m_max()};
     const double relative_size_factor =
         (radius_excision_sphere_grid_frame / Y00 - lambda_00_coef) /
-        ah_coefs[iter.set(0, 0)()];
+        (sqrt(0.5 * M_PI) * ah_coefs[iter.set(0, 0)()]);
 
     // The map parameters are in terms of SPHEREPACK coefficients (just like
     // strahlkorper coefficients), *not* spherical harmonic coefficients, thus

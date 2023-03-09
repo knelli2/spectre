@@ -15,6 +15,7 @@
 #include "Domain/Creators/Factory3D.hpp"
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/Tags.hpp"
 #include "Domain/TagsCharacteristicSpeeds.hpp"
@@ -331,7 +332,6 @@ template <template <size_t, bool> class EvolutionMetavarsDerived,
           size_t VolumeDim, bool UseNumericalInitialData>
 struct GeneralizedHarmonicTemplateBase<
     EvolutionMetavarsDerived<VolumeDim, UseNumericalInitialData>> {
-
   using derived_metavars =
       EvolutionMetavarsDerived<VolumeDim, UseNumericalInitialData>;
   static constexpr size_t volume_dim = VolumeDim;
@@ -376,8 +376,9 @@ struct GeneralizedHarmonicTemplateBase<
           volume_dim, system, AllStepChoosers, local_time_stepping>,
       tmpl::conditional_t<
           local_time_stepping,
-          tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
-                         tmpl::list<evolution::dg::ApplyBoundaryCorrections<
+          tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
+                         ::domain::CheckFunctionsOfTimeAreReadyPostprocessor,
+                         evolution::dg::ApplyBoundaryCorrections<
                              local_time_stepping, system, volume_dim, true>>>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, volume_dim>>,
@@ -385,7 +386,8 @@ struct GeneralizedHarmonicTemplateBase<
               evolution::dg::Actions::ApplyBoundaryCorrectionsToTimeDerivative<
                   system, volume_dim>,
               Actions::RecordTimeStepperData<>,
-              evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
+              evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
+                  ::domain::CheckFunctionsOfTimeAreReadyPostprocessor>>,
               Actions::UpdateU<>,
               dg::Actions::Filter<
                   Filters::Exponential<0>,
