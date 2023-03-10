@@ -78,6 +78,29 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+struct DeadlockCrap {
+  template <typename ParallelComponent, typename DbTags, typename Metavariables,
+            typename ArrayIndex>
+  static void apply(db::DataBox<DbTags>& box,
+                    Parallel::GlobalCache<Metavariables>& cache,
+                    const ArrayIndex& array_index) {
+    const auto& element = db::get<domain::Tags::Element<3>>(box);
+    auto& local_object =
+        *Parallel::local(Parallel::get_parallel_component<ParallelComponent>(
+            cache)[array_index]);
+
+    const bool terminated = local_object.get_terminate();
+
+    if (not terminated) {
+      const std::string& next_action =
+          local_object.deadlock_analysis_next_iterable_action();
+      Parallel::printf(
+          "Element %s did not terminate at time %.16f. Next action: %s\n",
+          element.id(), db::get<::Tags::Time>(box), next_action);
+    }
+  }
+};
+
 template <size_t VolumeDim, bool UseNumericalInitialData>
 struct EvolutionMetavars
     : public GeneralizedHarmonicTemplateBase<
@@ -217,6 +240,15 @@ struct EvolutionMetavars
               tmpl::list<Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                          step_actions<false>, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
+
+  static void run_deadlock_analysis_simple_actions(
+      Parallel::GlobalCache<EvolutionMetavars>& cache,
+      const std::vector<std::string>& /*deadlocked_components*/) {
+    auto& dg_element_array =
+        Parallel::get_parallel_component<gh_dg_element_array>(cache);
+
+    Parallel::simple_action<DeadlockCrap>(dg_element_array);
+  }
 
   template <bool DuringSelfStart>
   struct CceWorldtubeTarget
