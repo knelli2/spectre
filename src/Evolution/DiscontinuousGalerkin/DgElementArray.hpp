@@ -20,6 +20,7 @@
 #include "Domain/ElementDistribution.hpp"
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Structure/InitialElementIds.hpp"
+#include "Domain/Tags/ElementDistribution.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
 #include "Parallel/Algorithms/AlgorithmArray.hpp"
 #include "Parallel/GlobalCache.hpp"
@@ -73,8 +74,11 @@ struct DgElementArray {
 
   using const_global_cache_tags = tmpl::list<domain::Tags::Domain<volume_dim>>;
 
-  using simple_tags_from_options = Parallel::get_simple_tags_from_options<
-      Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
+  using simple_tags_from_options =
+      tmpl::push_back<Parallel::get_simple_tags_from_options<
+                          Parallel::get_initialization_actions_list<
+                              phase_dependent_action_list>>,
+                      domain::Tags::ElementDistribution>;
 
   static void allocate_array(
       Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
@@ -110,16 +114,8 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
       get<domain::Tags::InitialExtents<volume_dim>>(initialization_items);
   const auto& quadrature =
       get<evolution::dg::Tags::Quadrature>(initialization_items);
-
-  bool use_z_order_distribution = true;
-  if constexpr (detail::has_use_z_order_distribution_v<Metavariables>) {
-    use_z_order_distribution = Metavariables::use_z_order_distribution;
-  }
-
-  bool local_time_stepping = false;
-  if constexpr (detail::has_local_time_stepping_v<Metavariables>) {
-    local_time_stepping = Metavariables::local_time_stepping;
-  }
+  const std::optional<domain::ElementWeight>& element_weight =
+      get<domain::Tags::ElementDistribution>(initialization_items);
 
   const size_t number_of_procs = Parallel::number_of_procs<size_t>(local_cache);
   const size_t number_of_nodes = Parallel::number_of_nodes<size_t>(local_cache);
@@ -130,10 +126,7 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
   const std::unordered_map<ElementId<volume_dim>, double> element_costs =
       domain::get_element_costs(
           blocks, initial_refinement_levels, initial_extents,
-          local_time_stepping
-              ? domain::ElementWeight::NumGridPointsAndGridSpacing
-              : domain::ElementWeight::NumGridPoints,
-          quadrature);
+          element_weight.value_or(domain::ElementWeight::Uniform), quadrature);
   const domain::BlockZCurveProcDistribution<volume_dim> element_distribution{
       element_costs,   num_of_procs_to_use, blocks, initial_refinement_levels,
       initial_extents, procs_to_ignore};
@@ -153,7 +146,8 @@ void DgElementArray<Metavariables, PhaseDepActionList>::allocate_array(
     const std::vector<ElementId<volume_dim>> element_ids =
         initial_element_ids(block.id(), initial_ref_levs);
 
-    if (use_z_order_distribution) {
+    // Value means ZCurve. nullopt means round robin
+    if (element_weight.has_value()) {
       for (const auto& element_id : element_ids) {
         const size_t target_proc =
             element_distribution.get_proc_for_element(element_id);
