@@ -104,19 +104,28 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
     static constexpr Options::String help = {"+1 or -1"};
   };
 
-  using options = tmpl::list<AHCoefSign, LambdaCoefSign>;
+  struct ZeroControlError {
+    using type = bool;
+    static constexpr Options::String help = {"If true, control error is 0"};
+  };
+
+  using options = tmpl::list<AHCoefSign, LambdaCoefSign, ZeroControlError>;
   static constexpr Options::String help{
       "Computes the control error for shape control. This should not take any "
       "options."};
 
   Shape() = default;
 
-  Shape(const double ah_coef_sign, const double lambda_coef_sign)
-      : ah_coef_sign_(ah_coef_sign), lambda_coef_sign_(lambda_coef_sign) {}
+  Shape(const double ah_coef_sign, const double lambda_coef_sign,
+        const bool zero_control_error)
+      : ah_coef_sign_(ah_coef_sign),
+        lambda_coef_sign_(lambda_coef_sign),
+        zero_control_error_(zero_control_error) {}
 
   void pup(PUP::er& p) {
     p | ah_coef_sign_;
     p | lambda_coef_sign_;
+    p | zero_control_error_;
   }
 
   template <typename Metavariables, typename... TupleTags>
@@ -181,17 +190,15 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
     Parallel::printf(
         "t = %f\n"
         " size = %f\n"
-        " excision radius = %.16e\n"
-        " excision radius grid = %.16e\n"
-        " Y00 = %.16e\n"
-        " relative size factor = %.16e\n"
         " shape (2,0) = %.16e\n"
         " ah coefs (2,0) = %.16e\n"
         " control error (2,0) = %.16e\n",
-        time, lambda_00_coef,
-        excision_spheres.at(detail::excision_sphere_name<Horizon>()).radius(),
-        radius_excision_sphere_grid_frame, Y00, relative_size_factor,
-        lambda_lm_coefs[iter()], ah_coefs[iter()], Q[iter()]);
+        time, lambda_00_coef, lambda_lm_coefs[iter()], ah_coefs[iter()],
+        Q[iter()]);
+
+    if (zero_control_error_) {
+      Q = DataVector{Q.size(), 0.0};
+    }
 
     return Q;
   }
@@ -199,6 +206,7 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
  private:
   double ah_coef_sign_;
   double lambda_coef_sign_;
+  bool zero_control_error_;
 };
 }  // namespace ControlErrors
 }  // namespace control_system
