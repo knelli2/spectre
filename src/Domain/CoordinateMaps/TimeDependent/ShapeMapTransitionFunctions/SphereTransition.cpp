@@ -12,6 +12,7 @@
 #include "Utilities/ContainerHelpers.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Utilities/MakeWithValue.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
@@ -49,9 +50,7 @@ std::optional<double> SphereTransition::original_radius_over_radius(
   }
   const double original_radius = (mag + distorted_radius * b_) / denom;
 
-  return original_radius >= r_min_ and original_radius <= r_max_
-             ? std::optional<double>{original_radius / mag}
-             : std::nullopt;
+  return std::optional<double>{original_radius / mag};
 }
 
 double SphereTransition::map_over_radius(
@@ -75,24 +74,49 @@ std::array<DataVector, 3> SphereTransition::gradient(
 template <typename T>
 T SphereTransition::call_impl(const std::array<T, 3>& source_coords) const {
   const T mag = magnitude(source_coords);
-  check_magnitudes(mag);
-  return a_ + b_ / mag;
+  T result = a_ + b_ / mag;
+  // check_magnitudes(mag);
+  for (size_t i = 0; i < get_size(mag); ++i) {
+    if (get_element(mag, i) + eps_ < r_min_) {
+      get_element(result, i) = 1.0;
+    } else if (get_element(mag, i) - eps_ > r_max_) {
+      get_element(result, i) = 0.0;
+    }
+  }
+  return result;
 }
 
 template <typename T>
 T SphereTransition::map_over_radius_impl(
     const std::array<T, 3>& source_coords) const {
   const T mag = magnitude(source_coords);
-  check_magnitudes(mag);
-  return a_ / mag + b_ / square(mag);
+  T result = a_ / mag + b_ / square(mag);
+  // check_magnitudes(mag);
+  for (size_t i = 0; i < get_size(mag); ++i) {
+    if (get_element(mag, i) + eps_ < r_min_) {
+      get_element(result, i) = 1.0 / get_element(mag, i);
+    } else if (get_element(mag, i) - eps_ > r_max_) {
+      get_element(result, i) = 0.0;
+    }
+  }
+  return result;
 }
 
 template <typename T>
 std::array<T, 3> SphereTransition::gradient_impl(
     const std::array<T, 3>& source_coords) const {
   const T mag = magnitude(source_coords);
-  check_magnitudes(mag);
-  return -b_ * source_coords / cube(mag);
+  std::array<T, 3> result = -b_ * source_coords / cube(mag);
+  // check_magnitudes(mag);
+  for (size_t i = 0; i < get_size(mag); ++i) {
+    if (get_element(mag, i) + eps_ < r_min_ or
+        get_element(mag, i) - eps_ > r_max_) {
+      for (size_t j = 0; j < result.size(); j++) {
+        get_element(gsl::at(result, j), i) = 0.0;
+      }
+    }
+  }
+  return result;
 }
 
 bool SphereTransition::operator==(
