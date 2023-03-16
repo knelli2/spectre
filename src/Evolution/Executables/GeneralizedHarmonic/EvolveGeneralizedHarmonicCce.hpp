@@ -133,10 +133,10 @@ struct EvolutionMetavars
 
   template <bool DuringSelfStart>
   using step_actions = tmpl::list<
-      tmpl::conditional_t<
-          DuringSelfStart,
-          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
-          tmpl::list<>>,
+      //   tmpl::conditional_t<
+      //       DuringSelfStart,
+      //       Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
+      //       tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           VolumeDim, system, dg_step_choosers, local_time_stepping>,
       tmpl::conditional_t<

@@ -46,6 +46,8 @@ struct ReceiveCcmNextTime {
       const ArrayIndex& array_index, const ActionList /*meta*/,
       const ParallelComponent* const component) {
     auto& inbox = tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
+    inbox.clear();
+    return {Parallel::AlgorithmExecution::Continue, std::nullopt};
 
     const auto& element = db::get<domain::Tags::Element<3_st>>(box);
     const auto& external_boundaries = element.external_boundaries();
