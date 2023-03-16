@@ -94,12 +94,30 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
   // Shape doesn't need the center tags
   using object_centers = domain::object_list<Horizon>;
 
-  using options = tmpl::list<>;
+  struct AHCoefSign {
+    using type = double;
+    static constexpr Options::String help = {"+1 or -1"};
+  };
+
+  struct LambdaCoefSign {
+    using type = double;
+    static constexpr Options::String help = {"+1 or -1"};
+  };
+
+  using options = tmpl::list<AHCoefSign, LambdaCoefSign>;
   static constexpr Options::String help{
       "Computes the control error for shape control. This should not take any "
       "options."};
 
-  void pup(PUP::er& /*p*/) {}
+  Shape() = default;
+
+  Shape(const double ah_coef_sign, const double lambda_coef_sign)
+      : ah_coef_sign_(ah_coef_sign), lambda_coef_sign_(lambda_coef_sign) {}
+
+  void pup(PUP::er& p) {
+    p | ah_coef_sign_;
+    p | lambda_coef_sign_;
+  }
 
   template <typename Metavariables, typename... TupleTags>
   DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
@@ -147,7 +165,8 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
     // strahlkorper coefficients), *not* spherical harmonic coefficients, thus
     // the control error for each l,m is in terms of SPHEREPACK coefficients
     // and no extra factors of sqrt(2/pi) are needed
-    DataVector Q = -relative_size_factor * ah_coefs - lambda_lm_coefs;
+    DataVector Q = ah_coef_sign_ * relative_size_factor * ah_coefs +
+                   lambda_coef_sign_ * lambda_lm_coefs;
 
     // Shape control is only for l > 1 so enforce that Q=0 for l=0,l=1. These
     // components of the control error won't be 0 automatically because the AH
@@ -176,6 +195,10 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
 
     return Q;
   }
+
+ private:
+  double ah_coef_sign_;
+  double lambda_coef_sign_;
 };
 }  // namespace ControlErrors
 }  // namespace control_system
