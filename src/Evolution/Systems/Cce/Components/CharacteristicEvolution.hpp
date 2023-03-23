@@ -240,8 +240,8 @@ struct CharacteristicEvolution {
               self_start_extract_action_list,
               Cce::System<
                   Metavariables::uses_partially_flat_cartesian_coordinates>>>,
-      //   Parallel::PhaseActions<Parallel::Phase::CheckTimeStepperHistory,
-      //                          SelfStart::check_self_start_actions>,
+      Parallel::PhaseActions<Parallel::Phase::CheckTimeStepperHistory,
+                             SelfStart::check_self_start_actions>,
       Parallel::PhaseActions<Parallel::Phase::Evolve, extract_action_list>>;
 
   static void initialize(

@@ -67,6 +67,9 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/ErrorHandling/FloatingPointExceptions.hpp"
 
+#include <iomanip>
+#include <sstream>
+
 /// \cond
 namespace Frame {
 // IWYU pragma: no_forward_declare MathFunction
@@ -91,12 +94,41 @@ struct DeadlockCrap {
 
     const bool terminated = local_object.get_terminate();
 
+    const auto& inboxes = local_object.get_inboxes();
+    const auto& cce_inbox =
+        tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
+    const auto& mortar_inbox = tuples::get<
+        evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<3>>(inboxes);
+
+    std::stringstream ss{};
+    ss << " CCE next time inbox:\n" << std::setprecision(19);
+    for (const auto& [current_time_step_id, next_time_step_id] : cce_inbox) {
+      ss << "  Current time: " << current_time_step_id.substep_time()
+         << ", next time: " << next_time_step_id.substep_time() << "\n";
+    }
+    ss << " Mortar inbox:\n";
+    for (const auto& [current_time_step_id, hash_map] : mortar_inbox) {
+      ss << "  Current time: " << current_time_step_id.substep_time() << "\n";
+      for (const auto& [key, tuple_data] : hash_map) {
+        ss << "   Key: " << key
+           << ", next time: " << std::get<4>(tuple_data).substep_time() << "\n";
+      }
+    }
+
+    const auto& mortar_next_temporal_id =
+        db::get<evolution::dg::Tags::MortarNextTemporalId<3>>(box);
+
+    ss << " MortarNextTemporalId\n";
+    for (const auto& [key, next_id] : mortar_next_temporal_id) {
+      ss << "  Key: " << key << ", next time" << next_id.substep_time() << "\n";
+    }
+
     if (not terminated) {
       const std::string& next_action =
           local_object.deadlock_analysis_next_iterable_action();
       Parallel::printf(
-          "Element %s did not terminate at time %.16f. Next action: %s\n",
-          element.id(), db::get<::Tags::Time>(box), next_action);
+          "Element %s did not terminate at time %.19f. Next action: %s\n%s\n",
+          element.id(), db::get<::Tags::Time>(box), next_action, ss.str());
     }
   }
 };
@@ -133,10 +165,10 @@ struct EvolutionMetavars
 
   template <bool DuringSelfStart>
   using step_actions = tmpl::list<
-      //   tmpl::conditional_t<
-      //       DuringSelfStart,
-      //       Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
-      //       tmpl::list<>>,
+      tmpl::conditional_t<
+          DuringSelfStart,
+          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
+          tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           VolumeDim, system, dg_step_choosers, local_time_stepping>,
       tmpl::conditional_t<

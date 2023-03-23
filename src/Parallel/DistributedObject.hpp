@@ -248,6 +248,10 @@ class DistributedObject<ParallelComponent,
   /// Print the current contents of the DataBox
   std::string print_databox() const;
 
+  const auto& get_inboxes() const {
+    return inboxes_;
+  }
+
   void pup(PUP::er& p) override;  // NOLINT
 
   /*!
