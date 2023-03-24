@@ -114,9 +114,7 @@ struct ReceiveCcmNextTime {
             "doing dense output\n",
             array_index, gh_time, inbox.size(), next_gh_time.substep_time(),
             next_cce_time.substep_time(),
-            (next_cce_time.substep_time() >= next_gh_time.substep_time()
-                 ? " not"
-                 : ""));
+            (cce_next_time_at_current_gh_time ? " not" : ""));
       }
 
       // If the first next CCE time is after (or at) the next GH time, continue
@@ -146,9 +144,11 @@ struct ReceiveCcmNextTime {
         // correct time before we call the function and then set it back after.
         set_time_to(next_cce_time.substep_time());
 
+        // DENSE OUTPUT!!!!!!!!!!!!!!!!!!!!!!!1
         if (not evolution::dg::receive_boundary_data_local_time_stepping<
-                Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
-          set_time_to(current_time);
+                Metavariables, true>(make_not_null(&box),
+                                     make_not_null(&inboxes))) {
+          // set_time_to(current_time);
           if (Parallel::get<DebugToggle>(cache)) {
             Parallel::printf(
                 "ReceiveCcmNextTime, %s: Current gh time is %.16f. Waiting for "
