@@ -7,6 +7,7 @@
 
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/CalculateMeasurementTimescales.hpp"
+#include "ControlSystem/ControlErrors/ComputeControlError.hpp"
 #include "ControlSystem/Controller.hpp"
 #include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/Tags.hpp"
@@ -107,20 +108,20 @@ struct UpdateControlSystem {
     const auto& function_of_time = functions_of_time.at(function_of_time_name);
 
     // Begin step 3
-    // Get the averager, controller, tuner, and control error from the box
+    // Get the averager, controller, and tuner, from the box
     auto& averager = db::get_mutable_reference<
         control_system::Tags::Averager<ControlSystem>>(box);
     auto& controller = db::get_mutable_reference<
         control_system::Tags::Controller<ControlSystem>>(box);
     auto& tuner = db::get_mutable_reference<
         control_system::Tags::TimescaleTuner<ControlSystem>>(box);
-    auto& control_error = db::get_mutable_reference<
-        control_system::Tags::ControlError<ControlSystem>>(box);
     const DataVector& current_timescale = tuner.current_timescale();
 
     // Compute control error
-    const DataVector Q =
-        control_error(cache, time, function_of_time_name, data);
+    const DataVector Q = db::mutate_apply<ComputeControlError<
+        ControlSystem, typename ControlSystem::control_error::return_tags,
+        typename ControlSystem::control_error::argument_tags>>(
+        box, cache, time, function_of_time_name, data);
 
     // Update the averager. We do this for every measurement because we still
     // want the averager to be up-to-date even if we aren't updating at this
