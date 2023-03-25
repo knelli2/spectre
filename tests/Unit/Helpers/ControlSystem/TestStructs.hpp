@@ -40,6 +40,9 @@ struct ControlError : tt::ConformsTo<control_system::protocols::ControlError> {
   using options = tmpl::list<>;
   static constexpr Options::String help{"Example control error."};
 
+  using return_tags = tmpl::list<>;
+  using argument_tags = tmpl::list<>;
+
   template <typename Metavariables, typename... QueueTags>
   DataVector operator()(
       const Parallel::GlobalCache<Metavariables>& /*cache*/,

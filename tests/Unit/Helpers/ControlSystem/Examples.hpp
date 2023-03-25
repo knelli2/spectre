@@ -96,6 +96,14 @@ struct ExampleMeasurement
 };
 /// [Measurement]
 
+struct ReturnTagExample : db::SimpleTag {
+  using type = double;
+};
+
+struct ArgumentTagExample : db::SimpleTag {
+  using type = DataVector;
+};
+
 /// [ControlError]
 struct ExampleControlError
     : tt::ConformsTo<control_system::protocols::ControlError> {
@@ -105,8 +113,13 @@ struct ExampleControlError
 
   void pup(PUP::er& /*p*/) {}
 
+  using return_tags = tmpl::list<ReturnTagExample>;
+  using argument_tags = tmpl::list<ArgumentTagExample>;
+
   template <typename Metavariables, typename... QueueTags>
-  DataVector operator()(const Parallel::GlobalCache<Metavariables>& cache,
+  DataVector operator()(const gsl::not_null<double*> example_return,
+                        const DataVector& example_argument,
+                        const Parallel::GlobalCache<Metavariables>& cache,
                         const double time,
                         const std::string& function_of_time_name,
                         const tuples::TaggedTuple<QueueTags...>& measurements) {
@@ -115,6 +128,7 @@ struct ExampleControlError
     const double current_map_value =
         functions_of_time.at(function_of_time_name)->func(time)[0][0];
     const double measured_value = 0.0;
+    *example_return = example_argument[0];
     // Would do something like get<QueueTag>(measurements) here
     (void)measurements;
 
