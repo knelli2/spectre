@@ -41,16 +41,6 @@ struct ControlError {
         ConformingType::expected_number_of_excisions;
 
     using object_centers = typename ConformingType::object_centers;
-
-    static_assert(
-        std::is_same_v<
-            DataVector,
-            decltype(ConformingType{}(
-                std::declval<
-                    const Parallel::GlobalCache<DummyMetavariables>&>(),
-                std::declval<const double>(),
-                std::declval<const std::string&>(),
-                std::declval<const tuples::TaggedTuple<DummyTupleTags>&>()))>);
   };
 };
 }  // namespace control_system::protocols
