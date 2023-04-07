@@ -5,6 +5,7 @@
 
 #include <boost/functional/hash.hpp>
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -17,18 +18,27 @@
 #include "Domain/Structure/MaxNumberOfNeighbors.hpp"
 #include "Evolution/DgSubcell/NeighborTciDecision.hpp"
 #include "Evolution/DgSubcell/Tags/TciStatus.hpp"
+#include "Evolution/DiscontinuousGalerkin/Messages/BoundaryMessage.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Utilities/Gsl.hpp"
 
 namespace evolution::dg::subcell {
 template <size_t Dim>
+using BoundaryMessage = evolution::dg::BoundaryMessage<Dim>;
+
+template <size_t Dim>
+BoundaryMessage<Dim>* create_message(const int tci_status) {
+  BoundaryMessage<Dim>* message = new BoundaryMessage<Dim>();
+  message->tci_status = tci_status;
+  return message;
+}
+
+template <size_t Dim>
 void test() {
   using tag = subcell::Tags::NeighborTciDecisions<Dim>;
   using Type = typename tag::type;
   auto box = db::create<db::AddSimpleTags<tag>>(Type{});
-  using StorageType =
-      std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                 std::optional<DataVector>, ::TimeStepId, int>;
+  using StorageType = std::unique_ptr<BoundaryMessage<Dim>>;
   std::pair<
       const TimeStepId,
       FixedHashMap<maximum_number_of_neighbors(Dim),
@@ -36,19 +46,21 @@ void test() {
                    boost::hash<std::pair<Direction<Dim>, ElementId<Dim>>>>>
       neighbor_data{};
   const std::pair id_xi{Direction<Dim>::lower_xi(), ElementId<Dim>{0}};
-  neighbor_data.second.insert(std::pair{id_xi, StorageType{}});
-  std::get<5>(neighbor_data.second.at(id_xi)) = 10;
+  neighbor_data.second.insert(std::pair{
+      id_xi, std::unique_ptr<BoundaryMessage<Dim>>(create_message<Dim>(10))});
   std::pair<Direction<Dim>, ElementId<Dim>> id_eta;
   std::pair<Direction<Dim>, ElementId<Dim>> id_zeta;
   if constexpr (Dim > 1) {
     id_eta = std::pair{Direction<Dim>::lower_eta(), ElementId<Dim>{2}};
-    neighbor_data.second.insert(std::pair{id_eta, StorageType{}});
-    std::get<5>(neighbor_data.second.at(id_eta)) = 12;
+    neighbor_data.second.insert(std::pair{
+        id_eta,
+        std::unique_ptr<BoundaryMessage<Dim>>(create_message<Dim>(12))});
   }
   if constexpr (Dim > 2) {
     id_zeta = std::pair{Direction<Dim>::lower_zeta(), ElementId<Dim>{5}};
-    neighbor_data.second.insert(std::pair{id_zeta, StorageType{}});
-    std::get<5>(neighbor_data.second.at(id_zeta)) = 15;
+    neighbor_data.second.insert(std::pair{
+        id_zeta,
+        std::unique_ptr<BoundaryMessage<Dim>>(create_message<Dim>(15))});
   }
 #ifdef SPECTRE_DEBUG
   // check ASSERT for neighbors works

@@ -13,6 +13,7 @@
 #include "DataStructures/Variables.hpp"
 #include "Domain/Structure/Direction.hpp"
 #include "Domain/Structure/ElementId.hpp"
+#include "Evolution/DgSubcell/GhostData.hpp"
 #include "Domain/Structure/MaxNumberOfNeighbors.hpp"
 #include "Evolution/DgSubcell/GhostData.hpp"
 #include "Evolution/Systems/GrMhd/GhValenciaDivClean/System.hpp"

@@ -17,6 +17,7 @@
 #include "Domain/Structure/MaxNumberOfNeighbors.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/DgSubcell/Tags/GhostDataForReconstruction.hpp"
+#include "Evolution/DgSubcell/GhostData.hpp"
 #include "Evolution/DgSubcell/Tags/Mesh.hpp"
 #include "Evolution/Systems/Burgers/FiniteDifference/Reconstructor.hpp"
 #include "Evolution/Systems/Burgers/Tags.hpp"

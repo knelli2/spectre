@@ -133,11 +133,17 @@ void test_impl(
   const auto& mortar_sizes = get_tag(Tags::MortarSize<Dim>{});
   CHECK(mortar_sizes == expected_mortar_sizes);
   const auto& mortar_data = get_tag(Tags::MortarData<Dim>{});
+  for (const auto& id_and_data : mortar_data) {
+    CHECK(id_and_data.second.total_number_of_buffers() ==
+          (LocalTimeStepping ? 1_st : 2_st));
+    CHECK(id_and_data.second.current_buffer_index() == 0);
+  }
   const auto& boundary_data_history = get_tag(
       Tags::MortarDataHistory<
           Dim,
           typename db::add_tag_prefix<
               ::Tags::dt, typename metavars::system::variables_tag>::type>{});
+
   for (const auto& mortar_id_and_mesh : expected_mortar_meshes) {
     // Just make sure this exists, it is not expected to hold any data
     CHECK(mortar_data.find(mortar_id_and_mesh.first) != mortar_data.end());

@@ -20,6 +20,7 @@
 #include "Domain/Structure/DirectionMap.hpp"
 #include "Domain/Structure/Element.hpp"
 #include "Domain/Structure/ElementId.hpp"
+#include "Evolution/DgSubcell/GhostData.hpp"
 #include "Domain/Structure/MaxNumberOfNeighbors.hpp"
 #include "Evolution/DgSubcell/GhostData.hpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/ConservativeFromPrimitive.hpp"
@@ -249,7 +250,7 @@ void reconstruct_fd_neighbor_work(
     const DataVector& neighbor_data_on_mortar =
         ghost_data.at(mortar_id).neighbor_ghost_data_for_reconstruction();
     neighbor_prims.set_data_ref(
-        const_cast<double*>(neighbor_data_on_mortar.data()),
+        const_cast<double*>(ghost_data_on_mortar.data()),
         neighbor_prims.number_of_independent_components *
             ghost_data_extents.product());
   }

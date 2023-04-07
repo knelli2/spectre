@@ -28,6 +28,7 @@
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/FiniteDifference/ReconstructWork.tpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/Tags.hpp"
 #include "NumericalAlgorithms/FiniteDifference/Reconstruct.tpp"
+#include "Evolution/DgSubcell/GhostData.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
 #include "PointwiseFunctions/Hydro/EquationsOfState/EquationOfState.hpp"
@@ -271,10 +272,20 @@ void reconstruct_fd_neighbor_work(
     ASSERT(ghost_data.contains(mortar_id),
            "The neighbor data does not contain the mortar: ("
                << mortar_id.first << ',' << mortar_id.second << ")");
+<<<<<<< HEAD
     const DataVector& neighbor_data_on_mortar =
         ghost_data.at(mortar_id).neighbor_ghost_data_for_reconstruction();
     std::copy(neighbor_data_on_mortar.begin(),
               std::next(neighbor_data_on_mortar.begin(),
+||||||| parent of 53f14e15d (DROP??)
+    const auto& neighbor_data_on_mortar = neighbor_data.at(mortar_id);
+    std::copy(neighbor_data_on_mortar.begin(),
+              std::next(neighbor_data_on_mortar.begin(),
+=======
+    const auto& ghost_data_on_mortar = ghost_data.at(mortar_id);
+    std::copy(ghost_data_on_mortar.begin(),
+              std::next(ghost_data_on_mortar.begin(),
+>>>>>>> 53f14e15d (DROP??)
                         static_cast<std::ptrdiff_t>(
                             neighbor_prims.number_of_independent_components *
                             ghost_data_extents.product())),

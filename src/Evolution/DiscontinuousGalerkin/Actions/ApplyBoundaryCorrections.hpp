@@ -55,7 +55,8 @@
 /// \cond
 namespace evolution::dg::subcell {
 // We use a forward declaration instead of including a header file to avoid
-// coupling to the DG-subcell libraries for executables that don't use subcell.
+// coupling to the DG-subcell libraries for executables that don't use
+// subcell.
 template <typename Metavariables, typename DbTagsList>
 void neighbor_reconstructed_face_solution(
     const gsl::not_null<db::DataBox<DbTagsList>*> box,
@@ -65,10 +66,8 @@ void neighbor_reconstructed_face_solution(
             maximum_number_of_neighbors(Metavariables::volume_dim),
             std::pair<Direction<Metavariables::volume_dim>,
                       ElementId<Metavariables::volume_dim>>,
-            std::tuple<Mesh<Metavariables::volume_dim>,
-                       Mesh<Metavariables::volume_dim - 1>,
-                       std::optional<DataVector>, std::optional<DataVector>,
-                       ::TimeStepId, int>,
+            std::unique_ptr<
+                evolution::dg::BoundaryMessage<Metavariables::volume_dim>>,
             boost::hash<std::pair<Direction<Metavariables::volume_dim>,
                                   ElementId<Metavariables::volume_dim>>>>>*>
         received_temporal_id_and_data);
@@ -77,13 +76,15 @@ void neighbor_tci_decision(
     gsl::not_null<db::DataBox<DbTagsList>*> box,
     const std::pair<
         const TimeStepId,
-        FixedHashMap<
-            maximum_number_of_neighbors(Dim),
-            std::pair<Direction<Dim>, ElementId<Dim>>,
-            std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                       std::optional<DataVector>, ::TimeStepId, int>,
-            boost::hash<std::pair<Direction<Dim>, ElementId<Dim>>>>>&
+        FixedHashMap<maximum_number_of_neighbors(Dim),
+                     std::pair<Direction<Dim>, ElementId<Dim>>,
+                     std::unique_ptr<evolution::dg::BoundaryMessage<Dim>>,
+                     boost::hash<std::pair<Direction<Dim>, ElementId<Dim>>>>>&
         received_temporal_id_and_data);
+namespace Tags {
+template <size_t Dim>
+struct NeighborData;
+}  // namespace Tags
 }  // namespace evolution::dg::subcell
 /// \endcond
 
@@ -98,20 +99,24 @@ bool receive_boundary_data_global_time_stepping(
 
   const TimeStepId& temporal_id = get<::Tags::TimeStepId>(*box);
   using Key = std::pair<Direction<volume_dim>, ElementId<volume_dim>>;
-  std::map<
-      TimeStepId,
-      FixedHashMap<maximum_number_of_neighbors(volume_dim), Key,
-                   std::tuple<Mesh<volume_dim>, Mesh<volume_dim - 1>,
-                              std::optional<DataVector>,
-                              std::optional<DataVector>, ::TimeStepId, int>,
-                   boost::hash<Key>>>& inbox =
-      tuples::get<evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
-          volume_dim>>(*inboxes);
-  const auto received_temporal_id_and_data = inbox.find(temporal_id);
-  if (received_temporal_id_and_data == inbox.end()) {
+  using MessageType =
+      std::unique_ptr<evolution::dg::BoundaryMessage<volume_dim>>;
+  using MapType = FixedHashMap<maximum_number_of_neighbors(volume_dim), Key,
+                               MessageType, boost::hash<Key>>;
+  using InboxType = std::map<TimeStepId, MapType>;
+  InboxType& inbox =
+      tuples::get<evolution::dg::Tags::BoundaryMessageInbox<volume_dim>>(
+          *inboxes);
+  const auto received_temporal_id_and_data_it = inbox.find(temporal_id);
+
+  // If we have not received data at our current time, we need to wait
+  if (received_temporal_id_and_data_it == inbox.end()) {
     return false;
   }
-  const auto& received_neighbor_data = received_temporal_id_and_data->second;
+
+  // Check that we have received data for all neighbors in all directions. If we
+  // haven't, then we need to wait even more
+  const auto& received_neighbor_data = received_temporal_id_and_data_it->second;
   const Element<volume_dim>& element =
       db::get<domain::Tags::Element<volume_dim>>(*box);
   for (const auto& [direction, neighbors] : element.neighbors()) {
@@ -124,17 +129,22 @@ bool receive_boundary_data_global_time_stepping(
     }
   }
 
-  // Move inbox contents into the DataBox
+  std::pair<const TimeStepId, MapType>& received_temporal_id_and_data =
+      *received_temporal_id_and_data_it;
+
+  // Move subcell inbox contents into the DataBox
   if constexpr (using_subcell_v<Metavariables>) {
     evolution::dg::subcell::neighbor_reconstructed_face_solution<Metavariables>(
-        box, make_not_null(&*received_temporal_id_and_data));
+        box, make_not_null(&received_temporal_id_and_data));
     evolution::dg::subcell::neighbor_tci_decision<volume_dim>(
-        box, *received_temporal_id_and_data);
+        box, received_temporal_id_and_data);
   }
 
+  // Move dg inbox contents into the DataBox
   db::mutate<evolution::dg::Tags::MortarData<volume_dim>,
              evolution::dg::Tags::MortarNextTemporalId<volume_dim>,
-             evolution::dg::Tags::NeighborMesh<volume_dim>>(
+             evolution::dg::Tags::NeighborMesh<volume_dim>,
+             evolution::dg::Tags::BoundaryMessageFromInbox<volume_dim>>(
       box,
       [&received_temporal_id_and_data](
           const gsl::not_null<std::unordered_map<
@@ -149,35 +159,81 @@ bool receive_boundary_data_global_time_stepping(
               Mesh<volume_dim>,
               boost::hash<
                   std::pair<Direction<volume_dim>, ElementId<volume_dim>>>>*>
-              neighbor_mesh) {
+              neighbor_mesh,
+          const gsl::not_null<
+              std::unordered_map<Key, MessageType, boost::hash<Key>>*>
+              boundary_messages_in_data_box) {
         neighbor_mesh->clear();
-        for (auto& received_mortar_data :
-             received_temporal_id_and_data->second) {
-          const auto& mortar_id = received_mortar_data.first;
-          ASSERT(received_temporal_id_and_data->first ==
+        for (std::pair<const Key, MessageType>& received_mortar_data_pair :
+             received_temporal_id_and_data.second) {
+          const Key& mortar_id = received_mortar_data_pair.first;
+          MessageType& boundary_message_ptr = received_mortar_data_pair.second;
+
+          ASSERT(received_temporal_id_and_data.first ==
                      mortar_data->at(mortar_id).time_step_id(),
                  "Expected to receive mortar data on mortar "
                      << mortar_id << " at time "
                      << mortar_next_time_step_id->at(mortar_id)
                      << " but actually received at time "
-                     << received_temporal_id_and_data->first);
+                     << received_temporal_id_and_data.first);
+
+          // Copy the received time step ID and neighbor volume mesh to our
+          // DataBox
           neighbor_mesh->insert_or_assign(
-              mortar_id, std::get<0>(received_mortar_data.second));
+              mortar_id, boundary_message_ptr->volume_or_ghost_mesh);
           mortar_next_time_step_id->at(mortar_id) =
-              std::get<4>(received_mortar_data.second);
-          ASSERT(using_subcell_v<Metavariables> or
-                     std::get<3>(received_mortar_data.second).has_value(),
-                 "Must receive number boundary correction data when not using "
-                 "DG-subcell.");
-          if (std::get<3>(received_mortar_data.second).has_value()) {
-            mortar_data->at(mortar_id).insert_neighbor_mortar_data(
-                received_temporal_id_and_data->first,
-                std::get<1>(received_mortar_data.second),
-                std::move(*std::get<3>(received_mortar_data.second)));
+              boundary_message_ptr->next_time_step_id;
+
+          // The only time the received dg data may not exist is if we are doing
+          // subcell. If we aren't doing subcell, we must receive dg data.
+          // QUESTION: Why do we have this assert?? If we're only doing DG, then
+          // we always receive DG flux data. If we're doing subcell and receive
+          // DG data, then all is good. If we're doing subcell and receive FD
+          // data, the neighbor_reconstructed_face_solution above inserts the
+          // computed packaged data into to DG data part of the inbox. So no
+          // matter what, there will be DG data. So the assert should only be
+          // that boundary_message_ptr->dg_flux_data_size != 0. No subcell
+          // check.
+          ASSERT(boundary_message_ptr->dg_flux_data_size != 0 and
+                     boundary_message_ptr->dg_flux_data != nullptr,
+                 "Must always receive DG data.");
+
+          // Actually set the neighbor data. This is a non-owning vector because
+          // the data already lives somewhere and is guaranteed to live long
+          // enough for us to use it.
+          if (boundary_message_ptr->dg_flux_data_size != 0) {
+            mortar_data->at(mortar_id).time_step_id() =
+                received_temporal_id_and_data.first;
+            auto& neighbor_mortar_data =
+                mortar_data->at(mortar_id).neighbor_mortar_data();
+            if (UNLIKELY(not neighbor_mortar_data.has_value())) {
+              neighbor_mortar_data =
+                  std::pair<Mesh<volume_dim - 1>, DataVector>{};
+            }
+
+            neighbor_mortar_data.value().first =
+                boundary_message_ptr->interface_mesh;
+            neighbor_mortar_data.value().second.set_data_ref(
+                boundary_message_ptr->dg_flux_data,
+                boundary_message_ptr->dg_flux_data_size);
           }
+
+          // Now we move the boundary message from the inbox to the DataBox. We
+          // do this because if the mortar data came from another node, then the
+          // unique_ptr actually owns the mortar data. It isn't owned by another
+          // DataBox. So if we only copy the fd/dg pointer here, but then delete
+          // the BoundaryMessage pointer from the inbox, then the mortar data
+          // owned by that unique_ptr will also be deleted. These pointers don't
+          // need to be removed from the DataBox because once they get
+          // overridden here, the previous memory gets freed
+          boundary_messages_in_data_box->at(mortar_id) =
+              std::move(boundary_message_ptr);
         }
       });
-  inbox.erase(received_temporal_id_and_data);
+
+  // We have already moved the boundary messages out of the inbox to the
+  // DataBox, so this won't affect any data
+  inbox.erase(received_temporal_id_and_data_it);
   return true;
 }
 
@@ -334,11 +390,15 @@ bool receive_boundary_data_local_time_stepping(
 /// at ::Tags::Time instead of performing a full step.  This is only
 /// used for local time-stepping.
 template <bool LocalTimeStepping, typename System, size_t VolumeDim,
-          bool DenseOutput>
+          bool DenseOutput, bool UseSubcell = false>
 struct ApplyBoundaryCorrections {
   static constexpr bool local_time_stepping = LocalTimeStepping;
+  static constexpr bool using_subcell = UseSubcell;
   static_assert(local_time_stepping or not DenseOutput,
                 "GTS does not use ApplyBoundaryCorrections for dense output.");
+  static_assert((not local_time_stepping) or
+                    (local_time_stepping and not using_subcell),
+                "Cannot use subcell with LTS.");
 
   using system = System;
   static constexpr size_t volume_dim = VolumeDim;
@@ -358,10 +418,14 @@ struct ApplyBoundaryCorrections {
   using MortarDataType =
       tmpl::conditional_t<DenseOutput, const typename mortar_data_tag::type,
                           typename mortar_data_tag::type>;
+  using subcell_tag = evolution::dg::subcell::Tags::NeighborData<VolumeDim>;
+  using SubcellDataType = std::pair<
+      size_t, std::vector<std::optional<DirectionMap<volume_dim, DataVector>>>>;
 
-  using return_tags =
+  using return_tags = tmpl::flatten<tmpl::list<
       tmpl::conditional_t<DenseOutput, tmpl::list<tag_to_update>,
-                          tmpl::list<tag_to_update, mortar_data_tag>>;
+                          tmpl::list<tag_to_update, mortar_data_tag>>,
+      tmpl::conditional_t<using_subcell, subcell_tag, tmpl::list<>>>>;
   using argument_tags = tmpl::flatten<tmpl::list<
       tmpl::conditional_t<DenseOutput, mortar_data_tag, tmpl::list<>>,
       domain::Tags::Mesh<volume_dim>, Tags::MortarMesh<volume_dim>,
@@ -373,7 +437,7 @@ struct ApplyBoundaryCorrections {
                           domain::Tags::DetInvJacobian<Frame::ElementLogical,
                                                        Frame::Inertial>>>>;
 
-  // full step
+  // full step DG
   static void apply(
       const gsl::not_null<typename tag_to_update::type*> vars_to_update,
       const gsl::not_null<MortarDataType*> mortar_data,
@@ -395,6 +459,37 @@ struct ApplyBoundaryCorrections {
                time_stepper, boundary_correction, time_step,
                std::numeric_limits<double>::signaling_NaN(),
                gts_det_inv_jacobian);
+  }
+
+  // full step DG/FD
+  static void apply(
+      const gsl::not_null<typename tag_to_update::type*> vars_to_update,
+      const gsl::not_null<MortarDataType*> mortar_data,
+      const gsl::not_null<SubcellDataType*> subcell_neighbor_data_pair,
+      const Mesh<volume_dim>& volume_mesh,
+      const typename Tags::MortarMesh<volume_dim>::type& mortar_meshes,
+      const typename Tags::MortarSize<volume_dim>::type& mortar_sizes,
+      const ::dg::Formulation dg_formulation,
+      const DirectionMap<
+          volume_dim, std::optional<Variables<tmpl::list<
+                          evolution::dg::Tags::MagnitudeOfNormal,
+                          evolution::dg::Tags::NormalCovector<volume_dim>>>>>&
+          face_normal_covector_and_magnitude,
+      const TimeStepperType& time_stepper,
+      const typename system::boundary_correction_base& boundary_correction,
+      const TimeDelta& time_step,
+      const Scalar<DataVector>& gts_det_inv_jacobian = {}) {
+    const std::optional<size_t> mortar_index = apply_impl(
+        vars_to_update, mortar_data, volume_mesh, mortar_meshes, mortar_sizes,
+        dg_formulation, face_normal_covector_and_magnitude, time_stepper,
+        boundary_correction, time_step,
+        std::numeric_limits<double>::signaling_NaN(), gts_det_inv_jacobian);
+
+    ASSERT(mortar_index.has_value(),
+           "When applying boundary corrections with subcell, the mortar index "
+           "must have a value.");
+
+    subcell_neighbor_data_pair->first = mortar_index.value();
   }
 
   // dense output (LTS only)
@@ -437,7 +532,7 @@ struct ApplyBoundaryCorrections {
   }
 
  private:
-  static void apply_impl(
+  static std::optional<size_t> apply_impl(
       const gsl::not_null<typename tag_to_update::type*> vars_to_update,
       const gsl::not_null<MortarDataType*> mortar_data,
       const Mesh<volume_dim>& volume_mesh,
@@ -480,9 +575,12 @@ struct ApplyBoundaryCorrections {
         tmpl::all<derived_boundary_corrections, std::is_final<tmpl::_1>>::value,
         "All createable classes for boundary corrections must be marked "
         "final.");
+
+    std::optional<size_t> mortar_index{};
+
     call_with_dynamic_type<void, derived_boundary_corrections>(
         &boundary_correction,
-        [&dense_output_time, &dg_formulation,
+        [&dense_output_time, &dg_formulation, &mortar_index,
          &face_normal_covector_and_magnitude, &mortar_data, &mortar_meshes,
          &mortar_sizes, &time_step, &time_stepper, using_gauss_lobatto_points,
          &vars_to_update, &volume_det_jacobian, &volume_det_inv_jacobian,
@@ -548,19 +646,18 @@ struct ApplyBoundaryCorrections {
               const auto& mortar_mesh = mortar_meshes.at(mortar_id);
 
               // Extract local and neighbor data, copy into Variables because
-              // we store them in a std::vector for type erasure.
+              // we store them in a DataVector for type erasure.
               const std::pair<Mesh<volume_dim - 1>, DataVector>&
                   local_mesh_and_data = *local_mortar_data.local_mortar_data();
               const std::pair<Mesh<volume_dim - 1>, DataVector>&
                   neighbor_mesh_and_data =
                       *neighbor_mortar_data.neighbor_mortar_data();
               local_data_on_mortar.set_data_ref(
-                  const_cast<double*>(std::get<1>(local_mesh_and_data).data()),
-                  std::get<1>(local_mesh_and_data).size());
+                  const_cast<double*>(local_mesh_and_data.second.data()),
+                  local_mesh_and_data.second.size());
               neighbor_data_on_mortar.set_data_ref(
-                  const_cast<double*>(
-                      std::get<1>(neighbor_mesh_and_data).data()),
-                  std::get<1>(neighbor_mesh_and_data).size());
+                  const_cast<double*>(neighbor_mesh_and_data.second.data()),
+                  neighbor_mesh_and_data.second.size());
 
               // The boundary computations and lifting can be further
               // optimized by in the h-refinement case having only one
@@ -678,6 +775,7 @@ struct ApplyBoundaryCorrections {
             };
 
             if constexpr (local_time_stepping) {
+              (void)mortar_index;
               typename variables_tag::type lgl_lifted_data{};
               auto& lifted_data = using_gauss_lobatto_points ? lgl_lifted_data
                                                              : *vars_to_update;
@@ -709,6 +807,7 @@ struct ApplyBoundaryCorrections {
               (void)time_step;
               (void)time_stepper;
               (void)dense_output_time;
+              (void)mortar_index;
 
               // Choose an allocation cache that may be empty, so we
               // might be able to reuse the allocation obtained for the
@@ -723,10 +822,6 @@ struct ApplyBoundaryCorrections {
                                       : volume_dt_correction;
               lifted_data = compute_correction_coupling(
                   mortar_id_and_data.second, mortar_id_and_data.second);
-              // Remove data since it's tagged with the time. In the future we
-              // _might_ be able to reuse allocations, but this optimization
-              // should only be done after profiling.
-              mortar_id_and_data.second.extract();
 
               if (using_gauss_lobatto_points) {
                 // Add the flux contribution to the volume data
@@ -737,9 +832,31 @@ struct ApplyBoundaryCorrections {
               } else {
                 *vars_to_update += lifted_data;
               }
+
+              // Use the next available mortar buffer. This means that the data
+              // in the previous buffer will still exist for a while. However,
+              // once it's time to reuse that buffer again, we'll just overwrite
+              // it because nothing else will be using it anymore.
+              mortar_id_and_data.second.next_buffer();
+
+              if constexpr (using_subcell) {
+                if (mortar_index.has_value()) {
+                  ASSERT(
+                      mortar_index.value() ==
+                          mortar_id_and_data.second.current_buffer_index(),
+                      "All mortars of an Element must be using the same "
+                      "internal index at the same time. One mortar has index "
+                          << mortar_index.value() << " while another has index "
+                          << mortar_id_and_data.second.current_buffer_index());
+                }
+
+                mortar_index = mortar_id_and_data.second.current_buffer_index();
+              }
             }
           }
         });
+
+    return mortar_index;
   }
 
   template <typename... BoundaryCorrectionTags, typename... Tags,
@@ -766,8 +883,8 @@ namespace Actions {
  */
 template <typename System, size_t VolumeDim, bool DenseOutput>
 struct ApplyBoundaryCorrectionsToTimeDerivative {
-  using inbox_tags = tmpl::list<
-      evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<VolumeDim>>;
+  using inbox_tags =
+      tmpl::list<evolution::dg::Tags::BoundaryMessageInbox<VolumeDim>>;
   using const_global_cache_tags =
       tmpl::list<evolution::Tags::BoundaryCorrection<System>,
                  ::dg::Tags::Formulation>;
@@ -794,8 +911,8 @@ struct ApplyBoundaryCorrectionsToTimeDerivative {
       return {Parallel::AlgorithmExecution::Retry, std::nullopt};
     }
 
-    db::mutate_apply<
-        ApplyBoundaryCorrections<false, System, VolumeDim, DenseOutput>>(
+    db::mutate_apply<ApplyBoundaryCorrections<
+        false, System, VolumeDim, DenseOutput, using_subcell_v<Metavariables>>>(
         make_not_null(&box));
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
@@ -845,6 +962,7 @@ struct ApplyLtsBoundaryCorrections {
     db::mutate_apply<
         ApplyBoundaryCorrections<true, System, VolumeDim, DenseOutput>>(
         make_not_null(&box));
+
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };

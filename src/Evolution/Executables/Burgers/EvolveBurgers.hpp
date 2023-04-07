@@ -231,7 +231,8 @@ struct EvolutionMetavars {
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
                          tmpl::list<evolution::dg::ApplyBoundaryCorrections<
-                             local_time_stepping, system, volume_dim, true>>>,
+                             local_time_stepping, system, volume_dim, true,
+                             use_dg_subcell>>>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, volume_dim, false>>,
           tmpl::list<

@@ -32,7 +32,8 @@ add_spectre_executable(
 
   # The following lines list the source files with tests in them to be
   # compiled into the executable.
-  ../DataStructures/Test_DataVector.cpp
+  # ../Evolution/DiscontinuousGalerkin/Actions/Test_ComputeTimeDerivative.cpp
+  ../Evolution/DiscontinuousGalerkin/Actions/Test_ApplyBoundaryCorrections.cpp
   )
 
 # Modify which libraries to link for your test case.
@@ -40,6 +41,14 @@ target_link_libraries(
   ${EXECUTABLE}
   PRIVATE
   DataStructures
+  CoordinateMaps
+  DiscontinuousGalerkin
+  Domain
+  DomainStructure
+  Evolution
+  EvolutionDgActionsHelpers
+  Spectral
+  Time
   )
 
 # Core required libraries

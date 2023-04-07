@@ -112,6 +112,9 @@ void BoundaryConditionGhostData::apply(
   constexpr size_t number_of_tensor_components =
       NeighborVariables::number_of_independent_components;
 
+  auto& all_ghost_data =
+      db::get_mutable_reference<Tags::GhostDataForReconstruction<Dim>>(box);
+
   for (const auto& direction : element.external_boundaries()) {
     const auto& boundary_condition_at_direction =
         *external_boundary_condition.at(direction);

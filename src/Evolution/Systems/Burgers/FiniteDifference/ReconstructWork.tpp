@@ -78,6 +78,7 @@ void reconstruct_work(
                  << direction << " on element id " << element.id());
 
       ghost_cell_vars[direction] = gsl::make_span(
+<<<<<<< HEAD
           &neighbor_data[0], number_of_variables * ghost_zone_size);
     } else {
       // retrieve boundary ghost data from ghost_data
@@ -87,6 +88,21 @@ void reconstruct_work(
               .neighbor_ghost_data_for_reconstruction();
       ghost_cell_vars[direction] = gsl::make_span(
           &neighbor_data[0], number_of_variables * ghost_zone_size);
+||||||| parent of 53f14e15d (DROP??)
+          &neighbor_data.at(
+              std::pair{direction, ElementId<1>::external_boundary_id()})[0],
+          number_of_variables * ghost_zone_size);
+=======
+          &neighbor_data[0], number_of_variables * ghost_zone_size);
+    } else {
+      // retrieve boundary ghost data from ghost_data
+      const DataVector& neighbor_data =
+          ghost_data
+              .at(std::pair{direction, *ElementId<1>::external_boundary_id()})
+              .neighbor_ghost_data_for_reconstruction();
+      ghost_cell_vars[direction] = gsl::make_span(
+          &neighbor_data[0], number_of_variables * ghost_zone_size);
+>>>>>>> 53f14e15d (DROP??)
     }
   }
 

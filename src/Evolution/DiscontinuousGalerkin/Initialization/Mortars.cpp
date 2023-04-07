@@ -48,7 +48,8 @@ mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
                    const Spectral::Quadrature quadrature,
                    const Element<Dim>& element,
                    const TimeStepId& next_temporal_id,
-                   const Mesh<Dim>& volume_mesh) {
+                   const Mesh<Dim>& volume_mesh,
+                   const bool use_local_time_stepping) {
   MortarMap<evolution::dg::MortarData<Dim>, Dim> mortar_data{};
   MortarMap<Mesh<Dim - 1>, Dim> mortar_meshes{};
   MortarMap<std::array<Spectral::MortarSize, Dim - 1>, Dim> mortar_sizes{};
@@ -61,7 +62,8 @@ mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
     normal_covector_quantities[direction] = std::nullopt;
     for (const auto& neighbor : neighbors) {
       const auto mortar_id = std::make_pair(direction, neighbor);
-      mortar_data.emplace(mortar_id, MortarData<Dim>{1});
+      mortar_data.emplace(
+          mortar_id, MortarData<Dim>{use_local_time_stepping ? 1_st : 2_st});
       mortar_meshes.emplace(
           mortar_id,
           ::dg::mortar_mesh(volume_mesh.slice_away(direction.dimension()),
@@ -116,7 +118,7 @@ mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
       const std::vector<std::array<size_t, DIM(data)>>& initial_extents,       \
       const Spectral::Quadrature quadrature,                                   \
       const Element<DIM(data)>& element, const TimeStepId& next_temporal_id,   \
-      const Mesh<DIM(data)>& volume_mesh);
+      const Mesh<DIM(data)>& volume_mesh, const bool use_local_time_stepping);
 
 GENERATE_INSTANTIATIONS(INSTANTIATION, (1, 2, 3))
 

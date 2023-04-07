@@ -41,6 +41,7 @@
 #include "Evolution/DiscontinuousGalerkin/Actions/VolumeTermsImpl.tpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/Mortars.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
+#include "Evolution/DiscontinuousGalerkin/Messages/BoundaryMessage.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarData.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/ProjectToBoundary.hpp"
@@ -82,6 +83,8 @@
 #include "Utilities/TMPL.hpp"
 
 namespace TestHelpers::evolution::dg::Actions {
+template <size_t Dim>
+using BoundaryMessage = ::evolution::dg::BoundaryMessage<Dim>;
 struct Var1 : db::SimpleTag {
   using type = Scalar<DataVector>;
 };
@@ -1766,9 +1769,6 @@ void test_impl(const Spectral::Quadrature quadrature,
 
         const auto& orientation =
             element.neighbors().at(local_direction).orientation();
-        DataVector oriented_variables =
-            orient_variables_on_slice(expected_data, mortar_mesh.extents(),
-                                      local_direction.dimension(), orientation);
         if (local_data or orientation.is_aligned()) {
           return expected_data;
         } else {
@@ -1836,58 +1836,75 @@ void test_impl(const Spectral::Quadrature quadrature,
               .integration_order() == 1);
     check_mortar_data(east_mortar_data, mortar_id_east);
   } else {
-    CHECK_ITERABLE_APPROX(
+    const DataVector& east_mortar_data =
         get_tag(::evolution::dg::Tags::MortarData<Dim>{})
             .at(mortar_id_east)
             .local_mortar_data()
-            ->second,
-        compute_expected_mortar_data(mortar_id_east.first,
-                                     mortar_id_east.second, true));
+            ->second;
+    CHECK_ITERABLE_APPROX(east_mortar_data, compute_expected_mortar_data(
+                                                mortar_id_east.first,
+                                                mortar_id_east.second, true));
   }
-  CHECK_ITERABLE_APPROX(
-      *std::get<3>(
-          ActionTesting::get_inbox_tag<
-              component<metavars>,
-              ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
-              runner, mortar_id_east.second)
-              .at(time_step_id)
-              .at(std::pair{element.neighbors()
-                                .at(mortar_id_east.first)
-                                .orientation()(mortar_id_east.first.opposite()),
-                            element.id()})),
-      compute_expected_mortar_data(mortar_id_east.first, mortar_id_east.second,
-                                   false));
 
-  CHECK(
-      std::get<4>(
-          ActionTesting::get_inbox_tag<
-              component<metavars>,
-              ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
-              runner, mortar_id_east.second)
-              .at(time_step_id)
-              .at(std::pair{element.neighbors()
-                                .at(mortar_id_east.first)
-                                .orientation()(mortar_id_east.first.opposite()),
-                            element.id()})) ==
-      (LocalTimeStepping ? next_time_step_id : time_step_id));
+  if constexpr (LocalTimeStepping) {
+    const auto& east_mortar_data =
+        ActionTesting::get_inbox_tag<
+            component<metavars>,
+            ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
+            runner, mortar_id_east.second)
+            .at(time_step_id)
+            .at(std::pair{element.neighbors()
+                              .at(mortar_id_east.first)
+                              .orientation()(mortar_id_east.first.opposite()),
+                          element.id()});
+    CHECK_ITERABLE_APPROX(
+        *std::get<3>(east_mortar_data),
+        compute_expected_mortar_data(mortar_id_east.first,
+                                     mortar_id_east.second, false));
+    CHECK(std::get<4>(east_mortar_data) == next_time_step_id);
+  } else {
+    const std::unique_ptr<BoundaryMessage<Dim>>& boundary_message =
+        ActionTesting::get_inbox_tag<
+            component<metavars>,
+            ::evolution::dg::Tags::BoundaryMessageInbox<Dim>>(
+            runner, mortar_id_east.second)
+            .at(time_step_id)
+            .at(std::pair{element.neighbors()
+                              .at(mortar_id_east.first)
+                              .orientation()(mortar_id_east.first.opposite()),
+                          element.id()});
+    const DataVector east_mortar_dv{boundary_message->dg_flux_data,
+                                    boundary_message->dg_flux_data_size};
+    CHECK_ITERABLE_APPROX(east_mortar_dv, compute_expected_mortar_data(
+                                              mortar_id_east.first,
+                                              mortar_id_east.second, false));
+    CHECK(boundary_message->next_time_step_id == time_step_id);
+    CHECK_FALSE(boundary_message->owning);
+  }
 
   if constexpr (Dim > 1) {
     const auto mortar_id_south =
         std::make_pair(Direction<Dim>::lower_eta(), south_id);
-    CHECK(std::get<4>(
-              ActionTesting::get_inbox_tag<
-                  component<metavars>,
-                  ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
-                      Dim>>(runner, mortar_id_south.second)
-                  .at(time_step_id)
-                  .at(std::pair{
-                      element.neighbors()
-                          .at(mortar_id_south.first)
-                          .orientation()(mortar_id_south.first.opposite()),
-                      element.id()})) ==
-          (LocalTimeStepping ? next_time_step_id : time_step_id));
 
-    if (LocalTimeStepping) {
+    if constexpr (LocalTimeStepping) {
+      const auto& south_mortar_data_inbox =
+          ActionTesting::get_inbox_tag<
+              component<metavars>,
+              ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
+              runner, mortar_id_south.second)
+              .at(time_step_id)
+              .at(std::pair{
+                  element.neighbors()
+                      .at(mortar_id_south.first)
+                      .orientation()(mortar_id_south.first.opposite()),
+                  element.id()});
+
+      CHECK(std::get<4>(south_mortar_data_inbox) == next_time_step_id);
+      CHECK_ITERABLE_APPROX(
+          *std::get<3>(south_mortar_data_inbox),
+          compute_expected_mortar_data(mortar_id_south.first,
+                                       mortar_id_south.second, false));
+
       const auto& south_mortar_data =
           get_tag(::evolution::dg::Tags::MortarDataHistory<
                       Dim, typename dt_variables_tag::type>{})
@@ -1899,27 +1916,38 @@ void test_impl(const Spectral::Quadrature quadrature,
                 .integration_order() == 1);
       check_mortar_data(south_mortar_data, mortar_id_south);
     } else {
-      CHECK_ITERABLE_APPROX(get_tag(::evolution::dg::Tags::MortarData<Dim>{})
-                                .at(mortar_id_south)
-                                .local_mortar_data()
-                                ->second,
+      const std::unique_ptr<BoundaryMessage<Dim>>& boundary_message =
+          ActionTesting::get_inbox_tag<
+              component<metavars>,
+              ::evolution::dg::Tags::BoundaryMessageInbox<Dim>>(
+              runner, mortar_id_south.second)
+              .at(time_step_id)
+              .at(std::pair{
+                  element.neighbors()
+                      .at(mortar_id_south.first)
+                      .orientation()(mortar_id_south.first.opposite()),
+                  element.id()});
+
+      CHECK(boundary_message->next_time_step_id == time_step_id);
+      // We had to orient so the boundary message is owning
+      CHECK(boundary_message->owning);
+      const DataVector south_mortar_dv{boundary_message->dg_flux_data,
+                                       boundary_message->dg_flux_data_size};
+      CHECK_ITERABLE_APPROX(
+          south_mortar_dv,
+          compute_expected_mortar_data(mortar_id_south.first,
+                                       mortar_id_south.second, false));
+
+      const DataVector& south_mortar_data =
+          get_tag(::evolution::dg::Tags::MortarData<Dim>{})
+              .at(mortar_id_south)
+              .local_mortar_data()
+              ->second;
+
+      CHECK_ITERABLE_APPROX(south_mortar_data,
                             compute_expected_mortar_data(
                                 Direction<Dim>::lower_eta(), south_id, true));
     }
-    CHECK_ITERABLE_APPROX(
-        *std::get<3>(
-            ActionTesting::get_inbox_tag<
-                component<metavars>,
-                ::evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
-                    Dim>>(runner, mortar_id_south.second)
-                .at(time_step_id)
-                .at(std::pair{
-                    element.neighbors()
-                        .at(mortar_id_south.first)
-                        .orientation()(mortar_id_south.first.opposite()),
-                    element.id()})),
-        compute_expected_mortar_data(mortar_id_south.first,
-                                     mortar_id_south.second, false));
   }
   if constexpr (LocalTimeStepping) {
     for (const auto& mortar_data :

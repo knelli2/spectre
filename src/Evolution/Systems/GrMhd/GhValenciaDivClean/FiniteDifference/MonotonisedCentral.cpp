@@ -20,6 +20,7 @@
 #include "Domain/Structure/Direction.hpp"
 #include "Domain/Structure/Element.hpp"
 #include "Domain/Structure/ElementId.hpp"
+#include "Evolution/DgSubcell/GhostData.hpp"
 #include "Domain/Structure/MaxNumberOfNeighbors.hpp"
 #include "Domain/Structure/Side.hpp"
 #include "Evolution/DgSubcell/GhostData.hpp"

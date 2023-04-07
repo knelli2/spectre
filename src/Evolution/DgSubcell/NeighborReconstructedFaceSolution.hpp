@@ -6,6 +6,7 @@
 #include <boost/functional/hash.hpp>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -22,6 +23,7 @@
 #include "Evolution/DgSubcell/Tags/DataForRdmpTci.hpp"
 #include "Evolution/DgSubcell/Tags/GhostDataForReconstruction.hpp"
 #include "Evolution/DgSubcell/Tags/Mesh.hpp"
+#include "Evolution/DiscontinuousGalerkin/Messages/BoundaryMessage.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Time/TimeStepId.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
@@ -72,10 +74,8 @@ void neighbor_reconstructed_face_solution(
             maximum_number_of_neighbors(Metavariables::volume_dim),
             std::pair<Direction<Metavariables::volume_dim>,
                       ElementId<Metavariables::volume_dim>>,
-            std::tuple<Mesh<Metavariables::volume_dim>,
-                       Mesh<Metavariables::volume_dim - 1>,
-                       std::optional<DataVector>, std::optional<DataVector>,
-                       ::TimeStepId, int>,
+            std::unique_ptr<
+                evolution::dg::BoundaryMessage<Metavariables::volume_dim>>,
             boost::hash<std::pair<Direction<Metavariables::volume_dim>,
                                   ElementId<Metavariables::volume_dim>>>>>*>
         received_temporal_id_and_data) {
@@ -89,13 +89,16 @@ void neighbor_reconstructed_face_solution(
         for (auto& received_mortar_data :
              received_temporal_id_and_data->second) {
           const auto& mortar_id = received_mortar_data.first;
-          ASSERT(std::get<2>(received_mortar_data.second).has_value(),
+          auto& boundary_message = received_mortar_data.second;
+          ASSERT(boundary_message->subcell_ghost_data_size != 0 and
+                     boundary_message->subcell_ghost_data != nullptr,
                  "The subcell mortar data was not sent at TimeStepId "
                      << received_temporal_id_and_data->first
                      << " with mortar id (" << mortar_id.first << ','
                      << mortar_id.second << ")");
-          const DataVector& neighbor_ghost_and_subcell_data =
-              *std::get<2>(received_mortar_data.second);
+          const DataVector neighbor_ghost_and_subcell_data{
+              boundary_message->subcell_ghost_data,
+              boundary_message->subcell_ghost_data_size};
           // Compute min and max over neighbors
           const size_t offset_for_min =
               neighbor_ghost_and_subcell_data.size() - number_of_evolved_vars;
@@ -110,13 +113,14 @@ void neighbor_reconstructed_face_solution(
                 neighbor_ghost_and_subcell_data[offset_for_min + var_index]);
           }
 
-          ASSERT(subcell_ghost_data_ptr->find(mortar_id) ==
-                     subcell_ghost_data_ptr->end(),
-                 "The subcell neighbor data is already inserted. Direction: "
-                     << mortar_id.first
-                     << " with ElementId: " << mortar_id.second);
+          // QUESTION: Do we want to keep this??
+          //   ASSERT(subcell_ghost_data_ptr->find(mortar_id) ==
+          //              subcell_ghost_data_ptr->end(),
+          //          "The subcell neighbor data is already inserted. Direction:
+          //          "
+          //              << mortar_id.first
+          //              << " with ElementId: " << mortar_id.second);
 
-          (*subcell_ghost_data_ptr)[mortar_id] = GhostData{1};
           GhostData& all_ghost_data = subcell_ghost_data_ptr->at(mortar_id);
           DataVector& neighbor_data =
               all_ghost_data.neighbor_ghost_data_for_reconstruction();
@@ -141,35 +145,42 @@ void neighbor_reconstructed_face_solution(
       mortars_to_reconstruct_to{};
   for (auto& received_mortar_data : received_temporal_id_and_data->second) {
     const auto& mortar_id = received_mortar_data.first;
-    if (not std::get<3>(received_mortar_data.second).has_value()) {
+    auto& boundary_message = received_mortar_data.second;
+    if (boundary_message->dg_flux_data_size == 0) {
       mortars_to_reconstruct_to.push_back(mortar_id);
     }
   }
-  FixedHashMap<
-      maximum_number_of_neighbors(volume_dim),
-      std::pair<Direction<volume_dim>, ElementId<volume_dim>>, DataVector,
-      boost::hash<std::pair<Direction<volume_dim>, ElementId<volume_dim>>>>
-      neighbor_reconstructed_evolved_vars =
-          Metavariables::SubcellOptions::DgComputeSubcellNeighborPackagedData::
-              apply(*box, mortars_to_reconstruct_to);
-  ASSERT(neighbor_reconstructed_evolved_vars.size() ==
-             mortars_to_reconstruct_to.size(),
+
+  auto& reconstructed_neighbor_data = db::get_mutable_reference<
+      subcell::Tags::ReconstructedNeighborData<volume_dim>>(box);
+  reconstructed_neighbor_data =
+      Metavariables::SubcellOptions::DgComputeSubcellNeighborPackagedData::
+          apply(*box, mortars_to_reconstruct_to);
+
+  ASSERT(reconstructed_neighbor_data.size() == mortars_to_reconstruct_to.size(),
          "Should have reconstructed "
              << mortars_to_reconstruct_to.size() << " sides but reconstructed "
-             << neighbor_reconstructed_evolved_vars.size() << " sides.");
+             << reconstructed_neighbor_data.size() << " sides.");
   // Now copy over the packaged data _into_ the inbox in order to avoid having
   // to make other changes to the DG algorithm (code in
   // src/Evolution/DiscontinuousGalerkin)
   for (auto& received_mortar_data : received_temporal_id_and_data->second) {
     const auto& mortar_id = received_mortar_data.first;
-    if (not std::get<3>(received_mortar_data.second).has_value()) {
-      ASSERT(neighbor_reconstructed_evolved_vars.find(mortar_id) !=
-                 neighbor_reconstructed_evolved_vars.end(),
+    auto& boundary_message = received_mortar_data.second;
+    if (boundary_message->dg_flux_data_size == 0) {
+      ASSERT(boundary_message->dg_flux_data == nullptr,
+             "In NeighborReconstructedFaceSolution, the size of the received "
+             "DG flux data is 0, but the pointer is not a nullptr. This is an "
+             "error.");
+      ASSERT(reconstructed_neighbor_data.find(mortar_id) !=
+                 reconstructed_neighbor_data.end(),
              "Could not find mortar id (" << mortar_id.first << ','
                                           << mortar_id.second
                                           << ") in reconstructed data map.");
-      std::get<3>(received_mortar_data.second) =
-          std::move(neighbor_reconstructed_evolved_vars.at(mortar_id));
+      boundary_message->dg_flux_data =
+          reconstructed_neighbor_data.at(mortar_id).data();
+      boundary_message->dg_flux_data_size =
+          reconstructed_neighbor_data.at(mortar_id).size();
     }
   }
 }

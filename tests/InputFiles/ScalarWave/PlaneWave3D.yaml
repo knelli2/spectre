@@ -23,6 +23,9 @@ PhaseChangeAndTriggers:
 Evolution:
   InitialTime: 0.0
   InitialTimeStep: 0.001
+  InitialSlabSize: 0.1
+  StepChoosers:
+    - Constant: 0.001
   TimeStepper:
     AdamsBashforth:
       Order: 3
@@ -84,7 +87,7 @@ EventsAndTriggers:
             - StepToTimes:
                 Times:
                   Specified:
-                    Values: [*final_time]
+                    Values: [0.1]
 
 EventsAndDenseTriggers:
 

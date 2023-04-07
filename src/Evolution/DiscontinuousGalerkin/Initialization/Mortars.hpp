@@ -26,6 +26,7 @@
 #include "Evolution/DiscontinuousGalerkin/MortarData.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/NormalVectorTags.hpp"
+#include "Evolution/DiscontinuousGalerkin/UsingSubcell.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "ParallelAlgorithms/Initialization/MutateAssign.hpp"
@@ -64,7 +65,8 @@ std::tuple<
 mortars_apply_impl(const std::vector<std::array<size_t, Dim>>& initial_extents,
                    Spectral::Quadrature quadrature, const Element<Dim>& element,
                    const TimeStepId& next_temporal_id,
-                   const Mesh<Dim>& volume_mesh);
+                   const Mesh<Dim>& volume_mesh,
+                   const bool use_local_time_stepping = false);
 }  // namespace detail
 
 /*!
@@ -105,7 +107,8 @@ struct Mortars {
       evolution::dg::Tags::NormalCovectorAndMagnitude<Dim>,
       Tags::MortarDataHistory<
           Dim, typename db::add_tag_prefix<
-                   ::Tags::dt, typename System::variables_tag>::type>>;
+                   ::Tags::dt, typename System::variables_tag>::type>,
+      evolution::dg::Tags::BoundaryMessageFromInbox<Dim>>;
   using compute_tags = tmpl::list<>;
 
   template <typename DbTagsList, typename... InboxTags, typename Metavariables,
@@ -124,15 +127,24 @@ struct Mortars {
             db::get<evolution::dg::Tags::Quadrature>(box),
             db::get<::domain::Tags::Element<Dim>>(box),
             db::get<::Tags::Next<::Tags::TimeStepId>>(box),
-            db::get<::domain::Tags::Mesh<Dim>>(box));
+            db::get<::domain::Tags::Mesh<Dim>>(box),
+            Metavariables::local_time_stepping);
+
     typename Tags::MortarDataHistory<
         Dim, typename db::add_tag_prefix<
                  ::Tags::dt, typename System::variables_tag>::type>::type
         boundary_data_history{};
-    if (Metavariables::local_time_stepping) {
-      for (const auto& mortar_id_and_data : mortar_data) {
+    for (const auto& mortar_id_and_data : mortar_data) {
+      if (Metavariables::local_time_stepping) {
         // default initialize data
         boundary_data_history[mortar_id_and_data.first];
+      } else {
+        db::mutate<Tags::BoundaryMessageFromInbox<Dim>>(
+            make_not_null(&box),
+            [&mortar_id_and_data](auto db_boundary_message_map_ptr) {
+              // default initialize
+              (*db_boundary_message_map_ptr)[mortar_id_and_data.first];
+            });
       }
     }
     ::Initialization::mutate_assign<simple_tags>(

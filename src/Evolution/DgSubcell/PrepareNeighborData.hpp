@@ -85,6 +85,7 @@ void prepare_neighbor_data(
   const size_t rdmp_size = rdmp_data.max_variables_values.size() +
                            rdmp_data.min_variables_values.size();
 
+  // ghost_variables is primitive quantities on full volume dg grid
   if (DataVector ghost_variables = db::mutate_apply(
           typename Metavariables::SubcellOptions::GhostVariables{}, box,
           rdmp_size);

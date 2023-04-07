@@ -164,14 +164,19 @@ struct Initialize {
                              subcell_enabled_at_external_boundary) and
                             subcell_allowed_in_element;
 
-    db::mutate<Tags::NeighborTciDecisions<Dim>>(
-        make_not_null(&box), [&element](const auto neighbor_decisions_ptr) {
+    db::mutate<Tags::NeighborTciDecisions<Dim>,
+               Tags::GhostDataForReconstruction<Dim>>(
+        make_not_null(&box), [&element](const auto neighbor_decisions_ptr,
+                                        const auto ghost_data_ptr) {
           neighbor_decisions_ptr->clear();
+          ghost_data_ptr->clear();
           for (const auto& [direction, neighbors_in_direction] :
                element.neighbors()) {
             for (const auto& neighbor : neighbors_in_direction.ids()) {
-              neighbor_decisions_ptr->insert(
-                  std::pair{std::pair{direction, neighbor}, 0});
+              const std::pair key{direction, neighbor};
+              neighbor_decisions_ptr->insert(std::pair{key, 0});
+              // Only one buffer for now
+              ghost_data_ptr->insert(std::pair{key, GhostData{1}});
             }
           }
         });

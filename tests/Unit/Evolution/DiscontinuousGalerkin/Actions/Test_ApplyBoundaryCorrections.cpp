@@ -25,6 +25,7 @@
 #include "Evolution/DiscontinuousGalerkin/Actions/ApplyBoundaryCorrections.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/Mortars.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
+#include "Evolution/DiscontinuousGalerkin/Messages/BoundaryMessage.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarData.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/NormalVectorTags.hpp"
@@ -211,11 +212,11 @@ struct SetLocalMortarData {
         const Mesh<Metavariables::volume_dim - 1>& mortar_mesh =
             mortar_meshes.at(mortar_id);
 
-        DataVector type_erased_boundary_data_on_mortar{
+        DataVector boundary_data_on_mortar{
             mortar_mesh.number_of_grid_points() *
                 number_of_dg_package_tags_components,
             0.0};
-        alg::iota(type_erased_boundary_data_on_mortar,
+        alg::iota(boundary_data_on_mortar,
                   direction.dimension() +
                       10 * static_cast<unsigned long>(direction.side()) +
                       100 * count + 1000);
@@ -223,14 +224,13 @@ struct SetLocalMortarData {
         db::mutate<evolution::dg::Tags::MortarData<Metavariables::volume_dim>>(
             make_not_null(&box),
             [&face_mesh, &mortar_id, &time_step_id,
-             &type_erased_boundary_data_on_mortar](const auto mortar_data_ptr) {
+             &boundary_data_on_mortar](const auto mortar_data_ptr) {
               // when using local time stepping, we reset the local mortar data
               // at the end of the SetLocalMortarData action since the
               // ComputeTimeDerivative action would've moved the data into the
               // boundary history.
               mortar_data_ptr->at(mortar_id).insert_local_mortar_data(
-                  time_step_id, face_mesh,
-                  std::move(type_erased_boundary_data_on_mortar));
+                  time_step_id, face_mesh, std::move(boundary_data_on_mortar));
             });
         ++count;
         if (LocalTimeStepping) {
@@ -246,10 +246,10 @@ struct SetLocalMortarData {
               });
           // We also need to set the local history one step back to get to 2nd
           // order in time.
-          type_erased_boundary_data_on_mortar.destructive_resize(
+          boundary_data_on_mortar.destructive_resize(
               mortar_mesh.number_of_grid_points() *
               number_of_dg_package_tags_components);
-          alg::iota(type_erased_boundary_data_on_mortar,
+          alg::iota(boundary_data_on_mortar,
                     direction.dimension() +
                         10 * static_cast<unsigned long>(direction.side()) +
                         100 * count + 1000);
@@ -257,8 +257,7 @@ struct SetLocalMortarData {
           evolution::dg::MortarData<Metavariables::volume_dim>
               past_mortar_data{};
           past_mortar_data.insert_local_mortar_data(
-              past_time_step_id, face_mesh,
-              std::move(type_erased_boundary_data_on_mortar));
+              past_time_step_id, face_mesh, std::move(boundary_data_on_mortar));
           Scalar<DataVector> local_face_normal_magnitude{
               face_mesh.number_of_grid_points()};
           alg::iota(get(local_face_normal_magnitude),
@@ -451,6 +450,22 @@ const auto& get_tag(
                                                                        self_id);
 }
 
+template <size_t Dim>
+struct NextBuffer {
+  template <typename ParallelComponent, typename DbTags, typename Metavariables,
+            typename ArrayIndex>
+  static void apply(db::DataBox<DbTags>& box,
+                    const Parallel::GlobalCache<Metavariables>& /*cache*/,
+                    const ArrayIndex& /*array_index*/) {
+    db::mutate<evolution::dg::Tags::MortarData<Dim>>(
+        make_not_null(&box), [](auto mortar_data_ptr) {
+          for (auto& id_and_data : *mortar_data_ptr) {
+            id_and_data.second.next_buffer();
+          }
+        });
+  }
+};
+
 template <size_t Dim, TestHelpers::SystemType SystemType,
           bool UseLocalTimeStepping>
 void test_impl(const Spectral::Quadrature quadrature,
@@ -634,16 +649,20 @@ void test_impl(const Spectral::Quadrature quadrature,
   typename evolution::dg::subcell::Tags::NeighborTciDecisions<Dim>::type
       neighbor_decision{};
   int decision = 1;
-  for (const auto& direction_and_neighbor_id : order_to_send_neighbor_data_in) {
+  std::vector<DataVector> mortar_data_in_order{
+      order_to_send_neighbor_data_in.size()};
+  for (size_t i = 0; i < order_to_send_neighbor_data_in.size(); i++) {
+    const auto& direction_and_neighbor_id = order_to_send_neighbor_data_in[i];
     const auto& direction = direction_and_neighbor_id.first;
     const auto& neighbor_id = direction_and_neighbor_id.second;
+    DataVector& flux_data = mortar_data_in_order[i];
     CAPTURE(direction);
     CAPTURE(neighbor_id);
 
     size_t count = 0;
     const Mesh<Dim - 1> face_mesh = mesh.slice_away(direction.dimension());
-    const auto insert_neighbor_data = [&all_mortar_data, &count, &decision,
-                                       &direction, &face_mesh,
+    const auto insert_neighbor_data = [&flux_data, &all_mortar_data, &count,
+                                       &decision, &direction, &face_mesh,
                                        &local_next_time_step_id, &mesh,
                                        &mortar_data_history, &mortar_meshes,
                                        &neighbor_decision, &neighbor_id,
@@ -656,28 +675,29 @@ void test_impl(const Spectral::Quadrature quadrature,
       std::pair mortar_id{direction, neighbor_id};
       const Mesh<Dim - 1>& mortar_mesh = mortar_meshes.at(mortar_id);
 
-      DataVector flux_data{mortar_mesh.number_of_grid_points() *
-                               number_of_dg_package_tags_components,
-                           0.0};
+      flux_data.destructive_resize(mortar_mesh.number_of_grid_points() *
+                                   number_of_dg_package_tags_components);
       alg::iota(flux_data,
                 direction.dimension() +
                     10 * static_cast<unsigned long>(direction.side()) +
                     100 * count);
-      std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
-                 std::optional<DataVector>, ::TimeStepId, int>
-          data{
-              mesh,    face_mesh, {}, {flux_data}, {neighbor_next_time_step_id},
-              decision};
-      neighbor_decision.insert(std::pair{mortar_id, decision});
-      ++decision;
 
-      runner.template mock_distributed_objects<comp>()
-          .at(self_id)
-          .template receive_data<
-              evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
-              neighbor_time_step_id,
-              std::pair{std::pair{direction, neighbor_id}, data});
-      if (UseLocalTimeStepping) {
+      if constexpr (UseLocalTimeStepping) {
+        (void)all_mortar_data;
+        std::tuple<Mesh<Dim>, Mesh<Dim - 1>, std::optional<DataVector>,
+                   std::optional<DataVector>, ::TimeStepId, int>
+            data{mesh,
+                 face_mesh,
+                 {},
+                 {flux_data},
+                 {neighbor_next_time_step_id},
+                 decision};
+
+        runner.template mock_distributed_objects<comp>()
+            .at(self_id)
+            .template receive_data<
+                evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>(
+                neighbor_time_step_id, std::pair{mortar_id, data});
         if (neighbor_time_step_id < local_next_time_step_id) {
           evolution::dg::MortarData<Dim> nhbr_mortar_data{};
           nhbr_mortar_data.insert_neighbor_mortar_data(neighbor_time_step_id,
@@ -686,11 +706,44 @@ void test_impl(const Spectral::Quadrature quadrature,
               neighbor_time_step_id, std::move(nhbr_mortar_data));
         }
       } else {
+        (void)local_next_time_step_id;
+        (void)mortar_data_history;
+        using BoundaryMessage = evolution::dg::BoundaryMessage<Dim>;
+        // We don't create an owning BoundaryMessage here because nothing
+        // actually changes in ApplyBoundaryCorrections if the message is owning
+        // or not. Everything will get deleted properly when the unique_ptr
+        // holding this message gets deleted.
+        BoundaryMessage* boundary_message = new BoundaryMessage{};
+        boundary_message->volume_or_ghost_mesh = mesh;
+        boundary_message->interface_mesh = face_mesh;
+        boundary_message->owning = false;
+        boundary_message->sender_node = 0;
+        boundary_message->sender_core = 0;
+        boundary_message->current_time_step_id = neighbor_time_step_id;
+        boundary_message->next_time_step_id = neighbor_next_time_step_id;
+        boundary_message->tci_status = decision;
+        boundary_message->neighbor_direction = direction;
+        boundary_message->element_id = neighbor_id;
+        boundary_message->dg_flux_data_size = flux_data.size();
+        boundary_message->dg_flux_data = flux_data.data();
+        boundary_message->subcell_ghost_data_size = 0;
+        boundary_message->subcell_ghost_data = nullptr;
+
+        runner.template mock_distributed_objects<comp>()
+            .at(self_id)
+            .template receive_data<
+                evolution::dg::Tags::BoundaryMessageInbox<Dim>>(
+                boundary_message);
+
         all_mortar_data.at(mortar_id).insert_neighbor_mortar_data(
             neighbor_time_step_id, face_mesh, flux_data);
       }
+
+      neighbor_decision.insert(std::pair{mortar_id, decision});
+      ++decision;
       ++count;
     };
+
     if (neighbor_id == east_id and UseLocalTimeStepping) {
       for (size_t east_id_time_steps_index = 0;
            east_id_time_steps_index < east_id_next_time_steps.size();
@@ -722,23 +775,30 @@ void test_impl(const Spectral::Quadrature quadrature,
     }
   }
   // Check expected inboxes
-  REQUIRE(
-      runner
-          .template nonempty_inboxes<
-              comp,
-              evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<Dim>>()
-          .size() == 1);
+  REQUIRE(runner
+              .template nonempty_inboxes<
+                  comp, tmpl::conditional_t<
+                            UseLocalTimeStepping,
+                            evolution::dg::Tags::
+                                BoundaryCorrectionAndGhostCellsInbox<Dim>,
+                            evolution::dg::Tags::BoundaryMessageInbox<Dim>>>()
+              .size() == 1);
 
   ActionTesting::next_action<comp>(make_not_null(&runner), self_id);
 
   // Check the inboxes are empty when doing global time stepping
-  if (not UseLocalTimeStepping) {
-    REQUIRE(
-        runner
-            .template nonempty_inboxes<
-                comp, evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<
-                          Dim>>()
-            .empty());
+  if constexpr (not UseLocalTimeStepping) {
+    REQUIRE(runner
+                .template nonempty_inboxes<
+                    comp, evolution::dg::Tags::BoundaryMessageInbox<Dim>>()
+                .empty());
+
+    // Once the boundary corrections have been applied, the
+    // ApplyBoundaryCorrections action will automatically advance our internal
+    // mortar index for the Tags::MortarData. We must set this back to what it
+    // was so we can check that the received data is what we expected.
+    ActionTesting::simple_action<comp, NextBuffer<Dim>>(make_not_null(&runner),
+                                                        self_id);
   } else {
     CHECK(
         runner
@@ -961,12 +1021,15 @@ void test_impl(const Spectral::Quadrature quadrature,
 
   for (const auto& mortar_data :
        get_tag<::evolution::dg::Tags::MortarData<Dim>>(runner, self_id)) {
-    // The MortarData currently requires there to be no data already inserted.
-    // In theory we could re-use the allocation, but that is a future
+    // For LTS, the MortarData currently requires there to be no data already
+    // inserted. In theory we could re-use the allocation, but that is a future
     // optimization. For now, we require that there is nothing in the MortarData
     // after `ApplyBoundaryCorrections` was called.
-    CHECK_FALSE(mortar_data.second.local_mortar_data().has_value());
-    CHECK_FALSE(mortar_data.second.neighbor_mortar_data().has_value());
+    // For GTS, there will still be data inserted
+    CHECK(mortar_data.second.local_mortar_data().has_value() !=
+          UseLocalTimeStepping);
+    CHECK(mortar_data.second.neighbor_mortar_data().has_value() !=
+          UseLocalTimeStepping);
   }
 
   // Check neighbor meshes

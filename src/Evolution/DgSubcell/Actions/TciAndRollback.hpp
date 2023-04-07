@@ -186,12 +186,9 @@ struct TciAndRollback {
         (cell_has_external_boundary and
          not subcell_enabled_at_external_boundary) or
         not cell_is_troubled) {
-      db::mutate<subcell::Tags::GhostDataForReconstruction<Dim>,
-                 subcell::Tags::DataForRdmpTci>(
+      db::mutate<subcell::Tags::DataForRdmpTci>(
           make_not_null(&box),
-          [&tci_result](const auto neighbor_data_ptr,
-                        const gsl::not_null<RdmpTciData*> rdmp_tci_data_ptr) {
-            neighbor_data_ptr->clear();
+          [&tci_result](const gsl::not_null<RdmpTciData*> rdmp_tci_data_ptr) {
             *rdmp_tci_data_ptr = std::move(std::get<1>(std::move(tci_result)));
           });
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
@@ -300,6 +297,9 @@ struct TciAndRollback {
             });
       }
     }
+
+    // TODO: Need to keep MortarData index the same, so set it back to what it
+    // was before...
 
     return {Parallel::AlgorithmExecution::Continue,
             tmpl::index_of<
