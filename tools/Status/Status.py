@@ -174,7 +174,7 @@ def _format(field: str, value: Any) -> str:
 
 
 @rich.console.group()
-def render_screen(show_paths, show_unidentified, **kwargs):
+def render_status(show_paths, show_unidentified, **kwargs):
     job_data = fetch_job_data([
         "JobID",
         "User",
@@ -186,8 +186,7 @@ def render_screen(show_paths, show_unidentified, **kwargs):
         "State",
         "WorkDir",
         "Comment",
-    ], kwargs["Fields"], kwargs["User"], kwargs["AllUsers"], kwargs["State"],
-                              kwargs["StartTime"])
+    ], **kwargs)
 
     # Do nothing if job list is empty
     if len(job_data) == 0:
@@ -232,7 +231,6 @@ def render_screen(show_paths, show_unidentified, **kwargs):
     standard_columns = [col_names.get(col, col) for col in standard_fields]
 
     # Group output by executable
-    suppress_warning = kwargs["watch"] is not None
     first_section = True
     for executable_name, exec_data in job_data.groupby("ExecutableName"):
         if first_section:
@@ -240,8 +238,7 @@ def render_screen(show_paths, show_unidentified, **kwargs):
         else:
             yield ""
         yield rich.rule.Rule(f"[bold]{executable_name}", align="left")
-        executable_status = match_executable_status(executable_name,
-                                                    suppress_warning)
+        executable_status = match_executable_status(executable_name)
 
         extra_columns = [(field + f" [{unit}]") if unit else field
                          for field, unit in executable_status.fields.items()]
@@ -336,30 +333,29 @@ def render_screen(show_paths, show_unidentified, **kwargs):
                     "See documentation for 'sacct -S' for details."))
 @click.option("-w",
               "--watch",
+              "refresh_rate",
               type=float,
               default=None,
               help=("On a new screen, refresh jobs every 'watch' number "
                     "of seconds. Exit out with Ctl+C."))
-def status_command(show_paths, show_unidentified, **kwargs):
+def status_command(refresh_rate, **kwargs):
     """Gives an overview of simulations running on this machine."""
 
     # Start printing things
     console = rich.console.Console()
 
-    refresh_rate = kwargs["watch"]
-
     if not refresh_rate:
-        console.print(render_screen(show_paths, show_unidentified, **kwargs))
+        console.print(render_status(**kwargs))
         return
 
     try:
-        with rich.live.Live(render_screen(show_paths, show_unidentified,
-                                          **kwargs),
+        logging.disable()
+        with rich.live.Live(render_status(**kwargs),
                             console=console,
+                            auto_refresh=False,
                             screen=True) as live:
             while True:
                 time.sleep(refresh_rate)
-                live.update(
-                    render_screen(show_paths, show_unidentified, **kwargs))
+                live.update(render_status(**kwargs), refresh=True)
     except KeyboardInterrupt:
         pass
