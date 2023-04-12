@@ -238,6 +238,7 @@ def render_status(show_paths, show_unidentified, **kwargs):
         else:
             yield ""
         yield rich.rule.Rule(f"[bold]{executable_name}", align="left")
+        yield ""
         executable_status = match_executable_status(executable_name)
 
         extra_columns = [(field + f" [{unit}]") if unit else field
@@ -290,6 +291,7 @@ def render_status(show_paths, show_unidentified, **kwargs):
     if len(unidentified_jobs) > 0 and show_unidentified:
         yield ""
         yield rich.rule.Rule("[bold]Unidentified Jobs", align="left")
+        yield ""
         table = rich.table.Table(*standard_columns, box=None)
         for i, row in unidentified_jobs.iterrows():
             row_formatted = [
