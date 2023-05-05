@@ -15,6 +15,7 @@
 #include "Evolution/Systems/Cce/ReceiveTags.hpp"
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "Evolution/Systems/Cce/WorldtubeDataManager.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "IO/Observer/Actions/GetLockPointer.hpp"
 #include "IO/Observer/ObserverComponent.hpp"
 #include "Parallel/GlobalCache.hpp"
@@ -28,6 +29,11 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits.hpp"
+
+namespace logging::Tags {
+template <typename OptionsGroup>
+struct Verbosity;
+}
 
 namespace Cce {
 namespace Actions {
@@ -112,9 +118,8 @@ struct BoundaryComputeAndSendToEvolution<H5WorldtubeBoundary<Metavariables>,
                 boundary_variables) {
           successfully_populated =
               (*worldtube_data_manager)
-                  ->populate_hypersurface_boundary_data(boundary_variables,
-                                                        time.substep_time(),
-                                                        hdf5_lock);
+                  ->populate_hypersurface_boundary_data(
+                      boundary_variables, time.substep_time(), hdf5_lock);
         });
     if (not successfully_populated) {
       ERROR("Insufficient boundary data to proceed, exiting early at time " +
@@ -274,6 +279,13 @@ struct SendToEvolution<GhWorldtubeBoundary<Metavariables>, EvolutionComponent> {
         },
         db::get<InitializationTags::ExtractionRadius>(box),
         db::get<Tags::LMax>(box));
+
+    if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
+        ::Verbosity::Verbose) {
+      Parallel::printf("SendToCceEvolution: Sending data to CCE at time %f.\n",
+                       time.substep_time());
+    }
+
     Parallel::receive_data<Cce::ReceiveTags::BoundaryData<
         typename Metavariables::cce_boundary_communication_tags>>(
         Parallel::get_parallel_component<EvolutionComponent>(cache), time,

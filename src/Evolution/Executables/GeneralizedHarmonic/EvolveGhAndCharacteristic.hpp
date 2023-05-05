@@ -11,6 +11,8 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Executables/Cce/CharacteristicExtractBase.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
+#include "Evolution/Systems/Cce/Actions/InitializeCcmNextTime.hpp"
+#include "Evolution/Systems/Cce/Actions/ReceiveCcmNextTime.hpp"
 #include "Evolution/Systems/Cce/Actions/SendGhVarsToCce.hpp"
 #include "Evolution/Systems/Cce/Callbacks/SendGhWorldtubeData.hpp"
 #include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
@@ -42,6 +44,9 @@
 #include "Options/Protocols/FactoryCreation.hpp"
 #include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Parallel/PhaseControl/PhaseControlTags.hpp"
+#include "ParallelAlgorithms/Actions/InitializeItems.hpp"
+#include "ParallelAlgorithms/Actions/MemoryMonitor/ContributeMemoryData.hpp"
+#include "ParallelAlgorithms/Events/MonitorMemory.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/CleanUpInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
@@ -63,6 +68,9 @@
 #include "Utilities/ErrorHandling/SegfaultHandler.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 
+#include <iomanip>
+#include <sstream>
+
 /// \cond
 namespace Frame {
 // IWYU pragma: no_forward_declare MathFunction
@@ -74,16 +82,71 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+struct DeadlockCrap {
+  template <typename ParallelComponent, typename DbTags, typename Metavariables,
+            typename ArrayIndex>
+  static void apply(db::DataBox<DbTags>& box,
+                    Parallel::GlobalCache<Metavariables>& cache,
+                    const ArrayIndex& array_index) {
+    const auto& element = db::get<domain::Tags::Element<3>>(box);
+    auto& local_object =
+        *Parallel::local(Parallel::get_parallel_component<ParallelComponent>(
+            cache)[array_index]);
+
+    const bool terminated = local_object.get_terminate();
+
+    const auto& inboxes = local_object.get_inboxes();
+    const auto& cce_inbox =
+        tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
+    const auto& mortar_inbox = tuples::get<
+        evolution::dg::Tags::BoundaryCorrectionAndGhostCellsInbox<3>>(inboxes);
+
+    std::stringstream ss{};
+    ss << " CCE next time inbox:\n" << std::setprecision(19);
+    for (const auto& [current_time_step_id, next_time_step_id] : cce_inbox) {
+      ss << "  Current time: " << current_time_step_id.substep_time()
+         << ", next time: " << next_time_step_id.substep_time() << "\n";
+    }
+    ss << " Mortar inbox:\n";
+    for (const auto& [current_time_step_id, hash_map] : mortar_inbox) {
+      ss << "  Current time: " << current_time_step_id.substep_time() << "\n";
+      for (const auto& [key, tuple_data] : hash_map) {
+        ss << "   Key: " << key
+           << ", next time: " << std::get<4>(tuple_data).substep_time() << "\n";
+      }
+    }
+
+    const auto& mortar_next_temporal_id =
+        db::get<evolution::dg::Tags::MortarNextTemporalId<3>>(box);
+
+    ss << " MortarNextTemporalId\n";
+    for (const auto& [key, next_id] : mortar_next_temporal_id) {
+      ss << "  Key: " << key << ", next time: " << next_id.substep_time()
+         << "\n";
+    }
+
+    if (not terminated) {
+      const std::string& next_action =
+          local_object.deadlock_analysis_next_iterable_action();
+      Parallel::printf(
+          "Element %s did not terminate at time %.19f. Next action: %s\n%s\n",
+          element.id(), db::get<::Tags::Time>(box), next_action, ss.str());
+    }
+  }
+};
+
 template <size_t VolumeDim, bool EvolveCcm>
-struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
-                           public CharacteristicExtractDefaults<EvolveCcm> {
-  static constexpr size_t volume_dim = VolumeDim;
-  using cce_base = CharacteristicExtractDefaults<EvolveCcm>;
-  using gh_base = GeneralizedHarmonicTemplateBase<volume_dim>;
+struct EvolutionMetavars
+    : public GeneralizedHarmonicTemplateBase<
+          EvolutionMetavars<VolumeDim>>,
+      public CharacteristicExtractDefaults<EvolveCcm> {
+  using gh_base = GeneralizedHarmonicTemplateBase<
+      EvolutionMetavars<VolumeDim>>;
   using typename gh_base::initialize_initial_data_dependent_quantities_actions;
   using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
 
   static constexpr bool local_time_stepping = gh_base::local_time_stepping;
+  static constexpr bool use_z_order_distribution = false;
 
   template <bool DuringSelfStart>
   struct CceWorldtubeTarget;
@@ -108,9 +171,12 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
       tmpl::conditional_t<
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
-          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<false>>>,
+          tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           volume_dim, system, dg_step_choosers, local_time_stepping>,
+      tmpl::conditional_t<
+          DuringSelfStart, tmpl::list<>,
+          Cce::Actions::ReceiveCcmNextTime<CceWorldtubeTarget<false>>>,
       tmpl::conditional_t<
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
@@ -146,7 +212,8 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
       Initialization::Actions::InitializeItems<
           Initialization::TimeStepping<EvolutionMetavars, local_time_stepping>,
           evolution::dg::Initialization::Domain<volume_dim>,
-          Initialization::TimeStepperHistory<EvolutionMetavars>>,
+          Initialization::TimeStepperHistory<EvolutionMetavars>,
+          Cce::Actions::InitializeCcmNextTime>,
       Initialization::Actions::NonconservativeSystem<system>,
       Initialization::Actions::AddComputeTags<::Tags::DerivCompute<
           typename system::variables_tag,
@@ -194,6 +261,15 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
                          step_actions<false>, Actions::AdvanceTime,
                          PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
+  static void run_deadlock_analysis_simple_actions(
+      Parallel::GlobalCache<EvolutionMetavars>& cache,
+      const std::vector<std::string>& /*deadlocked_components*/) {
+    auto& dg_element_array =
+        Parallel::get_parallel_component<gh_dg_element_array>(cache);
+
+    Parallel::simple_action<DeadlockCrap>(dg_element_array);
+  }
+
   template <bool DuringSelfStart>
   struct CceWorldtubeTarget
       : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
@@ -209,7 +285,8 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
         intrp::TargetPoints::Sphere<CceWorldtubeTarget, ::Frame::Inertial>;
     using post_interpolation_callback = intrp::callbacks::SendGhWorldtubeData<
         Cce::CharacteristicEvolution<EvolutionMetavars>, CceWorldtubeTarget,
-        DuringSelfStart, local_time_stepping>;
+        // FIXME: This is a hack
+        false, false>;
     using vars_to_interpolate_to_target = interpolator_source_vars;
     template <typename Metavariables>
     using interpolating_component = gh_dg_element_array;

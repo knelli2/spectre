@@ -58,6 +58,7 @@
 #include "Parallel/Algorithms/AlgorithmSingleton.hpp"
 #include "Parallel/InitializationFunctions.hpp"
 #include "Parallel/Local.hpp"
+#include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/PhaseControl/CheckpointAndExitAfterWallclock.hpp"
 #include "Parallel/PhaseControl/ExecutePhaseChange.hpp"
@@ -294,7 +295,7 @@ template <size_t VolumeDim>
 struct GeneralizedHarmonicTemplateBase {
   static constexpr size_t volume_dim = VolumeDim;
   using system = gh::System<volume_dim>;
-  static constexpr bool local_time_stepping = false;
+  static constexpr bool local_time_stepping = true;
 
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& /*p*/) {}

@@ -49,13 +49,10 @@ namespace Actions {
 template <typename EvolutionComponent, bool DuringSelfStart>
 struct ReceiveGhWorldtubeData {
   template <typename ParallelComponent, typename... DbTags,
-            typename Metavariables, typename ArrayIndex>
+            typename Metavariables, typename ArrayIndex, typename TemporalId>
   static void apply(db::DataBox<tmpl::list<DbTags...>>& box,
                     Parallel::GlobalCache<Metavariables>& cache,
-                    const ArrayIndex& /*array_index*/,
-                    const tmpl::conditional_t<DuringSelfStart, TimeStepId,
-                                              LinkedMessageId<double>>
-                        time,
+                    const ArrayIndex& /*array_index*/, const TemporalId& time,
                     const tnsr::aa<DataVector, 3>& spacetime_metric,
                     const tnsr::iaa<DataVector, 3>& phi,
                     const tnsr::aa<DataVector, 3>& pi) {
