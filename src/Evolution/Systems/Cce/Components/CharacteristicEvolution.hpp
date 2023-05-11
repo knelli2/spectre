@@ -10,14 +10,17 @@
 #include "Evolution/Systems/Cce/Actions/CalculateScriInputs.hpp"
 #include "Evolution/Systems/Cce/Actions/CharacteristicEvolutionBondiCalculations.hpp"
 #include "Evolution/Systems/Cce/Actions/FilterSwshVolumeQuantity.hpp"
+#include "Evolution/Systems/Cce/Actions/InitializeCcmDenseOutput.hpp"
 #include "Evolution/Systems/Cce/Actions/InitializeCharacteristicEvolutionScri.hpp"
 #include "Evolution/Systems/Cce/Actions/InitializeCharacteristicEvolutionTime.hpp"
 #include "Evolution/Systems/Cce/Actions/InitializeCharacteristicEvolutionVariables.hpp"
 #include "Evolution/Systems/Cce/Actions/InitializeFirstHypersurface.hpp"
 #include "Evolution/Systems/Cce/Actions/InsertInterpolationScriData.hpp"
 #include "Evolution/Systems/Cce/Actions/Psi0Matching.hpp"
+#include "Evolution/Systems/Cce/Actions/ReceiveGhNextTime.hpp"
 #include "Evolution/Systems/Cce/Actions/RequestBoundaryData.hpp"
 #include "Evolution/Systems/Cce/Actions/ScriObserveInterpolated.hpp"
+#include "Evolution/Systems/Cce/Actions/SendAndReceivePsi0.hpp"
 #include "Evolution/Systems/Cce/Actions/SendNextTimeToGh.hpp"
 #include "Evolution/Systems/Cce/Actions/TimeManagement.hpp"
 #include "Evolution/Systems/Cce/Actions/UpdateGauge.hpp"
@@ -32,6 +35,7 @@
 #include "Parallel/Local.hpp"
 #include "Parallel/Phase.hpp"
 #include "ParallelAlgorithms/Actions/Goto.hpp"
+#include "ParallelAlgorithms/Actions/InitializeItems.hpp"
 #include "ParallelAlgorithms/Actions/MutateApply.hpp"
 #include "ParallelAlgorithms/Actions/TerminatePhase.hpp"
 #include "Time/Actions/AdvanceTime.hpp"
@@ -103,6 +107,11 @@ struct CharacteristicEvolution {
   using cce_system = Cce::System<Metavariables::evolve_ccm>;
 
   using initialize_action_list = tmpl::list<
+      tmpl::conditional_t<
+          uses_partially_flat_cartesian_coordinates,
+          ::Initialization::Actions::InitializeItems<
+              Cce::Actions::InitializeCcmDenseOutput<Metavariables>>,
+          tmpl::list<>>,
       Actions::InitializeCharacteristicEvolutionVariables<Metavariables>,
       Actions::InitializeCharacteristicEvolutionTime<
           typename Metavariables::evolved_coordinates_variables_tag,
@@ -177,7 +186,8 @@ struct CharacteristicEvolution {
           Actions::UpdateGauge<Metavariables::evolve_ccm>>,
       Actions::PrecomputeGlobalCceDependencies,
       tmpl::conditional_t<Metavariables::evolve_ccm,
-                          Actions::CalculatePsi0AndDerivAtInnerBoundary,
+                          tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
+                                     Actions::SendPsi0>,
                           tmpl::list<>>,
       tmpl::transform<bondi_hypersurface_step_tags,
                       tmpl::bind<hypersurface_computation, tmpl::_1>>,
@@ -204,9 +214,9 @@ struct CharacteristicEvolution {
           Actions::UpdateGauge<false>,
           Actions::UpdateGauge<Metavariables::evolve_ccm>>,
       Actions::PrecomputeGlobalCceDependencies,
+      // QUESTION: Where should this go??
       tmpl::conditional_t<Metavariables::evolve_ccm,
-                          Actions::CalculatePsi0AndDerivAtInnerBoundary,
-                          tmpl::list<>>,
+                          Cce::Actions::ReceiveGhNextTime, tmpl::list<>>,
       tmpl::transform<bondi_hypersurface_step_tags,
                       tmpl::bind<hypersurface_computation, tmpl::_1>>,
       Actions::FilterSwshVolumeQuantity<Tags::BondiH>,

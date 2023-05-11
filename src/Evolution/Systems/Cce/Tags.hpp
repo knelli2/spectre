@@ -450,5 +450,14 @@ struct SelfStartGhInterfaceManager : db::SimpleTag {
 struct NextCcmTime : db::SimpleTag {
   using type = TimeStepId;
 };
+
+struct ExpectedNumberOfBoundaryElements : db::SimpleTag {
+  using type = size_t;
+};
+
+/// Bondi parameter \f$J\f$
+struct TemporaryBondiJ : db::SimpleTag {
+  using type = Scalar<SpinWeighted<ComplexDataVector, 2>>;
+};
 }  // namespace Tags
 }  // namespace Cce

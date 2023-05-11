@@ -33,6 +33,7 @@ spectre_target_headers(
   Equations.hpp
   GaugeTransformBoundaryData.hpp
   IntegrandInputSteps.hpp
+  IsBoundaryElement.hpp
   LinearOperators.hpp
   LinearSolve.hpp
   NewmanPenrose.hpp

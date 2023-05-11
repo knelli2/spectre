@@ -12,6 +12,7 @@
 #include "DataStructures/Variables.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/DiscontinuousGalerkin/Actions/ApplyBoundaryCorrections.hpp"
+#include "Evolution/Systems/Cce/IsBoundaryElement.hpp"
 #include "Evolution/Systems/Cce/ReceiveTags.hpp"
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/System.hpp"
@@ -51,31 +52,9 @@ struct ReceiveCcmNextTime {
       const ParallelComponent* const component) {
     auto& inbox = tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
 
-    const auto& element = db::get<domain::Tags::Element<3_st>>(box);
-    const auto& external_boundaries = element.external_boundaries();
-    // If we aren't on an external boundary clear the inbox and continue on.
-    if (external_boundaries.size() == 0_st) {
-      inbox.clear();
+    if (not Cce::is_outer_boundary_element<true>(make_not_null(&inbox), box,
+                                                 cache)) {
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
-    }
-
-    const auto& domain = Parallel::get<domain::Tags::Domain<3>>(cache);
-    const auto& excision_spheres = domain.excision_spheres();
-
-    // If we are on the excision boundary, clear the inbox and continue on. We
-    // are only concerned with the outer boundary.
-    for (const auto& [name, excision_sphere] : excision_spheres) {
-      (void)name;
-      const auto& abutting_directions = excision_sphere.abutting_directions();
-      for (const auto& element_direction : external_boundaries) {
-        if (alg::any_of(abutting_directions,
-                        [&element_direction](const auto& abutting_direction) {
-                          return element_direction == abutting_direction.second;
-                        })) {
-          inbox.clear();
-          return {Parallel::AlgorithmExecution::Continue, std::nullopt};
-        }
-      }
     }
 
     const double gh_time = db::get<::Tags::TimeStepId>(box).substep_time();

@@ -30,6 +30,7 @@
 namespace Cce {
 namespace Actions {
 
+template <typename Metavariables>
 struct InitializeCcmNextTime {
   using simple_tags_from_options = tmpl::list<>;
   using const_global_cache_tags =
@@ -38,7 +39,8 @@ struct InitializeCcmNextTime {
   using return_tags = tmpl::list<Cce::Tags::NextCcmTime>;
   using argument_tags = tmpl::list<::Tags::TimeStepId>;
   using compute_tags = tmpl::list<>;
-  using simple_tags = return_tags;
+  using simple_tags =
+      tmpl::append<return_tags, typename Metavariables::ccm_psi0>;
 
   static void apply(gsl::not_null<TimeStepId*> next_ccm_time,
                     const TimeStepId& current_time) {

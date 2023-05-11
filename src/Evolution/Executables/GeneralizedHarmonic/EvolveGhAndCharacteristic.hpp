@@ -11,9 +11,12 @@
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Executables/Cce/CharacteristicExtractBase.hpp"
 #include "Evolution/Executables/GeneralizedHarmonic/GeneralizedHarmonicBase.hpp"
+#include "Evolution/Systems/Cce/Actions/InitializeCcmDenseOutput.hpp"
 #include "Evolution/Systems/Cce/Actions/InitializeCcmNextTime.hpp"
 #include "Evolution/Systems/Cce/Actions/ReceiveCcmNextTime.hpp"
+#include "Evolution/Systems/Cce/Actions/SendAndReceivePsi0.hpp"
 #include "Evolution/Systems/Cce/Actions/SendGhVarsToCce.hpp"
+#include "Evolution/Systems/Cce/Actions/SendNextTimeToCcm.hpp"
 #include "Evolution/Systems/Cce/Callbacks/SendGhWorldtubeData.hpp"
 #include "Evolution/Systems/Cce/Components/CharacteristicEvolution.hpp"
 #include "Evolution/Systems/Cce/Components/WorldtubeBoundary.hpp"
@@ -144,6 +147,8 @@ struct EvolutionMetavars
       EvolutionMetavars<VolumeDim>>;
   using typename gh_base::initialize_initial_data_dependent_quantities_actions;
   using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
+  using cce_evolution_component =
+      Cce::CharacteristicEvolution<EvolutionMetavars>;
 
   static constexpr bool local_time_stepping = gh_base::local_time_stepping;
   static constexpr bool use_z_order_distribution = false;
@@ -172,6 +177,10 @@ struct EvolutionMetavars
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
           tmpl::list<>>,
+      tmpl::conditional_t<uses_partially_flat_cartesian_coordinates,
+                          // We cannot apply boundary conditions without Psi0
+                          Cce::Actions::ReceivePsi0<EvolutionMetavars>,
+                          tmpl::list<>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           volume_dim, system, dg_step_choosers, local_time_stepping>,
       tmpl::conditional_t<
@@ -213,7 +222,10 @@ struct EvolutionMetavars
           Initialization::TimeStepping<EvolutionMetavars, local_time_stepping>,
           evolution::dg::Initialization::Domain<volume_dim>,
           Initialization::TimeStepperHistory<EvolutionMetavars>,
-          Cce::Actions::InitializeCcmNextTime>,
+          tmpl::conditional_t<
+              uses_partially_flat_cartesian_coordinates,
+              Cce::Actions::InitializeCcmTags<EvolutionMetavars>,
+              Cce::Actions::InitializeCcmNextTime<EvolutionMetavars>>>,
       Initialization::Actions::NonconservativeSystem<system>,
       Initialization::Actions::AddComputeTags<::Tags::DerivCompute<
           typename system::variables_tag,
@@ -252,14 +264,31 @@ struct EvolutionMetavars
               SelfStart::self_start_procedure<step_actions<true>, system>>,
           Parallel::PhaseActions<Parallel::Phase::CheckTimeStepperHistory,
                                  SelfStart::check_self_start_actions>,
-          Parallel::PhaseActions<Parallel::Phase::Register,
-                                 tmpl::list<dg_registration_list,
-                                            Parallel::Actions::TerminatePhase>>,
+          Parallel::PhaseActions<
+              Parallel::Phase::Register,
+              tmpl::push_back<
+                  tmpl::append<
+                      dg_registration_list,
+                      tmpl::conditional_t<
+                          uses_partially_flat_cartesian_coordinates,
+                          tmpl::list<
+                              Cce::Actions::RegisterBoundaryElementsWithCcm<
+                                  cce_evolution_component>>,
+                          tmpl::list<>>>,
+                  Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
-              tmpl::list<Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
-                         step_actions<false>, Actions::AdvanceTime,
-                         PhaseControl::Actions::ExecutePhaseChange>>>>>;
+              tmpl::list<
+                  Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+                  step_actions<false>, Actions::AdvanceTime,
+                  // Send next time to Ccm as soon as possible to avoid waiting
+                  tmpl::conditional_t<
+                      uses_partially_flat_cartesian_coordinates,
+                      Cce::Actions::SendNextTimeToCcm<
+                          Cce::CharacteristicEvolution<EvolutionMetavars>,
+                          false>,
+                      tmpl::list<>>,
+                  PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
   static void run_deadlock_analysis_simple_actions(
       Parallel::GlobalCache<EvolutionMetavars>& cache,
@@ -311,7 +340,7 @@ struct EvolutionMetavars
       tmpl::transform<interpolation_target_tags,
                       tmpl::bind<intrp::InterpolationTarget,
                                  tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
-      cce_boundary_component, Cce::CharacteristicEvolution<EvolutionMetavars>>>;
+      cce_boundary_component, cce_evolution_component>>;
 
   static constexpr Options::String help{
       "Evolve the Einstein field equations using the Generalized Harmonic "
