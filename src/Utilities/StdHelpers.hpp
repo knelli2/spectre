@@ -218,18 +218,35 @@ inline std::ostream& operator<<(std::ostream& os, const std::optional<T>& t) {
 
 /*!
  * \ingroup UtilitiesGroup
+ * \brief Construct a string containing the keys of type `T` formatted with
+ * `Formatter`
+ *
+ * \details Currently `T` must be a std::map or a std::unordered map.
+ * `Formatter` must have an `operator()` with the following signature:
+ *
+ * \code {.cpp}
+ * void operator()(std::ostream& out, typename T::const_iterator it);
+ * \endcode
+ *
+ */
+template <typename T, typename Formatter>
+inline std::string keys_of(const T& m, const Formatter& formatter) {
+  std::ostringstream os;
+  unordered_print_helper(os, begin(m), end(m), formatter);
+  return os.str();
+}
+
+/*!
+ * \ingroup UtilitiesGroup
  * \brief Construct a string containing the keys of a std::unordered_map
  */
 template <typename K, typename V, typename H>
 inline std::string keys_of(const std::unordered_map<K, V, H>& m) {
-  std::ostringstream os;
-  unordered_print_helper(
-      os, begin(m), end(m),
-      [](std::ostream& out,
-         typename std::unordered_map<K, V, H>::const_iterator it) {
-        out << it->first;
-      });
-  return os.str();
+  return keys_of(m,
+                 [](std::ostream& out,
+                    typename std::unordered_map<K, V, H>::const_iterator it) {
+                   out << it->first;
+                 });
 }
 
 /*!
@@ -238,13 +255,10 @@ inline std::string keys_of(const std::unordered_map<K, V, H>& m) {
  */
 template <typename K, typename V, typename C>
 inline std::string keys_of(const std::map<K, V, C>& m) {
-  std::ostringstream os;
-  sequence_print_helper(
-      os, begin(m), end(m),
-      [](std::ostream& out, typename std::map<K, V, C>::const_iterator it) {
+  return keys_of(
+      m, [](std::ostream& out, typename std::map<K, V, C>::const_iterator it) {
         out << it->first;
       });
-  return os.str();
 }
 
 /*!
