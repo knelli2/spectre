@@ -450,6 +450,19 @@ struct get_value_type<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>> {
 
 template <class T>
 using get_value_type_t = typename get_value_type<T>::type;
+
+template <typename Tag, typename = std::void_t<>>
+struct get_value_type_from_tag {
+  using type = get_value_type_t<typename Tag::type::mapped_type>;
+};
+
+template <typename Tag>
+struct get_value_type_from_tag<Tag, std::void_t<typename Tag::mapped_type>> {
+  using type = typename Tag::mapped_type;
+};
+
+template <typename Tag>
+using get_value_type_from_tag_t = typename get_value_type_from_tag<Tag>::type;
 }  // namespace detail
 
 /*!
@@ -493,9 +506,8 @@ struct RegisterReceiveData : RegistrationHelper {
       ckindex::template idx_receive_data<ReceiveTag>(
           static_cast<void (algorithm::*)(
               const typename ReceiveTag::temporal_id&,
-              const detail::get_value_type_t<
-                  typename ReceiveTag::type::mapped_type>&,
-              bool)>(nullptr));
+              const detail::get_value_type_from_tag_t<ReceiveTag>&, bool)>(
+              nullptr));
     }
   }
 
