@@ -82,14 +82,17 @@ struct ReceiveGhNextTime {
 
     // We now have a time for every element. (Potentially) Do some dense output
     std::map<TimeStepId, std::vector<ElementId<3>>> times_for_dense_output{};
+    // We cannot erase elements as we are looping through the inbox because the
+    // iterators to erased elements become invalidated and we get UB.
+    std::unordered_set<ElementId<3>> elements_to_erase{};
 
     // Loop over all elements and gather the ones we need to do dene output to.
     for (const auto& [element, times] : inbox) {
       const TimeStepId& next_gh_time = times.second;
 
       if (next_gh_time.substep_time() >= next_ccm_time.substep_time()) {
-        // If the next time for this element is after (or at) our next time, we
-        // don't need to do dense output to this element so we can skip
+        // If the next time for this element is after our next time, we don't
+        // need to do dense output to this element so we can skip
         continue;
       } else {
         // The next time for this element is before our next time so we have
@@ -106,8 +109,12 @@ struct ReceiveGhNextTime {
         // Since this element needed to do dense output, we no longer keep it in
         // the inbox. We'll have to wait again to see if the next time it sends
         // is after our next time.
-        inbox.erase(element);
+        elements_to_erase.insert(element);
       }
+    }
+
+    for (const ElementId<3>& element : elements_to_erase) {
+      inbox.erase(element);
     }
 
     // The only way we are allowed to continue is if no elements need to do
@@ -118,7 +125,7 @@ struct ReceiveGhNextTime {
         Parallel::printf(
             "ReceiveGhNextTime, t = %.16f, next_t = %.16f: All received next "
             "GH times are after current CCE next time. Continuing with CCE "
-            "evolution.",
+            "evolution.\n",
             current_ccm_time.substep_time(), next_ccm_time.substep_time());
       }
 
@@ -147,6 +154,15 @@ struct ReceiveGhNextTime {
     using history_tag = ::Tags::HistoryEvolvedVariables<bondi_j_var_tag>;
     using psi0_mutators =
         typename CalculatePsi0AndDerivAtInnerBoundary::mutators;
+
+    db::mutate<temp_bondi_j_var_tag>(
+        make_not_null(&box),
+        [](const gsl::not_null<typename temp_bondi_j_var_tag::type*>
+               temp_bondi_j,
+           const typename bondi_j_var_tag::type& bondi_j) {
+          temp_bondi_j->initialize(bondi_j.number_of_grid_points());
+        },
+        db::get<bondi_j_var_tag>(box));
 
     const auto set_variables = [&box](const auto var_tag_to_set_v,
                                       const auto var_tag_to_set_from_v) {
@@ -221,7 +237,7 @@ struct ReceiveGhNextTime {
       Parallel::printf(
           "ReceiveGhNextTime, t = %.16f, next_t = %.16f: Completed dense "
           "output to all GH elements. Waiting until we are certain all GH "
-          "elements' next time is after CCE's next time.",
+          "elements' next time is after CCE's next time.\n",
           current_ccm_time.substep_time(), next_ccm_time.substep_time());
     }
 

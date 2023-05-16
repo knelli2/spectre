@@ -203,6 +203,20 @@ struct CharacteristicEvolution {
 
   using extract_action_list = tmpl::list<
       Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, true>,
+      Actions::InitializeFirstHypersurface<
+          uses_partially_flat_cartesian_coordinates,
+          typename Metavariables::cce_boundary_component>,
+      tmpl::conditional_t<
+          tt::is_a_v<AnalyticWorldtubeBoundary,
+                     typename Metavariables::cce_boundary_component>,
+          Actions::UpdateGauge<false>,
+          Actions::UpdateGauge<uses_partially_flat_cartesian_coordinates>>,
+      Actions::PrecomputeGlobalCceDependencies,
+      tmpl::conditional_t<
+          uses_partially_flat_cartesian_coordinates,
+          tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
+                     Actions::SendPsi0>,
+          tmpl::list<>>,
       ::Actions::Label<CceEvolutionLabelTag>,
       Actions::ReceiveWorldtubeData<Metavariables>,
       Actions::InitializeFirstHypersurface<

@@ -38,20 +38,25 @@ struct InitializeCcmDenseOutput {
       tmpl::list<logging::Tags::Verbosity<Cce::OptionTags::Cce>>;
   using mutable_global_cache_tags = tmpl::list<>;
   using return_tags =
-      tmpl::list<::Tags::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>>;
+      tmpl::list<::Tags::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>,
+                 ::Tags::Variables<typename Metavariables::ccm_psi0>>;
   using argument_tags = tmpl::list<Cce::Tags::LMax>;
   using compute_tags = tmpl::list<>;
   using simple_tags =
       tmpl::list<::Tags::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>,
-                 Cce::Tags::ExpectedNumberOfBoundaryElements>;
+                 Cce::Tags::ExpectedNumberOfBoundaryElements,
+                 ::Tags::Variables<typename Metavariables::ccm_psi0>>;
 
   static void apply(
       const gsl::not_null<::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>*>
           temp_bondi_j,
+      const gsl::not_null<::Variables<typename Metavariables::ccm_psi0>*>
+          psi0_vars,
       const size_t l_max) {
     const size_t number_of_angular_grid_points =
         Spectral::Swsh::number_of_swsh_collocation_points(l_max);
     temp_bondi_j->initialize(number_of_angular_grid_points, 0.0);
+    psi0_vars->initialize(number_of_angular_grid_points, 0.0);
   }
 };
 
@@ -91,23 +96,31 @@ struct RegisterBoundaryElementsWithCcm {
   }
 };
 
-template <typename Metavariables>
-struct InitializeCcmTags {
-  using psi0_var_tag = ::Tags::Variables<typename Metavariables::ccm_psi0>;
+template <typename Psi0TagList>
+struct InitializeCcmTags;
+
+template <typename... Psi0Tags>
+struct InitializeCcmTags<tmpl::list<Psi0Tags...>> {
   using simple_tags_from_options = tmpl::list<>;
   using const_global_cache_tags = tmpl::list<Cce::Tags::LMax>;
   using mutable_global_cache_tags = tmpl::list<>;
-  using return_tags = tmpl::list<psi0_var_tag>;
+  using return_tags = tmpl::list<Psi0Tags...>;
   using argument_tags = tmpl::list<Cce::Tags::LMax>;
   using compute_tags = tmpl::list<>;
-  using simple_tags = tmpl::list<psi0_var_tag>;
+  using simple_tags = return_tags;
 
-  static void apply(const gsl::not_null<typename psi0_var_tag::type*> psi0_vars,
+  static void apply(const gsl::not_null<typename Psi0Tags::type*>... psi0_vars,
                     const size_t l_max) {
     const size_t number_of_angular_grid_points =
         Spectral::Swsh::number_of_swsh_collocation_points(l_max);
 
-    psi0_vars->initialize(number_of_angular_grid_points, 0.0);
+    const auto initialize_psi0_vars = [&number_of_angular_grid_points](
+                                          const auto& psi0_var) {
+      get(*psi0_var).data().destructive_resize(number_of_angular_grid_points);
+      get(*psi0_var).data() = 0.0;
+    };
+
+    EXPAND_PACK_LEFT_TO_RIGHT(initialize_psi0_vars(psi0_vars));
   }
 };
 }  // namespace Cce::Actions

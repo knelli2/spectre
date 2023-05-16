@@ -44,6 +44,13 @@ struct SendNextTimeToCcm {
       const ParallelComponent* const /*meta*/) {
     if (not Cce::is_outer_boundary_element<false>(make_not_null(&inboxes), box,
                                                   cache)) {
+      // if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(
+      //         cache) >= ::Verbosity::Debug) {
+      //   Parallel::printf(
+      //       "SendNextTimeToCcm %s: Not a boundary element; not sending "
+      //       "anything.\n",
+      //       array_index);
+      // }
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
     }
 
@@ -54,20 +61,14 @@ struct SendNextTimeToCcm {
     if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
         ::Verbosity::Debug) {
       Parallel::printf(
-          "SendNextTimeToCcm: Sending next time %f at current time %f\n",
-          next_time.substep_time(), current_time.substep_time());
+          "SendNextTimeToCcm %s: Sending next time %f at current time %f\n",
+          array_index, next_time.substep_time(), current_time.substep_time());
     }
 
-    if constexpr (FirstTime) {
-      Parallel::receive_data<Cce::ReceiveTags::GhNextTimeToCcm>(
-          Parallel::get_parallel_component<CceComponent>(cache), current_time,
-          // QUESTION: true??????
-          std::make_pair(array_index, current_time), false);
-    } else {
-      Parallel::receive_data<Cce::ReceiveTags::GhNextTimeToCcm>(
-          Parallel::get_parallel_component<CceComponent>(cache), current_time,
-          std::make_pair(array_index, next_time), false);
-    }
+    Parallel::receive_data<Cce::ReceiveTags::GhNextTimeToCcm>(
+        Parallel::get_parallel_component<CceComponent>(cache), current_time,
+        // QUESTION: true??????
+        std::make_pair(array_index, next_time), false);
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }

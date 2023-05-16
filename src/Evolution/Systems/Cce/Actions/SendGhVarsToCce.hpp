@@ -53,6 +53,13 @@ struct SendGhVarsToCce {
         make_observation_box<db::AddComputeTags<
             Events::Tags::ObserverMeshCompute<Metavariables::volume_dim>>>(box),
         cache, array_index, component);
+
+    if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
+        ::Verbosity::Debug) {
+      Parallel::printf(
+          "SendGhVarsToCce %s t = %.16f: Starting interpolation to CCE.\n",
+          array_index, db::get<::Tags::Time>(box));
+    }
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };

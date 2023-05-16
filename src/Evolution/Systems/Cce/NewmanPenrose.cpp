@@ -58,8 +58,7 @@ void TransformBondiJToCauchyCoords::apply(
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& volume_j,
     const Scalar<SpinWeighted<ComplexDataVector, 0>>& gauge_cauchy_d,
     const Scalar<SpinWeighted<ComplexDataVector, 0>>& omega_cauchy,
-    const Spectral::Swsh::SwshInterpolator& interpolator,
-    const size_t l_max) {
+    const Spectral::Swsh::SwshInterpolator& interpolator, const size_t l_max) {
   const size_t number_of_angular_points =
       Spectral::Swsh::number_of_swsh_collocation_points(l_max);
   const size_t number_of_radial_points =
@@ -163,12 +162,13 @@ void VolumeWeyl<Tags::Psi0Match>::apply(
 
 void InnerBoundaryWeyl::apply(
     gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> psi_0_boundary,
-    gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
-        dlambda_psi_0_boundary,
     gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*>
         tetrad_coeff_theta_bound,
     gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
         tetrad_coeff_phi_bound,
+    gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+        dlambda_psi_0_boundary,
+    gsl::not_null<::Variables<ccm_psi0>*> psi_0_vars,
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& psi_0,
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& dy_psi_0,
     const Scalar<SpinWeighted<ComplexDataVector, 0>>& one_minus_y,
@@ -202,16 +202,24 @@ void InnerBoundaryWeyl::apply(
   make_const_view(make_not_null(&bondi_beta_cauchy_boundary),
                   get(bondi_beta_cauchy), 0, number_of_angular_points);
 
-  get(*psi_0_boundary).data() = pow(get(spec_norm).data(),2.0) *
-                                psi_0_boundary_view.data()*
+  get(*psi_0_boundary).data() = pow(get(spec_norm).data(), 2.0) *
+                                psi_0_boundary_view.data() *
                                 exp(-4.0 * bondi_beta_cauchy_boundary.data());
 
   get(*dlambda_psi_0_boundary) = dy_psi_0_boundary_view.data() *
-                              square(one_minus_y_boundary.data()) /
-                              (2.0 * get(bondi_r_cauchy).data()) *
-                              exp(-2.0 * bondi_beta_cauchy_boundary.data());
+                                 square(one_minus_y_boundary.data()) /
+                                 (2.0 * get(bondi_r_cauchy).data()) *
+                                 exp(-2.0 * bondi_beta_cauchy_boundary.data());
 
   get(*tetrad_coeff_theta_bound) = coeff_theta;
   get(*tetrad_coeff_phi_bound) = coeff_phi;
+
+  get<Tags::BoundaryValue<Tags::Psi0Match>>(*psi_0_vars) = *psi_0_boundary;
+  get<Tags::BoundaryValue<Tags::TetradCoeffTheta>>(*psi_0_vars) =
+      *tetrad_coeff_theta_bound;
+  get<Tags::BoundaryValue<Tags::TetradCoeffPhi>>(*psi_0_vars) =
+      *tetrad_coeff_phi_bound;
+  get<Tags::BoundaryValue<Tags::Dlambda<Tags::Psi0Match>>>(*psi_0_vars) =
+      *dlambda_psi_0_boundary;
 }
 }  // namespace Cce

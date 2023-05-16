@@ -55,17 +55,10 @@ struct SendNextTimeToGh {
             next_time.substep_time(), current_time.substep_time());
       }
 
-      if constexpr (FirstTime) {
-        Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
-            Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
-                cache),
-            current_time, current_time, false);
-      } else {
-        Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
-            Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
-                cache),
-            current_time, next_time, false);
-      }
+      Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
+          Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
+              cache),
+          current_time, next_time, false);
     }
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};

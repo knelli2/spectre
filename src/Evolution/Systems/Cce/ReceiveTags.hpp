@@ -47,7 +47,8 @@ struct GhNextTimeToCcm {
   static void insert_into_inbox(const gsl::not_null<type*> inbox,
                                 const temporal_id& received_temporal_id,
                                 std::pair<ElementId<3>, TimeStepId>&& data) {
-    (*inbox)[data.first] = std::make_pair(received_temporal_id, data.second);
+    (*inbox)[std::move(data.first)] =
+        std::make_pair(received_temporal_id, std::move(data.second));
   }
 };
 }  // namespace ReceiveTags

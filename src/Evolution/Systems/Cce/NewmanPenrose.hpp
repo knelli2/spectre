@@ -174,11 +174,12 @@ struct VolumeWeyl<Tags::Psi0Match> {
  * \f}
  */
 struct InnerBoundaryWeyl {
-  using return_tags =
-      tmpl::list<Tags::BoundaryValue<Tags::Psi0Match>,
-                 Tags::BoundaryValue<Tags::Dlambda<Tags::Psi0Match>>,
-                 Tags::BoundaryValue<Tags::TetradCoeffTheta>,
-                 Tags::BoundaryValue<Tags::TetradCoeffPhi>>;
+  using ccm_psi0 =
+      tmpl::list<Tags::BoundaryValue<Cce::Tags::Psi0Match>,
+                 Tags::BoundaryValue<Cce::Tags::TetradCoeffTheta>,
+                 Tags::BoundaryValue<Cce::Tags::TetradCoeffPhi>,
+                 Tags::BoundaryValue<Cce::Tags::Dlambda<Cce::Tags::Psi0Match>>>;
+  using return_tags = tmpl::push_back<ccm_psi0, ::Tags::Variables<ccm_psi0>>;
   using argument_tags =
       tmpl::list<Tags::Psi0Match, Tags::Dy<Tags::Psi0Match>, Tags::OneMinusY,
                  Tags::BoundaryValue<Tags::BondiR>,
@@ -187,12 +188,13 @@ struct InnerBoundaryWeyl {
                  Tags::TetradCoeffTheta, Tags::TetradCoeffPhi, Tags::LMax>;
   static void apply(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> psi_0_boundary,
-      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
-          dlambda_psi_0_boundary,
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 0>>*>
           tetrad_coeff_theta_bound,
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
           tetrad_coeff_phi_bound,
+      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+          dlambda_psi_0_boundary,
+      gsl::not_null<::Variables<ccm_psi0>*> psi_0_vars,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& psi_0,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& dy_psi_0,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& one_minus_y,

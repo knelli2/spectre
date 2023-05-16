@@ -52,16 +52,21 @@ struct ReceiveCcmNextTime {
       const ParallelComponent* const component) {
     auto& inbox = tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
 
-    if (not Cce::is_outer_boundary_element<true>(make_not_null(&inbox), box,
-                                                 cache)) {
-      return {Parallel::AlgorithmExecution::Continue, std::nullopt};
-    }
-
     const double gh_time = db::get<::Tags::TimeStepId>(box).substep_time();
 
     const bool debug_print =
         Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
         ::Verbosity::Debug;
+
+    if (not Cce::is_outer_boundary_element<true>(make_not_null(&inbox), box,
+                                                 cache)) {
+      // if (debug_print) {
+      //   Parallel::printf(
+      //       "ReceiveCcmNextTime, %s: Not a boundary element. Continuing.\n",
+      //       gh_time, array_index);
+      // }
+      return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    }
 
     // If we don't have a next time for CCE yet, wait until we have one. We
     // can't continue on because we don't know if the next CCE time will be
@@ -73,7 +78,7 @@ struct ReceiveCcmNextTime {
         Parallel::printf(
             "ReceiveCcmNextTime, %s: Current gh time is %.16f. No times in "
             "inbox, waiting\n",
-            gh_time, array_index);
+            get_output(array_index), gh_time);
       }
       return {Parallel::AlgorithmExecution::Retry, std::nullopt};
     }
@@ -91,22 +96,24 @@ struct ReceiveCcmNextTime {
       // larger than current GH time
       const bool cce_next_time_at_current_gh_time =
           current_gh_time.substep_time() == next_cce_time.substep_time();
+      const bool cce_next_time_after_next_gh_time =
+          next_cce_time.substep_time() > next_gh_time.substep_time();
 
       if (debug_print) {
         Parallel::printf(
             "ReceiveCcmNextTime, %s: Current gh time is %.16f. Inbox has %d "
             "times. Next gh time is %.16f, next CCE time is %.16f. We are%s "
-            "doing dense output\n",
-            array_index, gh_time, inbox.size(), next_gh_time.substep_time(),
-            next_cce_time.substep_time(),
-            (cce_next_time_at_current_gh_time ? " not" : ""));
+            "doing dense output this step.\n",
+            get_output(array_index), gh_time, inbox.size(),
+            next_gh_time.substep_time(), next_cce_time.substep_time(),
+            (cce_next_time_after_next_gh_time ? " not" : ""));
       }
 
       // If the first next CCE time is after (or at) the next GH time, continue
       // on because we don't need to do dense output this GH time step. Don't
       // clear the inbox because the next time through the action list we'll
       // need it.
-      if (next_cce_time.substep_time() >= next_gh_time.substep_time()) {
+      if (cce_next_time_after_next_gh_time) {
         return {Parallel::AlgorithmExecution::Continue, std::nullopt};
       }
 
@@ -138,7 +145,7 @@ struct ReceiveCcmNextTime {
             Parallel::printf(
                 "ReceiveCcmNextTime, %s: Current gh time is %.16f. Waiting for "
                 "mortar data. Next cce time is %f\n",
-                array_index, gh_time, next_cce_time.substep_time());
+                get_output(array_index), gh_time, next_cce_time.substep_time());
           }
           return {Parallel::AlgorithmExecution::Retry, std::nullopt};
         }
@@ -187,7 +194,7 @@ struct ReceiveCcmNextTime {
           Parallel::printf(
               "ReceiveCcmNextTime, %s: Current gh time is %.16f. Dense output "
               "to %f%s complete\n",
-              array_index, gh_time, next_cce_time.substep_time(),
+              get_output(array_index), gh_time, next_cce_time.substep_time(),
               (succeeded ? "" : " not"));
           // Parallel::printf("Vars:\n%s\n\n", evolved_vars);
         }
@@ -196,7 +203,7 @@ struct ReceiveCcmNextTime {
           Parallel::printf(
               "ReceiveCcmNextTime, %s: Current gh time is %.16f. No need to do "
               "dense output to %f because we are already at that time\n",
-              array_index, gh_time, next_cce_time.substep_time());
+              get_output(array_index), gh_time, next_cce_time.substep_time());
         }
       }
 
@@ -237,7 +244,7 @@ struct ReceiveCcmNextTime {
       Parallel::printf(
           "ReceiveCcmNextTime, %s: Current gh time is %.16f. Finished with all "
           "CCE times. Waiting\n",
-          array_index, gh_time);
+          get_output(array_index), gh_time);
     }
 
     // If we get here, we've sent GH data to all the next CCE times we have in

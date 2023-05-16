@@ -85,6 +85,8 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+struct CcmFirstTimeLabel {};
+
 struct DeadlockCrap {
   template <typename ParallelComponent, typename DbTags, typename Metavariables,
             typename ArrayIndex>
@@ -224,7 +226,7 @@ struct EvolutionMetavars
           Initialization::TimeStepperHistory<EvolutionMetavars>,
           tmpl::conditional_t<
               uses_partially_flat_cartesian_coordinates,
-              Cce::Actions::InitializeCcmTags<EvolutionMetavars>,
+              Cce::Actions::InitializeCcmTags<typename cce_base::ccm_psi0>,
               Cce::Actions::InitializeCcmNextTime<EvolutionMetavars>>>,
       Initialization::Actions::NonconservativeSystem<system>,
       Initialization::Actions::AddComputeTags<::Tags::DerivCompute<
@@ -260,11 +262,6 @@ struct EvolutionMetavars
               Parallel::Phase::InitializeInitialDataDependentQuantities,
               initialize_initial_data_dependent_quantities_actions>,
           Parallel::PhaseActions<
-              Parallel::Phase::InitializeTimeStepperHistory,
-              SelfStart::self_start_procedure<step_actions<true>, system>>,
-          Parallel::PhaseActions<Parallel::Phase::CheckTimeStepperHistory,
-                                 SelfStart::check_self_start_actions>,
-          Parallel::PhaseActions<
               Parallel::Phase::Register,
               tmpl::push_back<
                   tmpl::append<
@@ -277,8 +274,23 @@ struct EvolutionMetavars
                           tmpl::list<>>>,
                   Parallel::Actions::TerminatePhase>>,
           Parallel::PhaseActions<
+              Parallel::Phase::InitializeTimeStepperHistory,
+              SelfStart::self_start_procedure<step_actions<true>, system>>,
+          Parallel::PhaseActions<Parallel::Phase::CheckTimeStepperHistory,
+                                 SelfStart::check_self_start_actions>,
+          Parallel::PhaseActions<
               Parallel::Phase::Evolve,
               tmpl::list<
+                  tmpl::conditional_t<
+                      uses_partially_flat_cartesian_coordinates,
+                      tmpl::list<
+                          Cce::Actions::SendNextTimeToCcm<
+                              Cce::CharacteristicEvolution<EvolutionMetavars>,
+                              false>,
+                          Cce::Actions::SendGhVarsToCce<
+                              CceWorldtubeTarget<false>>>,
+                      tmpl::list<>>,
+                  ::Actions::Label<CcmFirstTimeLabel>,
                   Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                   step_actions<false>, Actions::AdvanceTime,
                   // Send next time to Ccm as soon as possible to avoid waiting
@@ -288,7 +300,8 @@ struct EvolutionMetavars
                           Cce::CharacteristicEvolution<EvolutionMetavars>,
                           false>,
                       tmpl::list<>>,
-                  PhaseControl::Actions::ExecutePhaseChange>>>>>;
+                  PhaseControl::Actions::ExecutePhaseChange,
+                  ::Actions::Goto<CcmFirstTimeLabel>>>>>>;
 
   static void run_deadlock_analysis_simple_actions(
       Parallel::GlobalCache<EvolutionMetavars>& cache,
