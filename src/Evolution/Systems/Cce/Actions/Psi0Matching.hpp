@@ -10,9 +10,23 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Evolution/Systems/Cce/NewmanPenrose.hpp"
 #include "Evolution/Systems/Cce/PreSwshDerivatives.hpp"
+#include "NumericalAlgorithms/Spectral/SwshFiltering.hpp"
+#include "Utilities/TMPL.hpp"
 
 namespace Cce {
 namespace Actions {
+struct FilterPsi0 {
+  using return_tags = tmpl::list<Tags::BoundaryValue<Tags::Psi0Match>>;
+  using argument_tags = tmpl::list<Cce::Tags::LMax>;
+
+  static void apply(
+      const gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*>
+          psi_0_bound,
+      const size_t l_max) {
+    Spectral::Swsh::filter_swsh_boundary_quantity(
+        make_not_null(&get(*psi_0_bound)), l_max, l_max - 3);
+  }
+};
 
 /*!
  * \ingroup ActionsGroup
@@ -34,7 +48,7 @@ struct CalculatePsi0AndDerivAtInnerBoundary {
                  PreSwshDerivatives<Tags::Dy<Tags::Dy<Tags::BondiJCauchyView>>>,
                  VolumeWeyl<Tags::Psi0Match>, TetradCoefficients,
                  PreSwshDerivatives<Tags::Dy<Tags::Psi0Match>>,
-                 InnerBoundaryWeyl>;
+                 InnerBoundaryWeyl, FilterPsi0>;
 
   template <typename DbTags, typename... InboxTags, typename Metavariables,
             typename ArrayIndex, typename ActionList,

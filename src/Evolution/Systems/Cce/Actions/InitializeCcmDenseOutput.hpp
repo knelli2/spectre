@@ -37,14 +37,22 @@ struct InitializeCcmDenseOutput {
   using const_global_cache_tags =
       tmpl::list<logging::Tags::Verbosity<Cce::OptionTags::Cce>>;
   using mutable_global_cache_tags = tmpl::list<>;
-  using return_tags = tmpl::list<>;
-  using argument_tags = tmpl::list<>;
+  using return_tags =
+      tmpl::list<::Tags::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>>;
+  using argument_tags = tmpl::list<Cce::Tags::LMax>;
   using compute_tags = tmpl::list<>;
   using simple_tags =
       tmpl::list<::Tags::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>,
                  Cce::Tags::ExpectedNumberOfBoundaryElements>;
 
-  static void apply() {}
+  static void apply(
+      const gsl::not_null<::Variables<tmpl::list<Cce::Tags::TemporaryBondiJ>>*>
+          temp_bondi_j,
+      const size_t l_max) {
+    const size_t number_of_angular_grid_points =
+        Spectral::Swsh::number_of_swsh_collocation_points(l_max);
+    temp_bondi_j->initialize(number_of_angular_grid_points, 0.0);
+  }
 };
 
 struct AddToExpectedNumberOnCcm {
