@@ -221,8 +221,10 @@ struct ReceiveCcmNextTime {
       const auto& spacetime_metric =
           get<gr::Tags::SpacetimeMetric<DataVector, 3, ::Frame::Inertial>>(
               evolved_vars);
-      const auto& pi = get<gh::Tags::Pi<3, ::Frame::Inertial>>(evolved_vars);
-      const auto& phi = get<gh::Tags::Phi<3, ::Frame::Inertial>>(evolved_vars);
+      const auto& pi =
+          get<gh::Tags::Pi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
+      const auto& phi =
+          get<gh::Tags::Phi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
 
       // Actually do the interpolation to the worldtube target. The TimeStepId
       // associated with current inbox value is the TimeStepId we need to pass

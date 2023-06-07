@@ -141,13 +141,14 @@ struct DeadlockCrap {
 };
 
 template <size_t VolumeDim, bool EvolveCcm>
-struct EvolutionMetavars
-    : public GeneralizedHarmonicTemplateBase<
-          EvolutionMetavars<VolumeDim>>,
-      public CharacteristicExtractDefaults<EvolveCcm> {
-  using gh_base = GeneralizedHarmonicTemplateBase<
-      EvolutionMetavars<VolumeDim>>;
-  using typename gh_base::initialize_initial_data_dependent_quantities_actions;
+struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
+                           public CharacteristicExtractDefaults<EvolveCcm> {
+  static constexpr size_t volume_dim = VolumeDim;
+  static constexpr bool evolve_ccm = EvolveCcm;
+  using gh_base = GeneralizedHarmonicTemplateBase<volume_dim>;
+  using cce_base = CharacteristicExtractDefaults<evolve_ccm>;
+  using initialize_initial_data_dependent_quantities_actions =
+      typename gh_base::initialize_initial_data_dependent_quantities_actions;
   using cce_boundary_component = Cce::GhWorldtubeBoundary<EvolutionMetavars>;
   using cce_evolution_component =
       Cce::CharacteristicEvolution<EvolutionMetavars>;
@@ -167,7 +168,7 @@ struct EvolutionMetavars
       tmpl::push_back<typename gh_base::dg_registration_list,
                       intrp::Actions::RegisterElementWithInterpolator>;
 
-  using typename gh_base::system;
+  using system = typename gh_base::system;
 
   using dg_step_choosers = tmpl::flatten<tmpl::list<
       StepChoosers::standard_step_choosers<system>,
@@ -179,7 +180,7 @@ struct EvolutionMetavars
           DuringSelfStart,
           Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
           tmpl::list<>>,
-      tmpl::conditional_t<uses_partially_flat_cartesian_coordinates,
+      tmpl::conditional_t<evolve_ccm,
                           // We cannot apply boundary conditions without Psi0
                           Cce::Actions::ReceivePsi0<EvolutionMetavars>,
                           tmpl::list<>>,
@@ -207,7 +208,7 @@ struct EvolutionMetavars
                              gh::Tags::Pi<DataVector, volume_dim>,
                              gh::Tags::Phi<DataVector, volume_dim>>>>>>;
 
-  using typename cce_base::cce_step_choosers;
+  using cce_step_choosers = typename cce_base::cce_step_choosers;
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
     using factory_classes = Options::add_factory_classes<
@@ -225,7 +226,7 @@ struct EvolutionMetavars
           evolution::dg::Initialization::Domain<volume_dim>,
           Initialization::TimeStepperHistory<EvolutionMetavars>,
           tmpl::conditional_t<
-              uses_partially_flat_cartesian_coordinates,
+              evolve_ccm,
               Cce::Actions::InitializeCcmTags<typename cce_base::ccm_psi0>,
               Cce::Actions::InitializeCcmNextTime<EvolutionMetavars>>>,
       Initialization::Actions::NonconservativeSystem<system>,
@@ -267,7 +268,7 @@ struct EvolutionMetavars
                   tmpl::append<
                       dg_registration_list,
                       tmpl::conditional_t<
-                          uses_partially_flat_cartesian_coordinates,
+                          evolve_ccm,
                           tmpl::list<
                               Cce::Actions::RegisterBoundaryElementsWithCcm<
                                   cce_evolution_component>>,
@@ -280,28 +281,28 @@ struct EvolutionMetavars
                                  SelfStart::check_self_start_actions>,
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
-              tmpl::list<
-                  tmpl::conditional_t<
-                      uses_partially_flat_cartesian_coordinates,
-                      tmpl::list<
-                          Cce::Actions::SendNextTimeToCcm<
-                              Cce::CharacteristicEvolution<EvolutionMetavars>,
-                              false>,
-                          Cce::Actions::SendGhVarsToCce<
-                              CceWorldtubeTarget<false>>>,
-                      tmpl::list<>>,
-                  ::Actions::Label<CcmFirstTimeLabel>,
-                  Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
-                  step_actions<false>, Actions::AdvanceTime,
-                  // Send next time to Ccm as soon as possible to avoid waiting
-                  tmpl::conditional_t<
-                      uses_partially_flat_cartesian_coordinates,
-                      Cce::Actions::SendNextTimeToCcm<
-                          Cce::CharacteristicEvolution<EvolutionMetavars>,
-                          false>,
-                      tmpl::list<>>,
-                  PhaseControl::Actions::ExecutePhaseChange,
-                  ::Actions::Goto<CcmFirstTimeLabel>>>>>>;
+              tmpl::list<tmpl::conditional_t<
+                             evolve_ccm,
+                             tmpl::list<Cce::Actions::SendNextTimeToCcm<
+                                            Cce::CharacteristicEvolution<
+                                                EvolutionMetavars>,
+                                            false>,
+                                        Cce::Actions::SendGhVarsToCce<
+                                            CceWorldtubeTarget<false>>>,
+                             tmpl::list<>>,
+                         ::Actions::Label<CcmFirstTimeLabel>,
+                         Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+                         step_actions<false>, Actions::AdvanceTime,
+                         // Send next time to Ccm as soon as possible to avoid
+                         // waiting
+                         tmpl::conditional_t<evolve_ccm,
+                                             Cce::Actions::SendNextTimeToCcm<
+                                                 Cce::CharacteristicEvolution<
+                                                     EvolutionMetavars>,
+                                                 false>,
+                                             tmpl::list<>>,
+                         PhaseControl::Actions::ExecutePhaseChange,
+                         ::Actions::Goto<CcmFirstTimeLabel>>>>>>;
 
   static void run_deadlock_analysis_simple_actions(
       Parallel::GlobalCache<EvolutionMetavars>& cache,

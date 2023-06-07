@@ -108,7 +108,7 @@ struct CharacteristicEvolution {
 
   using initialize_action_list = tmpl::list<
       tmpl::conditional_t<
-          uses_partially_flat_cartesian_coordinates,
+          Metavariables::evolve_ccm,
           ::Initialization::Actions::InitializeItems<
               Cce::Actions::InitializeCcmDenseOutput<Metavariables>>,
           tmpl::list<>>,
@@ -185,10 +185,11 @@ struct CharacteristicEvolution {
           Actions::UpdateGauge<false>,
           Actions::UpdateGauge<Metavariables::evolve_ccm>>,
       Actions::PrecomputeGlobalCceDependencies,
-      tmpl::conditional_t<Metavariables::evolve_ccm,
-                          tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
-                                     Actions::SendPsi0>,
-                          tmpl::list<>>,
+      tmpl::conditional_t<
+          Metavariables::evolve_ccm,
+          tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
+                     Actions::SendPsi0>,
+          tmpl::list<>>,
       tmpl::transform<bondi_hypersurface_step_tags,
                       tmpl::bind<hypersurface_computation, tmpl::_1>>,
       Actions::FilterSwshVolumeQuantity<Tags::BondiH>,
@@ -204,16 +205,16 @@ struct CharacteristicEvolution {
   using extract_action_list = tmpl::list<
       Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, true>,
       Actions::InitializeFirstHypersurface<
-          uses_partially_flat_cartesian_coordinates,
+          Metavariables::evolve_ccm,
           typename Metavariables::cce_boundary_component>,
       tmpl::conditional_t<
           tt::is_a_v<AnalyticWorldtubeBoundary,
                      typename Metavariables::cce_boundary_component>,
           Actions::UpdateGauge<false>,
-          Actions::UpdateGauge<uses_partially_flat_cartesian_coordinates>>,
+          Actions::UpdateGauge<Metavariables::evolve_ccm>>,
       Actions::PrecomputeGlobalCceDependencies,
       tmpl::conditional_t<
-          uses_partially_flat_cartesian_coordinates,
+          Metavariables::evolve_ccm,
           tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
                      Actions::SendPsi0>,
           tmpl::list<>>,
