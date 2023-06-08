@@ -178,17 +178,33 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
   using step_actions = tmpl::list<
       tmpl::conditional_t<
           DuringSelfStart,
-          Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
-          tmpl::list<>>,
-      tmpl::conditional_t<evolve_ccm,
-                          // We cannot apply boundary conditions without Psi0
-                          Cce::Actions::ReceivePsi0<EvolutionMetavars>,
-                          tmpl::list<>>,
+          tmpl::conditional_t<
+              evolve_ccm,
+              tmpl::list<
+                  Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>,
+                  // We cannot apply boundary conditions without Psi0
+                  Cce::Actions::ReceivePsi0<EvolutionMetavars>>,
+              tmpl::list<
+                  Cce::Actions::SendGhVarsToCce<CceWorldtubeTarget<true>>>>,
+          tmpl::conditional_t<
+              evolve_ccm,
+              tmpl::list<
+                  Cce::Actions::SendGhVarsEarly<CceWorldtubeTarget<false>>,
+                  // We cannot apply boundary conditions without Psi0
+                  Cce::Actions::ReceivePsi0<EvolutionMetavars>>,
+              tmpl::list<>>>,
       evolution::dg::Actions::ComputeTimeDerivative<
           volume_dim, system, dg_step_choosers, local_time_stepping>,
       tmpl::conditional_t<
-          DuringSelfStart, tmpl::list<>,
-          Cce::Actions::ReceiveCcmNextTime<CceWorldtubeTarget<false>>>,
+          not DuringSelfStart and
+              evolve_ccm,
+          tmpl::list<
+              // Immediately after CTD we know our next time so send to CCM
+              // immediately
+              Cce::Actions::SendNextTimeToCcm<
+                  Cce::CharacteristicEvolution<EvolutionMetavars>>,
+              Cce::Actions::ReceiveCcmNextTime<CceWorldtubeTarget<false>>>,
+          tmpl::list<>>,
       tmpl::conditional_t<
           local_time_stepping,
           tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
@@ -281,28 +297,9 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim>,
                                  SelfStart::check_self_start_actions>,
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
-              tmpl::list<tmpl::conditional_t<
-                             evolve_ccm,
-                             tmpl::list<Cce::Actions::SendNextTimeToCcm<
-                                            Cce::CharacteristicEvolution<
-                                                EvolutionMetavars>,
-                                            false>,
-                                        Cce::Actions::SendGhVarsToCce<
-                                            CceWorldtubeTarget<false>>>,
-                             tmpl::list<>>,
-                         ::Actions::Label<CcmFirstTimeLabel>,
-                         Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
+              tmpl::list<Actions::RunEventsAndTriggers, Actions::ChangeSlabSize,
                          step_actions<false>, Actions::AdvanceTime,
-                         // Send next time to Ccm as soon as possible to avoid
-                         // waiting
-                         tmpl::conditional_t<evolve_ccm,
-                                             Cce::Actions::SendNextTimeToCcm<
-                                                 Cce::CharacteristicEvolution<
-                                                     EvolutionMetavars>,
-                                                 false>,
-                                             tmpl::list<>>,
-                         PhaseControl::Actions::ExecutePhaseChange,
-                         ::Actions::Goto<CcmFirstTimeLabel>>>>>>;
+                         PhaseControl::Actions::ExecutePhaseChange>>>>>;
 
   static void run_deadlock_analysis_simple_actions(
       Parallel::GlobalCache<EvolutionMetavars>& cache,

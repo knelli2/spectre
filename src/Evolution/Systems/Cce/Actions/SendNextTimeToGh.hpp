@@ -28,7 +28,7 @@ struct Verbosity;
 namespace Cce {
 namespace Actions {
 
-template <typename CceComponent, bool FirstTime>
+template <typename CceComponent>
 struct SendNextTimeToGh {
   template <typename DbTags, typename... InboxTags, typename Metavariables,
             typename ArrayIndex, typename ActionList,
@@ -47,19 +47,17 @@ struct SendNextTimeToGh {
         tmpl::filter<typename Metavariables::component_list,
                      tt::is_a<::DgElementArray, tmpl::_1>>;
 
-    if constexpr (tmpl::size<gh_dg_element_array>::value == 1) {
-      if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(
-              cache) >= ::Verbosity::Verbose) {
-        Parallel::printf(
-            "SendNextTimeToGh: Sending next time %f at current time %f\n",
-            next_time.substep_time(), current_time.substep_time());
-      }
-
-      Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
-          Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
-              cache),
-          current_time, next_time, false);
+    if (Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
+        ::Verbosity::Verbose) {
+      Parallel::printf(
+          "SendNextTimeToGh: Sending next time %f at current time %f\n",
+          next_time.substep_time(), current_time.substep_time());
     }
+
+    Parallel::receive_data<Cce::ReceiveTags::CcmNextTimeToGH>(
+        Parallel::get_parallel_component<tmpl::front<gh_dg_element_array>>(
+            cache),
+        current_time, next_time, false);
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }

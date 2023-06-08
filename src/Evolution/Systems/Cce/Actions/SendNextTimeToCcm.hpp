@@ -32,7 +32,7 @@ struct Verbosity;
 namespace Cce {
 namespace Actions {
 
-template <typename CceComponent, bool FirstTime>
+template <typename CceComponent>
 struct SendNextTimeToCcm {
   template <typename DbTags, typename... InboxTags, typename Metavariables,
             typename ArrayIndex, typename ActionList,

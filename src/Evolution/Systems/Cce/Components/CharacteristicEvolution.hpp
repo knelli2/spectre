@@ -172,8 +172,7 @@ struct CharacteristicEvolution {
           observers::ObserverWriter<Metavariables>,
           typename Metavariables::cce_boundary_component>>;
 
-  using self_start_extract_action_list = tmpl::list<
-      Actions::ReceiveWorldtubeData<Metavariables>,
+  using calculate_bondi_j = tmpl::list<
       // note that the initialization will only actually happen on the
       // iterations immediately following restarts
       Actions::InitializeFirstHypersurface<
@@ -184,7 +183,10 @@ struct CharacteristicEvolution {
                      typename Metavariables::cce_boundary_component>,
           Actions::UpdateGauge<false>,
           Actions::UpdateGauge<Metavariables::evolve_ccm>>,
-      Actions::PrecomputeGlobalCceDependencies,
+      Actions::PrecomputeGlobalCceDependencies>;
+
+  using self_start_extract_action_list = tmpl::list<
+      Actions::ReceiveWorldtubeData<Metavariables>, calculate_bondi_j,
       tmpl::conditional_t<
           Metavariables::evolve_ccm,
           tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
@@ -203,32 +205,8 @@ struct CharacteristicEvolution {
       ::Actions::UpdateU<cce_system>>;
 
   using extract_action_list = tmpl::list<
-      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, true>,
-      Actions::InitializeFirstHypersurface<
-          Metavariables::evolve_ccm,
-          typename Metavariables::cce_boundary_component>,
-      tmpl::conditional_t<
-          tt::is_a_v<AnalyticWorldtubeBoundary,
-                     typename Metavariables::cce_boundary_component>,
-          Actions::UpdateGauge<false>,
-          Actions::UpdateGauge<Metavariables::evolve_ccm>>,
-      Actions::PrecomputeGlobalCceDependencies,
-      tmpl::conditional_t<
-          Metavariables::evolve_ccm,
-          tmpl::list<Actions::CalculatePsi0AndDerivAtInnerBoundary,
-                     Actions::SendPsi0>,
-          tmpl::list<>>,
-      ::Actions::Label<CceEvolutionLabelTag>,
-      Actions::ReceiveWorldtubeData<Metavariables>,
-      Actions::InitializeFirstHypersurface<
-          Metavariables::evolve_ccm,
-          typename Metavariables::cce_boundary_component>,
-      tmpl::conditional_t<
-          tt::is_a_v<AnalyticWorldtubeBoundary,
-                     typename Metavariables::cce_boundary_component>,
-          Actions::UpdateGauge<false>,
-          Actions::UpdateGauge<Metavariables::evolve_ccm>>,
-      Actions::PrecomputeGlobalCceDependencies,
+      Actions::SendPsi0Early<calculate_bondi_j>,
+      Actions::ReceiveWorldtubeData<Metavariables>, calculate_bondi_j,
       // QUESTION: Where should this go??
       tmpl::conditional_t<Metavariables::evolve_ccm,
                           Cce::Actions::ReceiveGhNextTime, tmpl::list<>>,
@@ -239,11 +217,10 @@ struct CharacteristicEvolution {
       ::Actions::RecordTimeStepperData<cce_system>,
       ::Actions::UpdateU<cce_system>,
       ::Actions::ChangeStepSize<typename Metavariables::cce_step_choosers>,
-      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>, false>,
+      Actions::SendNextTimeToGh<CharacteristicEvolution<Metavariables>>,
       // We cannot know our next step for certain until after we've performed
       // step size selection, as we may need to reject a step.
-      ::Actions::AdvanceTime, Actions::ExitIfEndTimeReached,
-      ::Actions::Goto<CceEvolutionLabelTag>>;
+      ::Actions::AdvanceTime, Actions::ExitIfEndTimeReached>;
 
   using phase_dependent_action_list = tmpl::list<
       Parallel::PhaseActions<Parallel::Phase::Initialization,

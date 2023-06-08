@@ -35,6 +35,134 @@ struct Verbosity;
 namespace Cce {
 namespace Actions {
 
+template <typename WorldtubeTargetTag, typename DbTags, typename Metavariables,
+          typename ArrayIndex, typename ParallelComponent>
+void send_vars_to_interpolator(
+    const db::DataBox<DbTags>& box, Parallel::GlobalCache<Metavariables>& cache,
+    const typename Metavariables::system::variables_tag::type& evolved_vars,
+    const TimeStepId& next_cce_time, const ArrayIndex& array_index,
+    const ParallelComponent* const component) {
+  auto interpolate_event = ::intrp::Events::InterpolateWithoutInterpComponent<
+      3, WorldtubeTargetTag, Metavariables,
+      typename Metavariables::system::variables_tag::tags_list>{};
+
+  // These arguments are needed to pass to the interpolate_event
+  const auto& point_info =
+      db::get<intrp::Tags::InterpPointInfo<Metavariables>>(box);
+  const auto& mesh = db::get<domain::Tags::Mesh<3>>(box);
+
+  // These must be in this order when passed to the interpolating event
+  // because that's the order they are in the `evolved_vars_list` type alias
+  const auto& spacetime_metric =
+      get<gr::Tags::SpacetimeMetric<DataVector, 3, ::Frame::Inertial>>(
+          evolved_vars);
+  const auto& pi =
+      get<gh::Tags::Pi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
+  const auto& phi =
+      get<gh::Tags::Phi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
+
+  // Actually do the interpolation to the worldtube target. The TimeStepId
+  // associated with current inbox value is the TimeStepId we need to pass
+  // to the interpolation target, and then to CCE because CCE is expecting
+  // this particular TimeStepId. We call the operator() by hand here rather
+  // than use a ::apply() call because we don't want to pass the evolved
+  // variables from the box to this interpolation. They are at the incorrect
+  // time. We instead want to pass out dense-outputted variables which are
+  // at the next CCE time.
+  interpolate_event(next_cce_time, point_info, mesh, spacetime_metric, pi, phi,
+                    cache, array_index, component);
+}
+
+template <typename WorldtubeTargetTag>
+struct SendGhVarsEarly {
+  using inbox_tags = tmpl::list<Cce::ReceiveTags::CcmNextTimeToGH>;
+  template <typename DbTags, typename... InboxTags, typename Metavariables,
+            typename ArrayIndex, typename ActionList,
+            typename ParallelComponent>
+  static Parallel::iterable_action_return_t apply(
+      db::DataBox<DbTags>& box, tuples::TaggedTuple<InboxTags...>& inboxes,
+      Parallel::GlobalCache<Metavariables>& cache,
+      const ArrayIndex& array_index, const ActionList /*meta*/,
+      const ParallelComponent* const component) {
+    auto& inbox = tuples::get<Cce::ReceiveTags::CcmNextTimeToGH>(inboxes);
+
+    if (not Cce::is_outer_boundary_element<true>(make_not_null(&inbox), box,
+                                                 cache)) {
+      return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    }
+
+    const bool debug_print =
+        Parallel::get<logging::Tags::Verbosity<Cce::OptionTags::Cce>>(cache) >=
+        ::Verbosity::Debug;
+
+    const TimeStepId& current_gh_time = db::get<::Tags::TimeStepId>(box);
+    const bool at_slab_zero = current_gh_time.slab_number() == 0 and
+                              current_gh_time.is_at_slab_boundary();
+
+    if (at_slab_zero) {
+      if (debug_print) {
+        Parallel::printf(
+            "SendGhVarsEarly, %s: Current gh time is %.16f. Sending GH vars to "
+            "CCM because we are at slab zero\n",
+            get_output(array_index), current_gh_time.substep_time());
+      }
+
+      send_vars_to_interpolator<WorldtubeTargetTag>(
+          box, cache,
+          db::get<typename Metavariables::system::variables_tag>(box),
+          current_gh_time, array_index, component);
+
+      return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    }
+
+    // If we don't have a next time for CCE yet, wait until we have one. We
+    // can't continue on because we don't know if the next CCE time will be
+    // before the next GH time (meaning we need to do dense output) or after
+    // (meaning we can continue on). We do this after we know we are an outer
+    // boundary element so we don't hold up volume elements.
+    if (inbox.size() == 0) {
+      if (debug_print) {
+        Parallel::printf(
+            "SendGhVarsEarly, %s: Current gh time is %.16f. No times in "
+            "inbox, waiting\n",
+            get_output(array_index), current_gh_time.substep_time());
+      }
+      return {Parallel::AlgorithmExecution::Retry, std::nullopt};
+    }
+
+    // This action is meant to be at the beginning of the action list. If we are
+    // at slab 0, then we send our data without waiting for a next CCM time. If
+    // we aren't at slab 0, we waited above for the next CCM time in order to
+    // check it against our current GH time. Only if the next CCM time is equal
+    // to our current time do we send data, otherwise we wait to do dense output
+    // later.
+    if (current_gh_time.substep_time() ==
+        inbox.begin()->second.substep_time()) {
+      if (debug_print) {
+        Parallel::printf(
+            "SendGhVarsEarly, %s: Current gh time is %.16f. Sending GH vars to "
+            "CCM because the current gh time is the same as the next CCM "
+            "time.\n",
+            get_output(array_index), current_gh_time.substep_time());
+      }
+
+      send_vars_to_interpolator<WorldtubeTargetTag>(
+          box, cache,
+          db::get<typename Metavariables::system::variables_tag>(box),
+          inbox.begin()->second, array_index, component);
+
+      // Now that we have sent GH data at the next CCE time, remove it from the
+      // inbox
+      inbox.erase(inbox.begin());
+    }
+
+    // No need to retry here because the next CCM is guaranteed to be after the
+    // current time so we deal with it in the action that does dense output or
+    // wait until we've gone through the action list once.
+    return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+  }
+};
+
 template <typename WorldtubeTargetTag>
 struct ReceiveCcmNextTime {
   // CCE only works in 3D so don't bother templating this on the volume
@@ -92,12 +220,10 @@ struct ReceiveCcmNextTime {
           db::get<::Tags::Next<::Tags::TimeStepId>>(box);
       const TimeStepId& next_cce_time = inbox.begin()->second;
 
-      // Use CCE next time as scale because that will always be equal to or
-      // larger than current GH time
       const bool cce_next_time_at_current_gh_time =
           current_gh_time.substep_time() == next_cce_time.substep_time();
       const bool cce_next_time_after_next_gh_time =
-          next_cce_time.substep_time() > next_gh_time.substep_time();
+          next_cce_time.substep_time() >= next_gh_time.substep_time();
 
       if (debug_print) {
         Parallel::printf(
@@ -155,7 +281,6 @@ struct ReceiveCcmNextTime {
 
       using system = gh::System<3>;
       using variables_tag = typename system::variables_tag;
-      using evolved_vars_list = typename variables_tag::tags_list;
       using variables_of_evolved_vars = typename variables_tag::type;
 
       // The first next CCE time is before the next GH time which means we need
@@ -207,35 +332,8 @@ struct ReceiveCcmNextTime {
         }
       }
 
-      auto interpolate_event =
-          ::intrp::Events::InterpolateWithoutInterpComponent<
-              3, WorldtubeTargetTag, Metavariables, evolved_vars_list>{};
-
-      // These arguments are needed to pass to the interpolate_event
-      const auto& point_info =
-          db::get<intrp::Tags::InterpPointInfo<Metavariables>>(box);
-      const auto& mesh = db::get<domain::Tags::Mesh<3>>(box);
-
-      // These must be in this order when passed to the interpolating event
-      // because that's the order they are in the `evolved_vars_list` type alias
-      const auto& spacetime_metric =
-          get<gr::Tags::SpacetimeMetric<DataVector, 3, ::Frame::Inertial>>(
-              evolved_vars);
-      const auto& pi =
-          get<gh::Tags::Pi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
-      const auto& phi =
-          get<gh::Tags::Phi<DataVector, 3, ::Frame::Inertial>>(evolved_vars);
-
-      // Actually do the interpolation to the worldtube target. The TimeStepId
-      // associated with current inbox value is the TimeStepId we need to pass
-      // to the interpolation target, and then to CCE because CCE is expecting
-      // this particular TimeStepId. We call the operator() by hand here rather
-      // than use a ::apply() call because we don't want to pass the evolved
-      // variables from the box to this interpolation. They are at the incorrect
-      // time. We instead want to pass out dense-outputted variables which are
-      // at the next CCE time.
-      interpolate_event(next_cce_time, point_info, mesh, spacetime_metric, pi,
-                        phi, cache, array_index, component);
+      send_vars_to_interpolator<WorldtubeTargetTag>(
+          box, cache, evolved_vars, next_cce_time, array_index, component);
 
       // Now that we have sent GH data at the next CCE time, remove it from the
       // inbox
