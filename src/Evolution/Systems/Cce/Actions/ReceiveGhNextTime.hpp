@@ -127,6 +127,10 @@ void calculate_and_send_psi0(
 
     // Once we have Psi0, send it to all the boundary elements. If there were
     // elements specified, send to only those. If not, send to all elements
+    // FIXME This next line causes a charm error. It happens because I'm calling
+    // receive_data on the element of an array chare rather then the whole array
+    // and for some reason the entry method/receive tag hasn't been registered.
+    // Not sure how to resolve this at the moment.
     if (elements.has_value()) {
       for (const ElementId<3>& element : elements.value()) {
         Parallel::receive_data<
