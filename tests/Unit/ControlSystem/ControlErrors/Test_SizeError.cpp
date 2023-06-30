@@ -141,11 +141,19 @@ void test_size_error_one_step(
                            cartesian_coords.get(i) /
                            distorted_excision_boundary_radius_initial;
   }
+
+  const auto lambda_dt_lambda = function_of_time->func_and_deriv(time);
+  const double control_error_delta_r =
+      control_system::size::control_error_delta_r(
+          horizon.coefficients()[0], time_deriv_horizon.coefficients()[0],
+          lambda_dt_lambda[0][0], lambda_dt_lambda[1][0],
+          grid_excision_boundary_radius);
+
   auto error = control_system::size::control_error(
       make_not_null(&info), predictor_char_speed, predictor_comoving_char_speed,
-      predictor_delta_radius, time, horizon, excision_boundary,
-      grid_excision_boundary_radius, time_deriv_horizon, lapse, shifty_quantity,
-      spatial_metric, inverse_spatial_metric, function_of_time);
+      predictor_delta_radius, time, control_error_delta_r,
+      time_deriv_horizon.coefficients()[0], horizon, excision_boundary, lapse,
+      shifty_quantity, spatial_metric, inverse_spatial_metric);
 
   // Check error and parts of info.
   //
@@ -169,7 +177,8 @@ void test_size_error_one_step(
                                  control_system::protocols::ControlError>);
 
     auto error_class = TestHelpers::test_creation<size_error>(
-        "MaxNumTimesForZeroCrossingPredictor: 4");
+        "MaxNumTimesForZeroCrossingPredictor: 4\n"
+        "SmoothingOptions: [0.25, 0.2]");
 
     CHECK_FALSE(error_class.get_suggested_timescale().has_value());
     CHECK_FALSE(error_class.discontinuous_change_has_occurred());

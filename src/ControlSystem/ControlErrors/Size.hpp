@@ -8,6 +8,8 @@
 #include <pup.h>
 #include <string>
 
+#include "ApparentHorizons/StrahlkorperGr.hpp"
+#include "ControlSystem/Averager.hpp"
 #include "ControlSystem/ControlErrors/Size/Error.hpp"
 #include "ControlSystem/ControlErrors/Size/Info.hpp"
 #include "ControlSystem/ControlErrors/Size/State.hpp"
@@ -31,6 +33,7 @@
 #include "Parallel/Printf.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
+#include "Utilities/Serialization/PupStlCpp17.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
@@ -44,7 +47,15 @@ struct Distorted;
 }  // namespace Frame
 /// \endcond
 
-namespace control_system::ControlErrors {
+namespace control_system {
+namespace size {
+double control_error_delta_r(const double horizon_00,
+                             const double dt_horizon_00, const double lambda_00,
+                             const double dt_lambda_00,
+                             const double grid_frame_excision_sphere_radius);
+}
+
+namespace ControlErrors {
 /*!
  * \brief Control error in the for the \f$l=0\f$ component of the
  * `domain::CoordinateMaps::TimeDependent::Shape` map.
@@ -91,6 +102,9 @@ namespace control_system::ControlErrors {
  *   horizon and the excision surfaces.
  * - MinRelativeDeltaR: MinDeltaR divided by the `Strahlkorper::average_radius`
  *   of the horizon
+ * - AvgDeltaR: Same as MinDeltaR except it's the average radii.
+ * - AvgRelativeDeltaR: AvgDeltaR divided by the `Strahlkorper::average_radius`
+ *   of the horizon
  * - ControlErrorDeltaR: \f$ \dot{S}_{00} (\lambda_{00} -
  *   r_{\mathrm{excision}}^{\mathrm{grid}} / Y_{00}) / S_{00} -
  *   \dot{\lambda}_{00} \f$
@@ -124,22 +138,50 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
     static int lower_bound() { return 3; }
   };
 
-  using options = tmpl::list<MaxNumTimesForZeroCrossingPredictor>;
+  struct SmoothAvgTimescaleFraction {
+    using type = double;
+    static constexpr Options::String help{
+        "Average timescale fraction for smoothing horizon measurements."};
+  };
+
+  struct CrossingTimeDecreaseFactor {
+    using type = double;
+    static constexpr Options::String help{
+        "Factor to multiple delta R crossing time in state DeltaR."};
+  };
+
+  struct SmootherTuner {
+    using type = TimescaleTuner;
+    static constexpr Options::String help{
+        "TimescaleTuner for smoothing horizon measurements."};
+  };
+
+  using options = tmpl::list<MaxNumTimesForZeroCrossingPredictor,
+                             SmoothAvgTimescaleFraction,
+                             CrossingTimeDecreaseFactor, SmootherTuner>;
   static constexpr Options::String help{
       "Computes the control error for size control. Will also write a "
       "diagnostics file if the control systems are allowed to write data to "
       "disk."};
 
+  Size() = default;
+
   /*!
    * \brief Initializes the `intrp::ZeroCrossingPredictor`s with the number of
-   * times passed in (default 3).
+   * times passed in (default 3) and the smoothing `Averager` with the smoothing
+   * options passed in.
    *
    * \details The internal `control_system::size::Info::state` is initialized to
    * `control_system::size::States::Initial`. All zero crossing predictors are
    * initialized with a minimum number of times 3. The input argument
    * `max_times` represents the maximum number of times.
+   *
+   * The smoothing options are defaulted to typical values that are used in BBH
+   * simulations.
    */
-  Size(const int max_times = 3);
+  Size(const int max_times, const double smooth_avg_timescale_frac,
+       const double crossing_time_decrease_factor,
+       TimescaleTuner smoother_tuner);
 
   /// Returns the internal `control_system::size::Info::suggested_time_scale`. A
   /// std::nullopt means that no timescale is suggested.
@@ -230,22 +272,82 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
             QueueTags::InverseSpatialMetricOnExcisionSurface<Frame::Distorted>>(
             excision_quantities);
 
+    const double Y00 = 0.25 * M_2_SQRTPI;
+
+    // The horizon radius and its derivative only show up as one divided by
+    // the other in control_error_delta_r, so any factor we multiply by here
+    // is irrelevant. However, we divide by Y00 here to match SpEC exactly
+    horizon_radius_averager_.update(time,
+                                    {apparent_horizon.average_radius() / Y00},
+                                    smoother_tuner_.current_timescale());
+
+    const std::optional<std::array<DataVector, DerivOrder + 1>>&
+        averaged_horizon_radius_at_average_time =
+            horizon_radius_averager_(time);
+
+    const auto map_lambda_and_deriv =
+        functions_of_time.at(function_of_time_name)->func_and_deriv(time);
+
+    const double lambda_00 = map_lambda_and_deriv[0][0];
+    const double dt_lambda_00 = map_lambda_and_deriv[1][0];
+    // Avoid divide by 0 if averager isn't ready
+    double horizon_00 = 1.0;
+    double dt_horizon_00 = 0.0;
+
+    // if (LIKELY(averaged_horizon_radius_at_average_time.has_value())) {
+    //   horizon_00 = averaged_horizon_radius_at_average_time.value()[0][0];
+    //   dt_horizon_00 = averaged_horizon_radius_at_average_time.value()[1][0];
+    // }
+    if (LIKELY(averaged_horizon_radius_at_average_time.has_value())) {
+      const double averaged_time = horizon_radius_averager_.average_time(time);
+      horizon_00 = averaged_horizon_radius_at_average_time.value()[0][0];
+      dt_horizon_00 = averaged_horizon_radius_at_average_time.value()[1][0];
+      const double d2t_horizon_00 =
+          averaged_horizon_radius_at_average_time.value()[2][0];
+
+      // Must account for time offset of averaged time. Do a simple Taylor
+      // series
+      const double time_diff = time - averaged_time;
+      horizon_00 += time_diff * dt_horizon_00;
+      dt_horizon_00 += 0.5 * square(time_diff) * d2t_horizon_00;
+
+      smoother_tuner_.update_timescale(
+          std::array{
+              DataVector{averaged_horizon_radius_at_average_time.value()[0][0]},
+              DataVector{
+                  averaged_horizon_radius_at_average_time.value()[1][0]}} -
+          std::array{
+              DataVector{apparent_horizon.coefficients()[0]},
+              DataVector{time_deriv_apparent_horizon.coefficients()[0]}});
+    }
+
+    // This is needed for every state
+    const double control_error_delta_r = size::control_error_delta_r(
+        horizon_00, dt_horizon_00, lambda_00, dt_lambda_00,
+        grid_frame_excision_sphere_radius);
+
     info_.damping_time = min(tuner.current_timescale());
 
     const size::ErrorDiagnostics error_diagnostics = size::control_error(
         make_not_null(&info_), make_not_null(&char_speed_predictor_),
         make_not_null(&comoving_char_speed_predictor_),
-        make_not_null(&delta_radius_predictor_), time, apparent_horizon,
-        excision_surface, grid_frame_excision_sphere_radius,
-        time_deriv_apparent_horizon, lapse, shifty_quantity,
-        spatial_metric_on_excision, inverse_spatial_metric_on_excision,
-        functions_of_time.at(function_of_time_name));
+        make_not_null(&delta_radius_predictor_), time, control_error_delta_r,
+        dt_lambda_00, apparent_horizon, excision_surface, lapse,
+        shifty_quantity, spatial_metric_on_excision,
+        inverse_spatial_metric_on_excision, crossing_time_decrease_factor_);
 
     state_history_.store(time, info_, error_diagnostics.control_error_args);
 
     if (Parallel::get<control_system::Tags::WriteDataToDisk>(cache)) {
       auto& observer_writer_proxy = Parallel::get_parallel_component<
           observers::ObserverWriter<Metavariables>>(cache);
+
+      // \Delta R = < R_ah > - < R_ex >
+      // < R_ah > = S_00 * Y_00
+      // < R_ex > = R_ex^grid - \lambda_00 * Y_00
+      // < \Delta R > = \Delta R / < R_ah >
+      const double avg_delta_r = (horizon_00 + lambda_00) * Y00 - grid_frame_excision_sphere_radius;
+      const double avg_relative_delta_r = avg_delta_r / (horizon_00 * Y00);
 
       Parallel::threaded_action<
           observers::ThreadedActions::WriteReductionDataRow>(
@@ -254,11 +356,11 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
               time, error_diagnostics.control_error,
               static_cast<double>(error_diagnostics.state_number),
               error_diagnostics.discontinuous_change_has_occurred ? 1.0 : 0.0,
-              error_diagnostics.lambda_00,
-              error_diagnostics.control_error_args.time_deriv_of_lambda_00,
-              error_diagnostics.horizon_00, error_diagnostics.dt_horizon_00,
+              lambda_00, dt_lambda_00, horizon_00, dt_horizon_00,
+              time_deriv_apparent_horizon.average_radius() / Y00,
               error_diagnostics.min_delta_r,
               error_diagnostics.min_relative_delta_r,
+              avg_delta_r, avg_relative_delta_r,
               error_diagnostics.control_error_args.control_error_delta_r,
               error_diagnostics.target_char_speed,
               error_diagnostics.control_error_args.min_char_speed,
@@ -280,6 +382,12 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
   }
 
  private:
+  TimescaleTuner smoother_tuner_{};
+  double crossing_time_decrease_factor_{};
+  Averager<DerivOrder> horizon_radius_averager_{};
+  // We don't need this yet but we may in the future
+  // Averager<DerivOrder> horizon_excision_radius_difference_averager_{};
+  Scalar<DataVector> radial_distance_{};
   size::Info info_{};
   intrp::ZeroCrossingPredictor char_speed_predictor_{};
   intrp::ZeroCrossingPredictor comoving_char_speed_predictor_{};
@@ -288,4 +396,5 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
   std::vector<std::string> legend_{};
   std::string subfile_name_{};
 };
-}  // namespace control_system::ControlErrors
+}  // namespace ControlErrors
+}  // namespace control_system

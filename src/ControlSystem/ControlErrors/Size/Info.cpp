@@ -63,10 +63,12 @@ void Info::set_all_but_state(const Info& info) {
 CrossingTimeInfo::CrossingTimeInfo(
     const std::optional<double>& char_speed_crossing_time,
     const std::optional<double>& comoving_char_speed_crossing_time,
-    const std::optional<double>& delta_radius_crossing_time)
+    const std::optional<double>& delta_radius_crossing_time,
+    const double crossing_time_decrease_factor_in)
     : t_char_speed(char_speed_crossing_time),
       t_comoving_char_speed(comoving_char_speed_crossing_time),
-      t_delta_radius(delta_radius_crossing_time) {
+      t_delta_radius(delta_radius_crossing_time),
+      crossing_time_decrease_factor(crossing_time_decrease_factor_in) {
   if (t_char_speed.value_or(-1.0) > 0.0) {
     if (t_delta_radius.value_or(-1.0) > 0.0 and
         t_delta_radius.value() <= t_char_speed.value()) {
