@@ -9,6 +9,7 @@
 #include "ControlSystem/CalculateMeasurementTimescales.hpp"
 #include "ControlSystem/Controller.hpp"
 #include "ControlSystem/ExpirationTimes.hpp"
+#include "ControlSystem/IsSize.hpp"
 #include "ControlSystem/Tags/IsActive.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
@@ -24,6 +25,8 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Printf.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/MakeString.hpp"
+#include "Utilities/StdHelpers.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
 namespace domain::Tags {
@@ -61,7 +64,14 @@ namespace control_system {
  * 3. Calculate the control error and update the averager (store the current
  *    measurement). If the averager doesn't have enough information to determine
  *    the derivatives of the control error, exit now (this usually only happens
- *    for the first couple measurements of a simulation).
+ *    for the first couple measurements of a simulation). If this is size
+ *    control, after we calculate the control error we check if a discontinuous
+ *    change has occurred (the internal `control_system::size::State` changed).
+ *    If not discontinuous change has occurred, then we do nothing. If one did
+ *    occur, we get a history of control errors from the
+ *    \link control_system::ControlErrors::Size Size control error \endlink and
+ *    use that to repopulate the averager history. Then after this we update the
+ *    averager with the current control error.
  * 4. If the `control_system::Tags::WriteDataToDisk` tag is set to `true`, write
  *    the time, function of time values, and the control error and its
  *    derivative to disk.
@@ -69,8 +79,14 @@ namespace control_system {
  *    measurement is equal to the number of measurements per update. If it's not
  *    time to update, exit now. Once we determine that it is time to update, set
  *    the current measurement back to 0.
- * 6. Update the damping timescales in the TimescaleTuner and compute the
- *    control signal using the control error and its derivatives.
+ * 6. Compute the control signal using the control error and its derivatives and
+ *    update the damping timescales in the TimescaleTuner. If this is size
+ *    control, we check for a suggested timescale from the \link
+ *    control_system::ControlErrors::Size Size control error \endlink. If one
+ *    is suggested and it is smaller than the current damping timescale, we set
+ *    this timescale in the TimescaleTuner to this suggested value. Otherwise,
+ *    we let the TimescaleTuner adjust the timescale. Regardless of whether a
+ *    timescale was suggested or not, we always reset the size control error.
  * 7. Calculate the new measurement timescale based off the updated damping
  *    timescales and the number of measurements per update.
  * 8. Determine the new expiration times for the
@@ -131,6 +147,35 @@ struct UpdateControlSystem {
           function_of_time_name, time, current_measurement, Q);
     }
 
+    if constexpr (size::is_size_v<ControlSystem>) {
+      if (control_error.discontinuous_change_has_occurred()) {
+        control_error.reset();
+        averager.clear();
+
+        const std::deque<std::pair<double, double>> control_error_history =
+            control_error.control_error_history();
+
+        if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
+          std::vector<double> history_times{};
+          for (const auto& history : control_error_history) {
+            history_times.push_back(history.first);
+          }
+          Parallel::printf(
+              "%s, time = %.16f: current measurement = %d, Discontinuous "
+              "change has occurred. Repopulating averager with control error "
+              "history from times: %s\n",
+              function_of_time_name, time, current_measurement, history_times);
+        }
+
+        for (const auto& [stored_time, stored_control_error] :
+             control_error_history) {
+          // Size 1 because it's size control
+          averager.update(stored_time, DataVector{1, stored_control_error},
+                          current_timescale);
+        }
+      }
+    }
+
     // Update the averager. We do this for every measurement because we still
     // want the averager to be up-to-date even if we aren't updating at this
     // time
@@ -142,8 +187,9 @@ struct UpdateControlSystem {
     if (not opt_avg_values.has_value()) {
       if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
         Parallel::printf(
-            "%s, time = %.16f: Averager does not have enough data.\n",
-            function_of_time_name, time);
+            "%s, time = %.16f: current measurement = %d, Averager does not "
+            "have enough data.\n",
+            function_of_time_name, time, current_measurement);
       }
       return;
     }
@@ -185,13 +231,43 @@ struct UpdateControlSystem {
     const double time_offset_0th =
         averager.using_average_0th_deriv_of_q() ? time_offset : 0.0;
 
-    tuner.update_timescale(q_and_dtq);
-
     // Calculate the control signal which will be used to update the highest
     // derivative of the FunctionOfTime
     const DataVector control_signal =
         controller(time, current_timescale, opt_avg_values.value(),
                    time_offset_0th, time_offset);
+
+    tuner.update_timescale(q_and_dtq);
+
+    if constexpr (size::is_size_v<ControlSystem>) {
+      const std::optional<double>& suggested_timescale =
+          control_error.get_suggested_timescale();
+      const double old_timescale = min(tuner.current_timescale());
+
+      if (suggested_timescale.value_or(
+              std::numeric_limits<double>::infinity()) < old_timescale) {
+        tuner.set_timescale_if_in_allowable_range(suggested_timescale.value());
+      }
+
+      if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
+        using ::operator<<;
+        Parallel::printf(
+            "%s, time = %.16f:\n"
+            " old_timescale = %.16f\n"
+            " suggested_timescale = %s\n"
+            " new_timescale = %.16f\n",
+            function_of_time_name, time, old_timescale,
+            MakeString{} << suggested_timescale,
+            min(tuner.current_timescale()));
+      }
+
+      // This reset call is ok because if there was a discontinuous change
+      // above after calculating the control error, the control error class was
+      // already reset so this reset won't do anything. If there wasn't a
+      // discontinuous change, then this will only affect the suggested
+      // timescale, which we always want to reset.
+      control_error.reset();
+    }
 
     // Begin step 7
     // Calculate new measurement timescales with updated damping timescales
