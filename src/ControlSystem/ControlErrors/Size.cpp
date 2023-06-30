@@ -53,7 +53,7 @@ Size<DerivOrder, Horizon>::Size(const int max_times,
                                      "DtFunctionOfTime",
                                      "HorizonCoef00",
                                      "AveragedDtHorizonCoef00",
-                                     "RawDtHorizonCoef00"
+                                     "RawDtHorizonCoef00",
                                      "MinDeltaR",
                                      "MinRelativeDeltaR",
                                      "ControlErrorDeltaR",
