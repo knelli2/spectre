@@ -148,7 +148,8 @@ struct CharSpeed : tt::ConformsTo<protocols::Measurement> {
         return "ControlSystemCharSpeedAh" + ::domain::name(Object);
       }
 
-      using temporal_id = ::Tags::TimeAndPrevious<1>;
+      using temporal_id =
+          ::Tags::TimeAndPrevious<Object == ::domain::ObjectLabel::A ? 1 : 2>;
 
       using vars_to_interpolate_to_target =
           ::ah::vars_to_interpolate_to_target<3, ::Frame::Distorted>;
