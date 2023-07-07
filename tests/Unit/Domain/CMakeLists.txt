@@ -33,6 +33,7 @@ set(LIBRARY_SOURCES
   Test_Tags.cpp
   Test_TagsCharacteristicSpeeds.cpp
   Test_TagsTimeDependent.cpp
+  Test_Triggers.cpp
 )
 
 add_subdirectory(Amr)
