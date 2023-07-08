@@ -12,12 +12,17 @@
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
+#include "Evolution/DgSubcell/GetTciDecision.hpp"
+#include "Evolution/DgSubcell/NeighborReconstructedFaceSolution.hpp"
+#include "Evolution/DgSubcell/NeighborTciDecision.hpp"
 #include "Evolution/DiscontinuousGalerkin/Limiters/Tags.hpp"
 #include "Evolution/Executables/GrMhd/GhValenciaDivClean/GhValenciaDivCleanBase.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/RegisterDerived.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/ConstraintDamping/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
 #include "Evolution/Systems/GrMhd/GhValenciaDivClean/BoundaryCorrections/RegisterDerived.hpp"
+#include "Evolution/Systems/GrMhd/GhValenciaDivClean/FiniteDifference/Factory.hpp"
+#include "Evolution/Systems/GrMhd/GhValenciaDivClean/FiniteDifference/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Systems/GrMhd/GhValenciaDivClean/TimeDerivativeTerms.hpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/Tags.hpp"
 #include "Evolution/VariableFixing/Tags.hpp"
@@ -54,9 +59,11 @@
 template <typename InitialData, typename... InterpolationTargetTags>
 struct EvolutionMetavars
     : public GhValenciaDivCleanTemplateBase<
-          EvolutionMetavars<InitialData, InterpolationTargetTags...>, false> {
-  static constexpr bool use_dg_subcell = false;
+          EvolutionMetavars<InitialData, InterpolationTargetTags...>, true> {
+  static constexpr bool use_dg_subcell = true;
 
+  using base = GhValenciaDivCleanTemplateBase<
+      EvolutionMetavars<InitialData, InterpolationTargetTags...>, true>;
   using defaults = GhValenciaDivCleanDefaults<use_dg_subcell>;
   static constexpr size_t volume_dim = defaults::volume_dim;
   using domain_frame = typename defaults::domain_frame;
@@ -130,19 +137,20 @@ struct EvolutionMetavars
       typename GhValenciaDivCleanTemplateBase<EvolutionMetavars,
                                               use_dg_subcell>::initial_data_tag;
 
-  using const_global_cache_tags = tmpl::flatten<tmpl::list<
-      gh::gauges::Tags::GaugeCondition,
-      tmpl::conditional_t<evolution::is_numeric_initial_data_v<initial_data>,
-                          tmpl::list<>, initial_data_tag>,
-      grmhd::ValenciaDivClean::Tags::ConstraintDampingParameter,
-      typename GhValenciaDivCleanTemplateBase<
-          EvolutionMetavars, use_dg_subcell>::equation_of_state_tag,
-      gh::ConstraintDamping::Tags::DampingFunctionGamma0<volume_dim,
-                                                         Frame::Grid>,
-      gh::ConstraintDamping::Tags::DampingFunctionGamma1<volume_dim,
-                                                         Frame::Grid>,
-      gh::ConstraintDamping::Tags::DampingFunctionGamma2<volume_dim,
-                                                         Frame::Grid>>>;
+  //   using const_global_cache_tags = tmpl::flatten<tmpl::list<
+  //       gh::gauges::Tags::GaugeCondition,
+  //       tmpl::conditional_t<evolution::is_numeric_initial_data_v<initial_data>,
+  //                           tmpl::list<>, initial_data_tag>,
+  //       grmhd::ValenciaDivClean::Tags::ConstraintDampingParameter,
+  //       typename GhValenciaDivCleanTemplateBase<
+  //           EvolutionMetavars, use_dg_subcell>::equation_of_state_tag,
+  //       gh::ConstraintDamping::Tags::DampingFunctionGamma0<volume_dim,
+  //                                                          Frame::Grid>,
+  //       gh::ConstraintDamping::Tags::DampingFunctionGamma1<volume_dim,
+  //                                                          Frame::Grid>,
+  //       gh::ConstraintDamping::Tags::DampingFunctionGamma2<volume_dim,
+  //                                                          Frame::Grid>>>;
+  using const_global_cache_tags = typename base::const_global_cache_tags;
 
   using observed_reduction_data_tags = observers::collect_reduction_data_tags<
       tmpl::at<typename factory_creation::factory_classes, Event>>;
@@ -168,12 +176,14 @@ struct EvolutionMetavars
 
 static const std::vector<void (*)()> charm_init_node_funcs{
     &setup_error_handling,
+    &setup_memory_allocation_failure_reporting,
     &disable_openblas_multithreading,
     &domain::creators::register_derived_with_charm,
     &domain::creators::time_dependence::register_derived_with_charm,
     &domain::FunctionsOfTime::register_derived_with_charm,
     &grmhd::GhValenciaDivClean::BoundaryCorrections::
         register_derived_with_charm,
+    &grmhd::GhValenciaDivClean::fd::register_derived_with_charm,
     &gh::ConstraintDamping::register_derived_with_charm,
     &EquationsOfState::register_derived_with_charm,
     &register_factory_classes_with_charm<metavariables>};

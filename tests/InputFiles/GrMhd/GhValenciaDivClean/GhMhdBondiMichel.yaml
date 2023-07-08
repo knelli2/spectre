@@ -48,12 +48,10 @@ DomainCreator:
     OuterRadius: 20.0
     Interior:
       ExciseWithBoundaryCondition:
-        ProductDirichletAnalyticAndDirichletAnalytic:
-          GeneralizedHarmonicDirichletAnalytic:
-            AnalyticPrescription: *InitialData
-          ValenciaDirichletAnalytic:
+        DirichletAnalytic:
+          # AnalyticPrescription: *InitialData
     InitialRefinement: 1
-    InitialGridPoints: 2
+    InitialGridPoints: 5
     UseEquiangularMap: true
     EquatorialCompression: None
     WhichWedges: All
@@ -61,10 +59,8 @@ DomainCreator:
     RadialDistribution: [Logarithmic]
     TimeDependentMaps: None
     OuterBoundaryCondition:
-      ProductDirichletAnalyticAndDirichletAnalytic:
-        GeneralizedHarmonicDirichletAnalytic:
-          AnalyticPrescription: *InitialData
-        ValenciaDirichletAnalytic:
+      DirichletAnalytic:
+        # AnalyticPrescription: *InitialData
 
 VariableFixing:
   FixConservatives:
@@ -80,11 +76,11 @@ VariableFixing:
     TransitionDensityCutoff: 1.0e-11
     MaxVelocityMagnitude: 1.0e-4
 
-Limiter:
-  Minmod:
-    Type: Muscl
-    TvbConstant: 50.0
-    DisableForDebugging: false
+# Limiter:
+#   Minmod:
+#     Type: Muscl
+#     TvbConstant: 50.0
+#     DisableForDebugging: false
 
 EvolutionSystem:
   ValenciaDivClean:
@@ -114,13 +110,45 @@ EvolutionSystem:
 
 
 SpatialDiscretization:
-  DiscontinuousGalerkin:
-    Formulation: StrongInertial
-    Quadrature: GaussLobatto
   BoundaryCorrection:
     ProductUpwindPenaltyAndRusanov:
       UpwindPenalty:
       Rusanov:
+  DiscontinuousGalerkin:
+    Formulation: StrongInertial
+    Quadrature: GaussLobatto
+    Subcell:
+      RdmpDelta0: 1.0e-7
+      RdmpEpsilon: 1.0e-3
+      PerssonExponent: 4.0
+      InitialData:
+        RdmpDelta0: 1.0e-7
+        RdmpEpsilon: 1.0e-3
+        PerssonExponent: 4.0
+      AlwaysUseSubcells: true
+      SubcellToDgReconstructionMethod: DimByDim
+      UseHalo: false
+      OnlyDgBlocksAndGroups: None
+      FiniteDifferenceDerivativeOrder: 2
+    TciOptions:
+      MinimumValueOfD: 1.0e-20
+      MinimumValueOfYe: 1.0e-20
+      MinimumValueOfTildeTau: 1.0e-50
+      AtmosphereDensity: 1.01e-15
+      SafetyFactorForB: 1.0e-12
+      MagneticFieldCutoff: DoNotCheckMagneticField
+  SubcellSolver:
+    Reconstructor:
+      MonotonisedCentralPrim:
+    FilterOptions:
+      SpacetimeDissipation: 0.1
+
+Filtering:
+  ExpFilter0:
+    Alpha: 36
+    HalfPower: 64
+    Enable: true
+    BlocksToFilter: All
 
 EventsAndTriggers:
   - Trigger:
@@ -200,7 +228,7 @@ EventsAndTriggers:
       Slabs:
         EvenlySpaced:
           Interval: 5
-          Offset: 3
+          Offset: 0
     Events:
       - AhA
   - Trigger:

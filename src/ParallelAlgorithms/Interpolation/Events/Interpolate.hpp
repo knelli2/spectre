@@ -30,6 +30,14 @@ template <size_t VolumeDim>
 struct Mesh;
 struct FunctionsOfTime;
 }  // namespace domain::Tags
+namespace Events::Tags {
+template <size_t VolumeDim>
+struct ObserverMesh;
+}
+namespace evolution::dg::subcell::Tags {
+template <size_t VolumeDim>
+struct ObserverMeshCompute;
+}
 /// \endcond
 
 namespace intrp {
@@ -60,11 +68,12 @@ class Interpolate<VolumeDim, InterpolationTargetTag,
 
   Interpolate() = default;
 
-  using compute_tags_for_observation_box = tmpl::list<>;
+  using compute_tags_for_observation_box =
+      tmpl::list<evolution::dg::subcell::Tags::ObserverMeshCompute<VolumeDim>>;
 
-  using argument_tags =
-      tmpl::list<typename InterpolationTargetTag::temporal_id,
-                 domain::Tags::Mesh<VolumeDim>, InterpolatorSourceVarTags...>;
+  using argument_tags = tmpl::list<typename InterpolationTargetTag::temporal_id,
+                                   ::Events::Tags::ObserverMesh<VolumeDim>,
+                                   InterpolatorSourceVarTags...>;
 
   template <typename Metavariables, typename ParallelComponent>
   void operator()(
