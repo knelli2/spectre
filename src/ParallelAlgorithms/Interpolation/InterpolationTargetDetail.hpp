@@ -671,7 +671,9 @@ void compute_dest_vars_from_source_vars(
       InterpolationTargetTag::compute_vars_to_interpolate::apply(
           dest_vars, source_vars, mesh, jac_grid_to_inertial,
           invjac_grid_to_inertial, jac_logical_to_grid, invjac_logical_to_grid,
-          inertial_mesh_velocity, tnsr::I<DataVector, 3, Frame::Grid>{});
+          inertial_mesh_velocity,
+          tnsr::I<DataVector, 3, Frame::Grid>{
+              DataVector{get<0, 0>(jac_logical_to_grid).size(), 0.0}});
     } else if constexpr (any_index_in_frame_v<SourceTags, Frame::Inertial> and
                          any_index_in_frame_v<typename InterpolationTargetTag::
                                                   vars_to_interpolate_to_target,
