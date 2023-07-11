@@ -36,6 +36,7 @@
 #include "Domain/Protocols/Metavariables.hpp"
 #include "Domain/Tags.hpp"
 #include "Domain/TagsCharacteristicSpeeds.hpp"
+#include "Domain/Triggers.hpp"
 #include "Evolution/Actions/RunEventsAndDenseTriggers.hpp"
 #include "Evolution/ComputeTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/Actions/ApplyBoundaryCorrections.hpp"
@@ -441,8 +442,10 @@ struct EvolutionMetavars {
         tmpl::pair<TimeSequence<std::uint64_t>,
                    TimeSequences::all_time_sequences<std::uint64_t>>,
         tmpl::pair<TimeStepper, TimeSteppers::time_steppers>,
-        tmpl::pair<Trigger, tmpl::append<Triggers::logical_triggers,
-                                         Triggers::time_triggers>>>;
+        tmpl::pair<
+            Trigger,
+            tmpl::append<Triggers::logical_triggers, Triggers::time_triggers,
+                         tmpl::list<Triggers::SeparationLessThan>>>>;
   };
 
   // A tmpl::list of tags to be added to the GlobalCache by the
