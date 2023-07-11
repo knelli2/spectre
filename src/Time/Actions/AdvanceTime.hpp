@@ -70,12 +70,13 @@ struct AdvanceTime {
     }
 
     db::mutate<Tags::TimeStepId, Tags::Next<Tags::TimeStepId>, Tags::TimeStep,
-               Tags::Time, Tags::Next<Tags::TimeStep>,
+               Tags::Time, Tags::Time2, Tags::Next<Tags::TimeStep>,
                Tags::AdaptiveSteppingDiagnostics>(
         [](const gsl::not_null<TimeStepId*> time_id,
            const gsl::not_null<TimeStepId*> next_time_id,
            const gsl::not_null<TimeDelta*> time_step,
            const gsl::not_null<double*> time,
+           const gsl::not_null<double*> time2,
            const gsl::not_null<TimeDelta*> next_time_step,
            const gsl::not_null<AdaptiveSteppingDiagnostics*> diags,
            const TimeStepper& time_stepper, const bool using_error_control) {
@@ -105,6 +106,7 @@ struct AdvanceTime {
           *next_time_step =
               time_step->with_slab(next_time_id->step_time().slab());
           *time = time_id->substep_time();
+          *time2 = time_id->substep_time();
         },
         make_not_null(&box), db::get<Tags::TimeStepper<>>(box),
         is_using_error_control);

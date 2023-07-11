@@ -122,6 +122,17 @@ struct Time : db::SimpleTag {
   }
 };
 
+/// Time2 because the interpolation framework is dumb
+struct Time2 : db::SimpleTag {
+  using type = double;
+  using option_tags = tmpl::list<OptionTags::InitialTime>;
+
+  static constexpr bool pass_metavariables = false;
+  static double create_from_options(const double initial_time) {
+    return initial_time;
+  }
+};
+
 /// @{
 /// \ingroup TimeGroup
 /// \brief Tag for the current and previous time as doubles

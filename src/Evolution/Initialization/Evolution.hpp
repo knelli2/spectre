@@ -72,9 +72,10 @@ struct TimeStepping {
   using mutable_global_cache_tags = tmpl::list<>;
 
   /// Tags for items fetched by the DataBox and passed to the apply function
-  using argument_tags = tmpl::list<::Tags::Time, Tags::InitialTimeDelta,
-                                   Tags::InitialSlabSize<UsingLts>,
-                                   ::Tags::TimeStepper<TimeStepperType>>;
+  using argument_tags =
+      tmpl::list<::Tags::Time, ::Tags::Time2, Tags::InitialTimeDelta,
+                 Tags::InitialSlabSize<UsingLts>,
+                 ::Tags::TimeStepper<TimeStepperType>>;
 
   /// Tags for simple DataBox items that are initialized from input file options
   using simple_tags_from_options = tmpl::flatten<
@@ -107,6 +108,7 @@ struct TimeStepping {
                     const gsl::not_null<TimeDelta*> time_step,
                     const gsl::not_null<TimeDelta*> next_time_step,
                     const double initial_time_value,
+                    const double /*initial_time_value2*/,
                     const double initial_dt_value,
                     const double initial_slab_size,
                     const LtsTimeStepper& time_stepper) {
