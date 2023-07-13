@@ -41,7 +41,8 @@ ErrorDiagnostics control_error(
     const tnsr::I<DataVector, 3, Frame>& frame_components_of_grid_shift,
     const tnsr::ii<DataVector, 3, Frame>& spatial_metric_on_excision_boundary,
     const tnsr::II<DataVector, 3, Frame>&
-        inverse_spatial_metric_on_excision_boundary) {
+        inverse_spatial_metric_on_excision_boundary,
+    const double crossing_time_decrease_factor) {
   const double Y00 = 0.25 * M_2_SQRTPI;
 
   // Define various quantities on excision boundary.
@@ -193,9 +194,9 @@ ErrorDiagnostics control_error(
       info,
       StateUpdateArgs{min_char_speed, min_comoving_char_speed,
                       control_error_delta_r},
-      CrossingTimeInfo{char_speed_crossing_time,
-                       comoving_char_speed_crossing_time,
-                       delta_radius_crossing_time});
+      CrossingTimeInfo{
+          char_speed_crossing_time, comoving_char_speed_crossing_time,
+          delta_radius_crossing_time, crossing_time_decrease_factor});
 
   const ControlErrorArgs control_error_args{
       min_char_speed, control_error_delta_r,
@@ -242,7 +243,8 @@ ErrorDiagnostics control_error(
       const tnsr::ii<DataVector, 3, FRAME(data)>&                              \
           spatial_metric_on_excision_boundary,                                 \
       const tnsr::II<DataVector, 3, FRAME(data)>&                              \
-          inverse_spatial_metric_on_excision_boundary);
+          inverse_spatial_metric_on_excision_boundary,                         \
+      const double);
 
 GENERATE_INSTANTIATIONS(INSTANTIATE, (::Frame::Distorted, ::Frame::Inertial))
 

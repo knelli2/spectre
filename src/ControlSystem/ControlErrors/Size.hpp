@@ -131,19 +131,33 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
     static int lower_bound() { return 3; }
   };
 
-  struct SmoothingOptions {
-    using type = std::array<double, 2>;
+  struct SmoothAvgTimescaleFraction {
+    using type = double;
     static constexpr Options::String help{
-        "Smoothing options. In order: average timescale fraction, damping "
-        "time."};
+        "Average timescale fraction for smoothing horizon measurements."};
   };
 
-  using options =
-      tmpl::list<MaxNumTimesForZeroCrossingPredictor, SmoothingOptions>;
+  struct CrossingTimeDecreaseFactor {
+    using type = double;
+    static constexpr Options::String help{
+        "Factor to multiple delta R crossing time in state DeltaR."};
+  };
+
+  struct SmootherTuner {
+    using type = TimescaleTuner;
+    static constexpr Options::String help{
+        "TimescaleTuner for smoothing horizon measurements."};
+  };
+
+  using options = tmpl::list<MaxNumTimesForZeroCrossingPredictor,
+                             SmoothAvgTimescaleFraction,
+                             CrossingTimeDecreaseFactor, SmootherTuner>;
   static constexpr Options::String help{
       "Computes the control error for size control. Will also write a "
       "diagnostics file if the control systems are allowed to write data to "
       "disk."};
+
+  Size() = default;
 
   /*!
    * \brief Initializes the `intrp::ZeroCrossingPredictor`s with the number of
@@ -158,8 +172,9 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
    * The smoothing options are defaulted to typical values that are used in BBH
    * simulations.
    */
-  Size(const int max_times = 3,
-       const std::array<double, 2>& smooth_options = std::array{0.25, 0.2});
+  Size(const int max_times, const double smooth_avg_timescale_frac,
+       const double crossing_time_decrease_factor,
+       TimescaleTuner smoother_tuner);
 
   /// Returns the internal `control_system::size::Info::suggested_time_scale`. A
   /// std::nullopt means that no timescale is suggested.
@@ -256,10 +271,11 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
     // is irrelevant. However, we divide by Y00 here to match SpEC exactly
     horizon_radius_averager_.update(time,
                                     {apparent_horizon.average_radius() / Y00},
-                                    {smooth_damp_timescale_});
+                                    smoother_tuner_.current_timescale());
 
     const std::optional<std::array<DataVector, DerivOrder + 1>>&
-        averaged_horizon_radius = horizon_radius_averager_(time);
+        averaged_horizon_radius_at_average_time =
+            horizon_radius_averager_(time);
 
     const auto map_lambda_and_deriv =
         functions_of_time.at(function_of_time_name)->func_and_deriv(time);
@@ -270,9 +286,31 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
     double horizon_00 = 1.0;
     double dt_horizon_00 = 0.0;
 
-    if (LIKELY(averaged_horizon_radius.has_value())) {
-      horizon_00 = averaged_horizon_radius.value()[0][0];
-      dt_horizon_00 = averaged_horizon_radius.value()[1][0];
+    // if (LIKELY(averaged_horizon_radius_at_average_time.has_value())) {
+    //   horizon_00 = averaged_horizon_radius_at_average_time.value()[0][0];
+    //   dt_horizon_00 = averaged_horizon_radius_at_average_time.value()[1][0];
+    // }
+    if (LIKELY(averaged_horizon_radius_at_average_time.has_value())) {
+      const double averaged_time = horizon_radius_averager_.average_time(time);
+      horizon_00 = averaged_horizon_radius_at_average_time.value()[0][0];
+      dt_horizon_00 = averaged_horizon_radius_at_average_time.value()[1][0];
+      const double d2t_horizon_00 =
+          averaged_horizon_radius_at_average_time.value()[2][0];
+
+      // Must account for time offset of averaged time. Do a simple Taylor
+      // series
+      const double time_diff = time - averaged_time;
+      horizon_00 += time_diff * dt_horizon_00;
+      dt_horizon_00 += 0.5 * square(time_diff) * d2t_horizon_00;
+
+      smoother_tuner_.update_timescale(
+          std::array{
+              DataVector{averaged_horizon_radius_at_average_time.value()[0][0]},
+              DataVector{
+                  averaged_horizon_radius_at_average_time.value()[1][0]}} -
+          std::array{
+              DataVector{apparent_horizon.coefficients()[0]},
+              DataVector{time_deriv_apparent_horizon.coefficients()[0]}});
     }
 
     // This is needed for every state
@@ -288,7 +326,7 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
         make_not_null(&delta_radius_predictor_), time, control_error_delta_r,
         dt_lambda_00, apparent_horizon, excision_surface, lapse,
         shifty_quantity, spatial_metric_on_excision,
-        inverse_spatial_metric_on_excision);
+        inverse_spatial_metric_on_excision, crossing_time_decrease_factor_);
 
     state_history_.store(time, info_, error_diagnostics.control_error_args);
 
@@ -328,7 +366,8 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
   }
 
  private:
-  double smooth_damp_timescale_{};
+  TimescaleTuner smoother_tuner_{};
+  double crossing_time_decrease_factor_{};
   Averager<DerivOrder> horizon_radius_averager_{};
   // We don't need this yet but we may in the future
   // Averager<DerivOrder> horizon_excision_radius_difference_averager_{};

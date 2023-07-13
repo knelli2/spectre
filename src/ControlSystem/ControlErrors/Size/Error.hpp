@@ -140,6 +140,7 @@ ErrorDiagnostics control_error(
     const tnsr::I<DataVector, 3, Frame>& frame_components_of_grid_shift,
     const tnsr::ii<DataVector, 3, Frame>& spatial_metric_on_excision_boundary,
     const tnsr::II<DataVector, 3, Frame>&
-        inverse_spatial_metric_on_excision_boundary);
+        inverse_spatial_metric_on_excision_boundary,
+    const double crossing_time_decrease_factor);
 
 }  // namespace control_system::size

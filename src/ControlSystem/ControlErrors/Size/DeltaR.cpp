@@ -77,7 +77,13 @@ std::string DeltaR::update(const gsl::not_null<Info*> info,
     ss << " Staying in DeltaR.\n";
     ss << " Suggested timescale = " << info->suggested_time_scale;
   } else if (delta_radius_is_in_danger) {
-    info->suggested_time_scale = crossing_time_info.t_delta_radius;
+    if (crossing_time_info.t_delta_radius.has_value()) {
+      info->suggested_time_scale =
+          crossing_time_info.crossing_time_decrease_factor *
+          crossing_time_info.t_delta_radius.value();
+    } else {
+      info->suggested_time_scale = crossing_time_info.t_delta_radius;
+    }
     ss << "Current state DeltaR. Delta radius in danger. Staying in DeltaR.\n";
     ss << " Suggested timescale = " << info->suggested_time_scale;
   } else if (update_args.min_comoving_char_speed > 0.0 and

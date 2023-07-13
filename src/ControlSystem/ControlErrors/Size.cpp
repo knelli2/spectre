@@ -35,10 +35,17 @@ double control_error_delta_r(const double horizon_00,
 namespace ControlErrors {
 template <size_t DerivOrder, ::domain::ObjectLabel Horizon>
 Size<DerivOrder, Horizon>::Size(const int max_times,
-                                const std::array<double, 2>& smooth_options)
-    : smooth_damp_timescale_(smooth_options[1]) {
+                                const double smooth_avg_timescale_frac,
+                                const double crossing_time_decrease_factor,
+                                TimescaleTuner smoother_tuner)
+    : smoother_tuner_{std::move(smoother_tuner)},
+      crossing_time_decrease_factor_(crossing_time_decrease_factor) {
+  if (not smoother_tuner_.timescales_have_been_set()) {
+    smoother_tuner_.resize_timescales(1);
+  }
   const auto max_times_size_t = static_cast<size_t>(max_times);
-  horizon_radius_averager_ = Averager<DerivOrder>{smooth_options[0], true};
+  horizon_radius_averager_ =
+      Averager<DerivOrder>{smooth_avg_timescale_frac, true};
   info_.state = std::make_unique<size::States::Initial>();
   char_speed_predictor_ = intrp::ZeroCrossingPredictor{3, max_times_size_t};
   comoving_char_speed_predictor_ =
@@ -97,7 +104,8 @@ Size<DerivOrder, Horizon>::control_error_history() const {
 
 template <size_t DerivOrder, ::domain::ObjectLabel Horizon>
 void Size<DerivOrder, Horizon>::pup(PUP::er& p) {
-  p | smooth_damp_timescale_;
+  p | smoother_tuner_;
+  p | crossing_time_decrease_factor_;
   p | horizon_radius_averager_;
   // p | horizon_excision_radius_difference_averager_;
   p | radial_distance_;

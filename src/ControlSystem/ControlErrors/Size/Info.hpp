@@ -65,7 +65,8 @@ struct CrossingTimeInfo {
   CrossingTimeInfo(
       const std::optional<double>& char_speed_crossing_time,
       const std::optional<double>& comoving_char_speed_crossing_time,
-      const std::optional<double>& delta_radius_crossing_time);
+      const std::optional<double>& delta_radius_crossing_time,
+      const double crossing_time_decrease_factor_in);
   /// t_char_speed is the time (relative to the current time) when the
   /// minimum characteristic speed is predicted to cross zero (or nullopt if
   /// the minimum characteristic speed is increasing).
@@ -84,5 +85,6 @@ struct CrossingTimeInfo {
   /// expected to cross zero soon.
   bool char_speed_will_hit_zero_first{false};
   bool horizon_will_hit_excision_boundary_first{false};
+  double crossing_time_decrease_factor;
 };
 }  // namespace control_system::size
