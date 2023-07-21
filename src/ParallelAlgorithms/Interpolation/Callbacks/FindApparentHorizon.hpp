@@ -374,7 +374,7 @@ struct FindApparentHorizon
                   previous_strahlkorpers) {
             // This is the number of previous strahlkorpers that we
             // keep around.
-            const size_t num_previous_strahlkorpers = 3;
+            const size_t num_previous_strahlkorpers = 4;
 
             // Save a new previous_strahlkorper.
             previous_strahlkorpers->emplace_front(
