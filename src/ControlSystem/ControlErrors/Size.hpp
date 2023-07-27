@@ -44,7 +44,22 @@ struct Distorted;
 }  // namespace Frame
 /// \endcond
 
-namespace control_system::ControlErrors {
+namespace control_system {
+namespace size {
+/*!
+ * \brief Function that computes the control error for
+ * `control_system::size::States::DeltaR`.
+ *
+ * This is helpful to have calculated separately because other control errors
+ * may make use of this quantity. This is Q in Eq. 96 in \cite Hemberger2012jz.
+ */
+double control_error_delta_r(const double horizon_00,
+                             const double dt_horizon_00, const double lambda_00,
+                             const double dt_lambda_00,
+                             const double grid_frame_excision_sphere_radius);
+}  // namespace size
+
+namespace ControlErrors {
 /*!
  * \brief Control error in the for the \f$l=0\f$ component of the
  * `domain::CoordinateMaps::TimeDependent::Shape` map.
@@ -288,4 +303,5 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
   std::vector<std::string> legend_{};
   std::string subfile_name_{};
 };
-}  // namespace control_system::ControlErrors
+}  // namespace ControlErrors
+}  // namespace control_system
