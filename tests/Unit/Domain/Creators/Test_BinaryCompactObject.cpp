@@ -230,6 +230,9 @@ void test_connectivity() {
     CHECK(binary_compact_object.block_groups() == expected_block_groups);
     std::unordered_map<std::string, ExcisionSphere<3>>
         expected_excision_spheres{};
+    const auto& blocks = domain.blocks();
+    const auto& final_block_grid_to_inertial_map =
+        blocks[blocks.size() - 1].moving_mesh_grid_to_inertial_map();
     if (excise_interiorA) {
       expected_excision_spheres.emplace(
           "ExcisionSphereA",
@@ -242,6 +245,9 @@ void test_connectivity() {
                {3, Direction<3>::lower_zeta()},
                {4, Direction<3>::lower_zeta()},
                {5, Direction<3>::lower_zeta()}}});
+      expected_excision_spheres.at("ExcisionSphereA")
+          .inject_time_dependent_maps(
+              final_block_grid_to_inertial_map.get_clone());
     }
     if (excise_interiorB) {
       expected_excision_spheres.emplace(
@@ -255,6 +261,9 @@ void test_connectivity() {
                {15, Direction<3>::lower_zeta()},
                {16, Direction<3>::lower_zeta()},
                {17, Direction<3>::lower_zeta()}}});
+      expected_excision_spheres.at("ExcisionSphereB")
+          .inject_time_dependent_maps(
+              final_block_grid_to_inertial_map.get_clone());
     }
     CHECK(domain.excision_spheres() == expected_excision_spheres);
 
