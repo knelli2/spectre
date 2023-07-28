@@ -339,9 +339,11 @@ void test_construction(const CylBCO& creator,
   const auto& excision_sphere_a =
       domain.excision_spheres().at("ExcisionSphereA");
   CHECK(excision_sphere_a.radius() == inner_radius_objectA);
+  CHECK(excision_sphere_a.moving_mesh_grid_to_inertial_map() != nullptr);
   const auto& excision_sphere_b =
       domain.excision_spheres().at("ExcisionSphereB");
   CHECK(excision_sphere_b.radius() == inner_radius_objectB);
+  CHECK(excision_sphere_b.moving_mesh_grid_to_inertial_map() != nullptr);
   for (size_t i = 0; i < 3; ++i) {
     CHECK(excision_sphere_a.center().get(i) == center_objectA.at(i));
     CHECK(excision_sphere_b.center().get(i) == center_objectB.at(i));
