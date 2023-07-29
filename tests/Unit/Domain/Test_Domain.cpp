@@ -109,7 +109,9 @@ void test_1d_domains() {
                                            CoordinateMaps::Affine>>(
                 make_coordinate_map<Frame::BlockLogical, Frame::Inertial>(
                     CoordinateMaps::Affine{-1., 1., 2., 0.}))),
-        {}, {"Left", "Right"}, {{"All", {"Left", "Right"}}});
+        {{"ExcisionSphere",
+          ExcisionSphere<1>{1.0, tnsr::I<double, 1>{0.0}, {}}}},
+        {"Left", "Right"}, {{"All", {"Left", "Right"}}});
     CHECK_FALSE(domain_no_corners.is_time_dependent());
     CHECK(domain_no_corners.blocks()[0].name() == "Left");
     CHECK(domain_no_corners.blocks()[1].name() == "Right");
@@ -193,7 +195,28 @@ void test_1d_domains() {
             Translation{"Translation1"}),
         translation_grid_to_distorted_map.get_clone(),
         translation_distorted_to_inertial_map.get_clone());
+    domain_no_corners.inject_time_dependent_map_for_excision_sphere(
+        "ExcisionSphere",
+        make_coordinate_map_base<Frame::Grid, Frame::Inertial>(
+            Translation{"Translation0"}));
+    CHECK_THROWS_WITH(
+        domain_no_corners.inject_time_dependent_map_for_excision_sphere(
+            "NonExistentExcisionSphere",
+            make_coordinate_map_base<Frame::Grid, Frame::Inertial>(
+                Translation{"Translation0"})),
+        Catch::Contains("Cannot inject time dependent maps into excision "
+                        "sphere 'NonExistentExcisionSphere'"));
     CHECK(domain_no_corners.is_time_dependent());
+
+    // Excision spheres
+    const auto& excision_spheres_corners =
+        domain_from_corners.excision_spheres();
+    CHECK(excision_spheres_corners.empty());
+    const auto& excision_spheres_no_corners =
+        domain_no_corners.excision_spheres();
+    CHECK(excision_spheres_no_corners.size() == 1);
+    CHECK(excision_spheres_no_corners.count("ExcisionSphere") == 1);
+    CHECK(excision_spheres_no_corners.at("ExcisionSphere").is_time_dependent());
 
     const auto expected_logical_to_grid_maps =
         make_vector(make_coordinate_map_base<Frame::BlockLogical, Frame::Grid>(
