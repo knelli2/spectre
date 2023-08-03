@@ -24,4 +24,4 @@ furo
 myst-parser
 # Code formatting. The required version is locked in the pyproject.toml config.
 black == 23.3.0
-isort ~= 5.12
+isort ~= 5.11
