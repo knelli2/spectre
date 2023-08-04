@@ -185,6 +185,20 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+template <size_t Index>
+struct TimeAndPreviousCompute : Tags::TimeAndPrevious<Index>, db::ComputeTag {
+  using argument_tags = tmpl::list<::Tags::Time>;
+  using base = Tags::TimeAndPrevious<Index>;
+  using return_type = LinkedMessageId<double>;
+
+  static void function(
+      gsl::not_null<LinkedMessageId<double>*> time_and_previous,
+      const double time) {
+    time_and_previous->id = time;
+    time_and_previous->previous = std::nullopt;
+  }
+};
+
 // Note: this executable does not use GeneralizedHarmonicBase.hpp, because
 // using it would require a number of changes in GeneralizedHarmonicBase.hpp
 // that would apply only when evolving binary black holes. This would
@@ -218,13 +232,14 @@ struct EvolutionMetavars {
   template <::domain::ObjectLabel Horizon, typename Frame>
   struct Ah : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
     // Offset index by 10 to avoid clashes with control system horizon finds
-    using temporal_id =
-        ::Tags::TimeAndPrevious<static_cast<size_t>(Horizon) + 10>;
+    static constexpr size_t index = static_cast<size_t>(Horizon) + 10;
+    using temporal_id = ::Tags::TimeAndPrevious<index>;
     using vars_to_interpolate_to_target =
         ::ah::vars_to_interpolate_to_target<volume_dim, Frame>;
     using compute_vars_to_interpolate = ah::ComputeHorizonVolumeQuantities;
     using tags_to_observe = ::ah::tags_for_observing<Frame>;
     using surface_tags_to_observe = ::ah::surface_tags_for_observing;
+    using compute_items_on_source = tmpl::list<::TimeAndPreviousCompute<index>>;
     using compute_items_on_target =
         ::ah::compute_items_on_target<volume_dim, Frame>;
     using compute_target_points =
@@ -507,17 +522,11 @@ struct EvolutionMetavars {
                                                 use_control_systems>,
           Initialization::TimeStepperHistory<EvolutionMetavars>>,
       Initialization::Actions::NonconservativeSystem<system>,
-      Initialization::Actions::AddComputeTags<
-          tmpl::list<::Tags::DerivCompute<typename system::variables_tag,
-                                          ::domain::Tags::InverseJacobian<
-                                              volume_dim, Frame::ElementLogical,
-                                              Frame::Inertial>,
-                                          typename system::gradient_variables>,
-                     // For observation horizon finds. The index member is
-                     // specific to TimeAndPrevious
-                     ::Tags::TimeAndPreviousCompute<AhA::temporal_id::index>,
-                     ::Tags::TimeAndPreviousCompute<AhB::temporal_id::index>,
-                     ::Tags::TimeAndPreviousCompute<AhC::temporal_id::index>>>,
+      Initialization::Actions::AddComputeTags<tmpl::list<::Tags::DerivCompute<
+          typename system::variables_tag,
+          ::domain::Tags::InverseJacobian<volume_dim, Frame::ElementLogical,
+                                          Frame::Inertial>,
+          typename system::gradient_variables>>>,
       gh::Actions::InitializeGhAnd3Plus1Variables<volume_dim>,
       Initialization::Actions::AddComputeTags<
           tmpl::push_back<StepChoosers::step_chooser_compute_tags<
