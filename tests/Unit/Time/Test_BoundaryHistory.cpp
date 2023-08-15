@@ -245,6 +245,22 @@ void test_boundary_history() {
                                              << "Data: (3)\n";
   CHECK(get_output(history) == expected_output);
 
+  std::string expected_pretty_output = MakeString{}
+                                       << " Integration order: 2\n"
+                                       << "  Local Data:\n"
+                                       << "   Time: -1.0000000000000000e+00\n"
+                                       << "   Time: 0.0000000000000000e+00\n"
+                                       << "   Time: 1.0000000000000000e+00\n"
+                                       << "   Time: 2.0000000000000000e+00\n"
+                                       << "  Remote Data:\n"
+                                       << "   Time: -2.0000000000000000e+00\n"
+                                       << "   Time: -1.0000000000000000e+00\n"
+                                       << "   Time: 0.0000000000000000e+00\n"
+                                       << "   Time: 1.0000000000000000e+00\n"
+                                       << "   Time: 2.0000000000000000e+00\n"
+                                       << "   Time: 3.0000000000000000e+00\n";
+  CHECK(history.pretty_print_without_data(1_st) == expected_pretty_output);
+
   // We check this later, to make sure we don't somehow depend on the
   // original object.
   auto copy = serialize_and_deserialize(history);

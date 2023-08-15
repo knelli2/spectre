@@ -296,6 +296,8 @@ class BoundaryHistory {
 
   std::ostream& print(std::ostream& os) const;
 
+  std::string pretty_print_without_data(const size_t padding_size) const;
+
  private:
   template <size_t Side>
   void mark_unneeded(const iterator& first_needed);
@@ -471,6 +473,27 @@ std::ostream& BoundaryHistory<LocalVars, RemoteVars, CouplingResult>::print(
     os << "Data: " << *remote_value_it << "\n";
   }
   return os;
+}
+
+template <typename LocalVars, typename RemoteVars, typename CouplingResult>
+std::string BoundaryHistory<LocalVars, RemoteVars, CouplingResult>::
+    pretty_print_without_data(const size_t padding_size) const {
+  std::stringstream ss{};
+  ss << std::scientific << std::setprecision(16);
+  const std::string pad(padding_size, ' ');
+  using ::operator<<;
+  ss << pad << "Integration order: " << integration_order_ << "\n";
+  ss << pad << " Local Data:\n";
+  for (auto local_time_it = local_data_.first.begin();
+       local_time_it != local_data_.first.end(); ++local_time_it) {
+    ss << pad << "  Time: " << local_time_it->value() << "\n";
+  }
+  ss << pad << " Remote Data:\n";
+  for (auto remote_time_it = remote_data_.first.begin();
+       remote_time_it != remote_data_.first.end(); ++remote_time_it) {
+    ss << pad << "  Time: " << remote_time_it->value() << "\n";
+  }
+  return ss.str();
 }
 
 template <typename LocalVars, typename RemoteVars, typename CouplingResult>
