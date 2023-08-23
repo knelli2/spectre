@@ -235,8 +235,9 @@ void test_functions_of_time_tag() {
   const double min_expiration_time =
       std::min(expiration_controlled_2, expiration_controlled_3);
 
+  // 1 isn't active
   CHECK(functions_of_time.at("Controlled1")->time_bounds()[1] ==
-        min_expiration_time);
+        std::numeric_limits<double>::infinity());
   CHECK(functions_of_time.at("Controlled2")->time_bounds()[1] ==
         min_expiration_time);
   CHECK(functions_of_time.at("Controlled3")->time_bounds()[1] ==

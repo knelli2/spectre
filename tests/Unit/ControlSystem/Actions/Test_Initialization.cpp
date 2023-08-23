@@ -14,6 +14,7 @@
 #include "ControlSystem/Actions/Initialization.hpp"
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/Component.hpp"
+#include "ControlSystem/Tags/IsActive.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "ControlSystem/TimescaleTuner.hpp"
@@ -68,10 +69,8 @@ struct MockControlComponent {
 
   using simple_tags = tmpl::list<>;
 
-  using const_global_cache_tags =
-      tmpl::list<control_system::Tags::SystemToCombinedNames>;
-  using mutable_global_cache_tags =
-      tmpl::list<control_system::Tags::MeasurementTimescales>;
+  using const_global_cache_tags = tmpl::list<>;
+  using mutable_global_cache_tags = tmpl::list<>;
 
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       Parallel::Phase::Initialization,
@@ -82,7 +81,8 @@ struct MockMetavars {
   using mutable_global_cache_tags =
       tmpl::list<control_system::Tags::MeasurementTimescales>;
   using const_global_cache_tags =
-      tmpl::list<control_system::Tags::SystemToCombinedNames>;
+      tmpl::list<control_system::Tags::SystemToCombinedNames,
+                 control_system::Tags::IsActiveMap>;
   using component_list = tmpl::transform<
       tmpl::list<mock_control_sys_1, mock_control_sys_2, mock_control_sys_3>,
       tmpl::bind<MockControlComponent, tmpl::pin<MockMetavars>, tmpl::_1>>;
@@ -125,12 +125,16 @@ SPECTRE_TEST_CASE("Unit.ControlSystem.Initialization",
   system_to_combined_names["LabelA"] = "LabelALabelB";
   system_to_combined_names["LabelB"] = "LabelALabelB";
   system_to_combined_names["LabelC"] = "LabelC";
+  std::unordered_map<std::string, bool> is_active_map{};
+  is_active_map["LabelA"] = true;
+  is_active_map["LabelB"] = false;
+  is_active_map["LabelC"] = true;
 
   std::unordered_map<std::string, control_system::UpdateAggregator>
       aggregators{};
 
   Parallel::GlobalCache<MockMetavars> cache{
-      {std::move(system_to_combined_names)},
+      {std::move(system_to_combined_names), std::move(is_active_map)},
       {std::move(measurement_timescales)}};
 
   const Parallel::GlobalCache<MockMetavars>& cache_reference = cache;

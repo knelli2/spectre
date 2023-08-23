@@ -850,8 +850,8 @@ struct SystemHelper {
           control_system_names.insert(system::name());
         });
 
-    update_aggregators[combined_name_] =
-        control_system::UpdateAggregator{std::move(control_system_names)};
+    update_aggregators[combined_name_] = control_system::UpdateAggregator{
+        combined_name_, std::move(control_system_names)};
 
     tmpl::for_each<control_systems>([this, &options,
                                      &update_aggregators](auto system_v) {

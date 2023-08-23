@@ -90,13 +90,14 @@ struct UpdateAggregator {
   UpdateAggregator() = default;
 
   /*!
-   * \brief Construct a new UpdateAggregator using a set of control system
-   * names.
+   * \brief Construct a new UpdateAggregator using a set of active control
+   * system names and the combined name for the measurement.
    *
    * It is expected that all the control systems in this set use the same
    * `control_system::protocols::Measurement`.
    */
-  UpdateAggregator(std::unordered_set<std::string> control_system_names);
+  UpdateAggregator(std::string combined_name,
+                   std::unordered_set<std::string> active_control_system_names);
 
   /*!
    * \brief Inserts and stores information for one of the control systems that
@@ -167,7 +168,7 @@ struct UpdateAggregator {
   std::unordered_map<std::string, std::pair<std::pair<DataVector, double>,
                                             std::pair<double, double>>>
       expiration_times_{};
-  std::unordered_set<std::string> individual_names_{};
+  std::unordered_set<std::string> active_names_{};
   std::string combined_name_{};
 };
 

@@ -52,18 +52,10 @@ void ResetFunctionOfTimeExpirationTime::apply(
 }
 
 UpdateAggregator::UpdateAggregator(
-    std::unordered_set<std::string> control_system_names)
-    : individual_names_(std::move(control_system_names)),
-      combined_name_([this]() {
-        std::vector<std::string> sorted_names(individual_names_.begin(),
-                                              individual_names_.end());
-        alg::sort(sorted_names);
-        std::string combined_name{};
-        for (const std::string& name : sorted_names) {
-          combined_name += name;
-        }
-        return combined_name;
-      }()) {}
+    std::string combined_name,
+    std::unordered_set<std::string> active_control_system_names)
+    : active_names_(std::move(active_control_system_names)),
+      combined_name_(std::move(combined_name)) {}
 
 void UpdateAggregator::insert(const std::string& control_system_name,
                               const DataVector& new_measurement_timescale,
@@ -73,6 +65,10 @@ void UpdateAggregator::insert(const std::string& control_system_name,
   ASSERT(expiration_times_.count(control_system_name) == 0,
          "Already received expiration time data for control system '"
              << control_system_name << "'.");
+  ASSERT(active_names_.count(control_system_name) == 1,
+         "Received expiration time data for a non-active control system '"
+             << control_system_name << "'. Active control systems are "
+             << active_names_);
 
   expiration_times_[control_system_name] = std::make_pair(
       std::make_pair(std::move(control_signal), new_fot_expiration_time),
@@ -82,7 +78,7 @@ void UpdateAggregator::insert(const std::string& control_system_name,
 
 bool UpdateAggregator::is_ready() const {
   // Short circuit if one name isn't ready
-  for (const std::string& control_system_name : individual_names_) {
+  for (const std::string& control_system_name : active_names_) {
     if (expiration_times_.count(control_system_name) != 1) {
       return false;
     }
@@ -103,13 +99,13 @@ UpdateAggregator::combined_fot_expiration_times() const {
   std::unordered_map<std::string, std::pair<DataVector, double>> result{};
 
   double min_expiration_time = std::numeric_limits<double>::infinity();
-  for (const auto& control_system_name : individual_names_) {
+  for (const auto& control_system_name : active_names_) {
     min_expiration_time =
         std::min(min_expiration_time,
                  expiration_times_.at(control_system_name).first.second);
   }
 
-  for (const auto& control_system_name : individual_names_) {
+  for (const auto& control_system_name : active_names_) {
     result[control_system_name] =
         expiration_times_.at(control_system_name).first;
     result[control_system_name].second = min_expiration_time;
@@ -127,7 +123,7 @@ UpdateAggregator::combined_measurement_expiration_time() {
   double min_measurement_timescale = std::numeric_limits<double>::infinity();
   double min_expiration_time = std::numeric_limits<double>::infinity();
 
-  for (const auto& control_system_name : individual_names_) {
+  for (const auto& control_system_name : active_names_) {
     min_measurement_timescale =
         std::min(min_measurement_timescale,
                  expiration_times_[control_system_name].second.first);
@@ -143,7 +139,7 @@ UpdateAggregator::combined_measurement_expiration_time() {
 
 void UpdateAggregator::pup(PUP::er& p) {
   p | expiration_times_;
-  p | individual_names_;
+  p | active_names_;
   p | combined_name_;
 }
 }  // namespace control_system

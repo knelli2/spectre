@@ -186,27 +186,50 @@ void test_mutates() {
 }
 
 void test_update_aggregator() {
+  // Notice the combined name has an extra state that isn't active
+  const std::string combined_name{
+      "AlaskaCaliforniaFloridaIllinoisTexasWisconsin"};
   std::unordered_set<std::string> names{"Illinois", "California", "Wisconsin",
                                         "Florida", "Texas"};
-  std::vector<std::string> sorted_names(names.begin(), names.end());
-  alg::sort(sorted_names);
+  std::unordered_map<std::string, DataVector> signals{};
+  signals["Wisconsin"] = DataVector{5.0};
+  signals["Texas"] = DataVector{4.0};
+  signals["Illinois"] = DataVector{3.0};
+  signals["Florida"] = DataVector{2.0};
+  signals["California"] = DataVector{1.0};
+  auto expected_signals = signals;
 
-  control_system::UpdateAggregator unserialized_aggregator{names};
+  control_system::UpdateAggregator unserialized_aggregator{combined_name,
+                                                           names};
   control_system::UpdateAggregator aggregator =
       serialize_and_deserialize(unserialized_aggregator);
 
-  CHECK(aggregator.combined_name() ==
-        "CaliforniaFloridaIllinoisTexasWisconsin");
+  CHECK(aggregator.combined_name() == combined_name);
 
-  aggregator.insert("Wisconsin", DataVector{1.0}, 1.0, DataVector{5.0}, 5.0);
+  aggregator.insert("Wisconsin", DataVector{1.0}, 1.0,
+                    std::move(signals.at("Wisconsin")), 5.0);
   CHECK_FALSE(aggregator.is_ready());
-  aggregator.insert("Texas", DataVector{2.0}, 2.0, DataVector{4.0}, 4.0);
+  aggregator.insert("Texas", DataVector{2.0}, 2.0,
+                    std::move(signals.at("Texas")), 4.0);
   CHECK_FALSE(aggregator.is_ready());
-  aggregator.insert("Illinois", DataVector{3.0}, 3.0, DataVector{3.0}, 3.0);
+  aggregator.insert("Illinois", DataVector{3.0}, 3.0,
+                    std::move(signals.at("Illinois")), 3.0);
   CHECK_FALSE(aggregator.is_ready());
-  aggregator.insert("Florida", DataVector{4.0}, 4.0, DataVector{2.0}, 2.0);
+  aggregator.insert("Florida", DataVector{4.0}, 4.0,
+                    std::move(signals.at("Florida")), 2.0);
   CHECK_FALSE(aggregator.is_ready());
-  aggregator.insert("California", DataVector{5.0}, 5.0, DataVector{1.0}, 1.0);
+#ifdef SPECTRE_DEBUG
+  CHECK_THROWS_WITH(
+      aggregator.insert("Florida", DataVector{}, 1.0, DataVector{}, 1.0),
+      Catch::Matchers::ContainsSubstring("Already received expiration time "
+                                         "data for control system 'Florida'"));
+  CHECK_THROWS_WITH(
+      aggregator.insert("Alaska", DataVector{}, 1.0, DataVector{}, 1.0),
+      Catch::Matchers::ContainsSubstring("Received expiration time data for a "
+                                         "non-active control system 'Alaska'"));
+#endif
+  aggregator.insert("California", DataVector{5.0}, 5.0,
+                    std::move(signals.at("California")), 1.0);
   CHECK(aggregator.is_ready());
 
   const std::unordered_map<std::string, std::pair<DataVector, double>>
@@ -216,11 +239,11 @@ void test_update_aggregator() {
       aggregator.combined_measurement_expiration_time();
   CHECK_FALSE(aggregator.is_ready());
 
-  CHECK(combined_fot.size() == sorted_names.size());
-  for (size_t i = 0; i < sorted_names.size(); i++) {
-    CHECK(combined_fot.count(sorted_names[i]) == 1);
-    CHECK(combined_fot.at(sorted_names[i]) ==
-          std::make_pair(DataVector{double(i + 1)}, 1.0));
+  CHECK(combined_fot.size() == names.size());
+  for (const auto& name : names) {
+    CAPTURE(name);
+    CHECK(combined_fot.count(name) == 1);
+    CHECK(combined_fot.at(name) == std::make_pair(expected_signals[name], 1.0));
   }
 
   CHECK(combined_measurements == std::make_pair(1.0, 1.0));
@@ -280,8 +303,8 @@ void test_aggregate_update_action() {
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       expected_measurement_map = clone_unique_ptrs(measurement_map);
 
-  control_system::UpdateAggregator aggregator13{{"FoT1", "FoT3"}};
-  control_system::UpdateAggregator aggregator2{{"FoT2"}};
+  control_system::UpdateAggregator aggregator13{"FoT1FoT3", {"FoT1", "FoT3"}};
+  control_system::UpdateAggregator aggregator2{"FoT2", {"FoT2"}};
   std::unordered_map<std::string, control_system::UpdateAggregator>
       aggregators{};
   aggregators["FoT1FoT3"] = aggregator13;

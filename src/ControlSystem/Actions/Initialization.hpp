@@ -125,6 +125,9 @@ struct Initialize {
     averager->assign_time_between_measurements(measurement_timescale);
     *current_number_of_measurements = 0;
 
+    const std::unordered_map<std::string, bool> is_active_map =
+        Parallel::get<control_system::Tags::IsActiveMap>(*cache);
+
     std::unordered_map<std::string, std::unordered_set<std::string>>
         combined_to_system_names{};
     for (const auto& [control_system_name, combined_name] :
@@ -133,13 +136,16 @@ struct Initialize {
         combined_to_system_names[combined_name];
       }
 
-      combined_to_system_names.at(combined_name).insert(control_system_name);
+      // Only add active control systems
+      if (is_active_map.at(control_system_name)) {
+        combined_to_system_names.at(combined_name).insert(control_system_name);
+      }
     }
 
     for (const auto& [combined_name, control_system_names] :
          combined_to_system_names) {
-      (*update_aggregators)[combined_name] =
-          control_system::UpdateAggregator{std::move(control_system_names)};
+      (*update_aggregators)[combined_name] = control_system::UpdateAggregator{
+          combined_name, std::move(control_system_names)};
     }
   }
 };
