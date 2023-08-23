@@ -80,12 +80,14 @@ void test_shape_control(
   auto grid_center_B = domain.excision_spheres().at("ExcisionSphereB").center();
 
   const auto& init_shape_tuple = system_helper->template init_tuple<system>();
+  auto system_to_combined_names = system_helper->system_to_combined_names();
 
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<Metavars>;
   // Excision centers aren't used so their values can be anything
   MockRuntimeSystem runner{
       {"DummyFileName", std::move(domain), 4, false, ::Verbosity::Silent,
-       std::move(grid_center_A), std::move(grid_center_B)},
+       std::move(grid_center_A), std::move(grid_center_B),
+       std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<shape_component>(

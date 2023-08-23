@@ -105,6 +105,7 @@ void test_translation_control_system() {
       system_helper.initial_measurement_timescales();
   const auto& init_trans_tuple =
       system_helper.template init_tuple<translation_system>();
+  auto system_to_combined_names = system_helper.system_to_combined_names();
   const std::string translation_name =
       system_helper.template name<translation_system>();
 
@@ -115,7 +116,8 @@ void test_translation_control_system() {
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   MockRuntimeSystem runner{
       {"DummyFileName", std::move(domain), 4, false, ::Verbosity::Silent,
-       std::move(grid_center_A), std::move(grid_center_B)},
+       std::move(grid_center_A), std::move(grid_center_B),
+       std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<

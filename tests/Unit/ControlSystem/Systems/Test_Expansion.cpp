@@ -97,6 +97,7 @@ void test_expansion_control_system() {
       system_helper.initial_measurement_timescales();
   const auto& init_exp_tuple =
       system_helper.template init_tuple<expansion_system>();
+  auto system_to_combined_names = system_helper.system_to_combined_names();
 
   auto grid_center_A = domain.excision_spheres().at("ExcisionSphereA").center();
   auto grid_center_B = domain.excision_spheres().at("ExcisionSphereB").center();
@@ -105,7 +106,8 @@ void test_expansion_control_system() {
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   MockRuntimeSystem runner{
       {"DummyFileName", std::move(domain), 4, false, ::Verbosity::Silent,
-       std::move(grid_center_A), std::move(grid_center_B)},
+       std::move(grid_center_A), std::move(grid_center_B),
+       std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<

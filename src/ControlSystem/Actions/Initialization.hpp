@@ -11,6 +11,7 @@
 #include "ControlSystem/Tags/IsActive.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
+#include "ControlSystem/UpdateFunctionOfTime.hpp"
 #include "Domain/Creators/Tags/ObjectCenter.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
@@ -47,6 +48,7 @@ struct get_center_tags<domain::object_list<>> {
  *   - `control_system::Tags::WriteDataToDisk`
  *   - `control_system::Tags::ObserveCenters`
  *   - `control_system::Tags::Verbosity`
+ *   - `control_system::Tags::SystemToCombinedNames`
  *   - `domain::Tags::ObjectCenter<domain::ObjectLabel::A>`
  *   - `domain::Tags::ObjectCenter<domain::ObjectLabel::B>`
  *
@@ -58,10 +60,13 @@ struct get_center_tags<domain::object_list<>> {
  *   - `control_system::Tags::TimescaleTuner<ControlSystem>`
  *   - `control_system::Tags::ControlError<ControlSystem>`
  *   - `control_system::Tags::IsActive<ControlSystem>`
+ *   - `control_system::Tags::CurrentNumberOfMeasurements`
+ *   - `control_system::Tags::UpdateAggregators`
  * - Removes: Nothing
  * - Modifies:
  *   - `control_system::Tags::Averager<ControlSystem>`
  *   - `control_system::Tags::CurrentNumberOfMeasurements`
+ *   - `control_system::Tags::UpdateAggregators`
  */
 template <typename Metavariables, typename ControlSystem>
 struct Initialize {
@@ -76,9 +81,11 @@ struct Initialize {
 
   using simple_tags =
       tmpl::push_back<typename ControlSystem::simple_tags,
+                      control_system::Tags::UpdateAggregators,
                       control_system::Tags::CurrentNumberOfMeasurements>;
 
   using const_global_cache_tags = tmpl::flatten<tmpl::list<
+      control_system::Tags::SystemToCombinedNames,
       control_system::Tags::MeasurementsPerUpdate,
       control_system::Tags::WriteDataToDisk,
       control_system::Tags::ObserveCenters, control_system::Tags::Verbosity,
@@ -92,13 +99,18 @@ struct Initialize {
 
   using return_tags =
       tmpl::list<control_system::Tags::Averager<ControlSystem>,
-                 control_system::Tags::CurrentNumberOfMeasurements>;
+                 control_system::Tags::CurrentNumberOfMeasurements,
+                 control_system::Tags::UpdateAggregators>;
 
   using argument_tags = tmpl::list<Parallel::Tags::GlobalCache>;
 
-  static void apply(const gsl::not_null<::Averager<deriv_order - 1>*> averager,
-                    const gsl::not_null<int*> current_number_of_measurements,
-                    const Parallel::GlobalCache<Metavariables>* const& cache) {
+  static void apply(
+      const gsl::not_null<::Averager<deriv_order - 1>*> averager,
+      const gsl::not_null<int*> current_number_of_measurements,
+      const gsl::not_null<
+          std::unordered_map<std::string, control_system::UpdateAggregator>*>
+          update_aggregators,
+      const Parallel::GlobalCache<Metavariables>* const& cache) {
     const auto& measurement_timescales =
         Parallel::get<control_system::Tags::MeasurementTimescales>(*cache);
     const auto& measurement_timescale_func =
@@ -109,6 +121,27 @@ struct Initialize {
 
     averager->assign_time_between_measurements(measurement_timescale);
     *current_number_of_measurements = 0;
+
+    const std::unordered_map<std::string, std::string>&
+        system_to_combined_names =
+            Parallel::get<control_system::Tags::SystemToCombinedNames>(*cache);
+
+    std::unordered_map<std::string, std::unordered_set<std::string>>
+        combined_to_system_names{};
+    for (const auto& [control_system_name, combined_name] :
+         system_to_combined_names) {
+      if (combined_to_system_names.count(combined_name) != 1) {
+        combined_to_system_names[combined_name];
+      }
+
+      combined_to_system_names.at(combined_name).insert(control_system_name);
+    }
+
+    for (const auto& [combined_name, control_system_names] :
+         combined_to_system_names) {
+      (*update_aggregators)[combined_name] =
+          control_system::UpdateAggregator{std::move(control_system_names)};
+    }
   }
 };
 }  // namespace Actions

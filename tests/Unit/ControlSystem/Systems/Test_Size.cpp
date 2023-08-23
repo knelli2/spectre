@@ -115,7 +115,8 @@ void test_size_process_measurement() {
   MockRuntimeSystem runner{
       {creator->create_domain(), ::Verbosity::Silent, 4, false,
        tnsr::I<double, 3, Frame::Grid>{std::array{0.0, 0.0, 0.0}},
-       tnsr::I<double, 3, Frame::Grid>{std::array{0.0, 0.0, 0.0}}},
+       tnsr::I<double, 3, Frame::Grid>{std::array{0.0, 0.0, 0.0}},
+       std::unordered_map<std::string, std::string>{}},
       {creator->functions_of_time(),
        control_system::Tags::MeasurementTimescales::type{}}};
 
