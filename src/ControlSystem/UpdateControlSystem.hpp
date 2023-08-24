@@ -102,9 +102,12 @@ struct UpdateControlSystem {
                     Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& /*array_index*/, const double time,
                     tuples::TaggedTuple<TupleTags...> data) {
+    const std::string& function_of_time_name = ControlSystem::name();
+
     // Begin step 1
     // If this control system isn't active, don't do anything
-    if (not get<control_system::Tags::IsActive<ControlSystem>>(*box)) {
+    if (not Parallel::get<control_system::Tags::IsActiveMap>(cache).at(
+            function_of_time_name)) {
       return;
     }
 
@@ -118,7 +121,6 @@ struct UpdateControlSystem {
 
     const auto& functions_of_time =
         Parallel::get<::domain::Tags::FunctionsOfTime>(cache);
-    const std::string& function_of_time_name = ControlSystem::name();
     const auto& function_of_time = functions_of_time.at(function_of_time_name);
 
     // Begin step 3
