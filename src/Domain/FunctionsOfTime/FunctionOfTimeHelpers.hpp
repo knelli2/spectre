@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <limits>
 #include <list>
 #include <ostream>
@@ -56,8 +57,9 @@ struct StoredInfo<MaxDerivPlusOne, false> {
 
 /// Resets the previous expiration time if the next expiration time is after,
 /// otherwise throws an error
-void reset_expiration_time(const gsl::not_null<double*> prev_expiration_time,
-                           const double next_expiration_time);
+void reset_expiration_time(
+    const gsl::not_null<std::atomic<double>*> prev_expiration_time,
+    const double next_expiration_time);
 
 /*!
  * \brief Returns a StoredInfo corresponding to the closest element in the range

@@ -79,7 +79,8 @@ class PiecewisePolynomial : public FunctionOfTime {
   /// Returns the domain of validity of the function,
   /// including the extrapolation region.
   std::array<double, 2> time_bounds() const override {
-    return {{deriv_info_at_update_times_.front().time, expiration_time_}};
+    return {{deriv_info_at_update_times_.front().time,
+             expiration_time_.load(std::memory_order_acquire)}};
   }
 
   /// Return a const reference to the stored deriv info so external classes can
@@ -104,11 +105,16 @@ class PiecewisePolynomial : public FunctionOfTime {
       std::ostream& os,
       const PiecewisePolynomial<LocalMaxDeriv>& piecewise_polynomial);
 
+  /// @{
   /// Returns the function and `MaxDerivReturned` derivatives at
   /// an arbitrary time `t`.
   /// The function has multiple components.
   template <size_t MaxDerivReturned = MaxDeriv>
   std::array<DataVector, MaxDerivReturned + 1> func_and_derivs(double t) const;
+  template <size_t MaxDerivReturned = MaxDeriv>
+  std::array<DataVector, MaxDerivReturned + 1> func_and_derivs_no_expr_check(
+      double t) const;
+  /// @}
 
   // There exists a DataVector for each deriv order that contains
   // the values of that deriv order for all components.
@@ -119,10 +125,12 @@ class PiecewisePolynomial : public FunctionOfTime {
   // to elements upon insertion or resizing. A std::list fits this requirement
   std::list<FunctionOfTimeHelpers::StoredInfo<MaxDeriv + 1>>
       deriv_info_at_update_times_;
-  double expiration_time_{std::numeric_limits<double>::lowest()};
+  alignas(64) std::atomic<double> expiration_time_{};
+  // Pad memory to avoid false-sharing when accessing deriv_info_size_
+  char unused_padding_expr_[64 - (sizeof(std::atomic_uint64_t) % 64)] = {};
   alignas(64) std::atomic_uint64_t deriv_info_size_{};
   // Pad memory to avoid false-sharing when accessing deriv_info_size_
-  char unused_padding_[64 - (sizeof(std::atomic_uint64_t) % 64)] = {};
+  char unused_padding_info_size_[64 - (sizeof(std::atomic_uint64_t) % 64)] = {};
 };
 
 template <size_t MaxDeriv>

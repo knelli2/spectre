@@ -3,6 +3,7 @@
 
 #include "Domain/FunctionsOfTime/FunctionOfTimeHelpers.hpp"
 
+#include <atomic>
 #include <list>
 #include <pup.h>
 #include <pup_stl.h>
@@ -45,15 +46,18 @@ void StoredInfo<MaxDerivPlusOne, false>::pup(PUP::er& p) {
   p | stored_quantities;
 }
 
-void reset_expiration_time(const gsl::not_null<double*> prev_expiration_time,
-                           const double next_expiration_time) {
-  if (next_expiration_time < *prev_expiration_time) {
+void reset_expiration_time(
+    const gsl::not_null<std::atomic<double>*> prev_expiration_time,
+    const double next_expiration_time) {
+  const double loaded_prev_expr_time =
+      prev_expiration_time->load(std::memory_order_acquire);
+  if (next_expiration_time < loaded_prev_expr_time) {
     ERROR("Attempted to change expiration time to "
           << next_expiration_time
           << ", which precedes the previous expiration time of "
-          << *prev_expiration_time << ".");
+          << loaded_prev_expr_time << ".");
   }
-  *prev_expiration_time = next_expiration_time;
+  prev_expiration_time->store(next_expiration_time, std::memory_order_release);
 }
 
 template <size_t MaxDerivPlusOne, bool StoreCoefs>

@@ -112,7 +112,7 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTime.FunctionOfTimeHelpers",
 
   CHECK_THROWS_WITH(
       []() {
-        double expr_time = 4.0;
+        std::atomic<double> expr_time{4.0};
         double next_expr_time = 3.5;
         FunctionOfTimeHelpers::reset_expiration_time(make_not_null(&expr_time),
                                                      next_expr_time);
