@@ -208,4 +208,5 @@ SPECTRE_TEST_CASE("Unit.ApparentHorizonFinder.StrahlkorperDataBox",
   TestHelpers::db::test_base_tag<ah::Tags::ObserveCentersBase>(
       "ObserveCentersBase");
   TestHelpers::db::test_simple_tag<ah::Tags::ObserveCenters>("ObserveCenters");
+  TestHelpers::db::test_simple_tag<ah::Tags::HorizonFinders>("HorizonFinders");
 }

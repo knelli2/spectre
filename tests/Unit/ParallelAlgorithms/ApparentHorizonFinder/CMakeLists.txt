@@ -10,6 +10,7 @@ set(LIBRARY_SOURCES
   Test_FastFlow.cpp
   Test_InterpolationTargetApparentHorizon.cpp
   Test_ObserveCenters.cpp
+  Test_OptionTags.cpp
   Test_Tags.cpp
   )
 

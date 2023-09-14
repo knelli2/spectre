@@ -3,7 +3,12 @@
 
 #pragma once
 
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "DataStructures/DataBox/Tag.hpp"
+#include "ParallelAlgorithms/ApparentHorizonFinder/OptionTags.hpp"
 
 /// \cond
 class FastFlow;
@@ -25,5 +30,14 @@ struct ObserveCentersBase : db::BaseTag {};
 /// Currently this tag is not creatable by options
 struct ObserveCenters : ObserveCentersBase, db::SimpleTag {
   using type = bool;
+};
+
+struct HorizonFinders : db::SimpleTag {
+  using type = std::optional<std::vector<HorizonFinderOptions>>;
+
+  static constexpr bool pass_metavariables = false;
+  using option_tags = tmpl::list<OptionTags::HorizonFinders>;
+
+  static type create_from_options(const type& option) { return option; }
 };
 }  // namespace ah::Tags
