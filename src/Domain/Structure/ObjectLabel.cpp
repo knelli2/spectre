@@ -5,6 +5,8 @@
 
 #include <ostream>
 
+#include "Options/Options.hpp"
+#include "Options/ParseOptions.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Literals.hpp"
 
@@ -27,3 +29,22 @@ std::ostream& operator<<(std::ostream& s, const ObjectLabel x) {
   return s << name(x);
 }
 }  // namespace domain
+
+template <>
+domain::ObjectLabel
+Options::create_from_yaml<domain::ObjectLabel>::create<void>(
+    const Options::Option& options) {
+  const auto ordering = options.parse_as<std::string>();
+  if (ordering == "A") {
+    return domain::ObjectLabel::A;
+  } else if (ordering == "B") {
+    return domain::ObjectLabel::B;
+  } else if (ordering == "C") {
+    return domain::ObjectLabel::C;
+  } else if (ordering == "None") {
+    return domain::ObjectLabel::None;
+  }
+
+  PARSE_ERROR(options.context(),
+              "ObjectLabel must be 'A', 'B', 'C', or 'None'");
+}

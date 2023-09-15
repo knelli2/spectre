@@ -4,6 +4,7 @@
 #include "Framework/TestingFramework.hpp"
 
 #include "Domain/Structure/ObjectLabel.hpp"
+#include "Framework/TestCreation.hpp"
 #include "Utilities/GetOutput.hpp"
 
 SPECTRE_TEST_CASE("Unit.Domain.ObjectLabel", "[Domain][Unit]") {
@@ -15,6 +16,15 @@ SPECTRE_TEST_CASE("Unit.Domain.ObjectLabel", "[Domain][Unit]") {
   CHECK(get_output(domain::ObjectLabel::C) == "C");
   CHECK(name(domain::ObjectLabel::None) == "");
   CHECK(get_output(domain::ObjectLabel::None) == "");
+
+  CHECK(TestHelpers::test_creation<domain::ObjectLabel>("A") ==
+        domain::ObjectLabel::A);
+  CHECK(TestHelpers::test_creation<domain::ObjectLabel>("B") ==
+        domain::ObjectLabel::B);
+  CHECK(TestHelpers::test_creation<domain::ObjectLabel>("C") ==
+        domain::ObjectLabel::C);
+  CHECK(TestHelpers::test_creation<domain::ObjectLabel>("None") ==
+        domain::ObjectLabel::None);
 
   // This is a regression test to ensure nobody accidentally changes the values
   // of the enums

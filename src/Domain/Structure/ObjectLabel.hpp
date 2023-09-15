@@ -6,6 +6,14 @@
 #include <iosfwd>
 #include <string>
 
+/// \cond
+namespace Options {
+class Option;
+template <typename T>
+struct create_from_yaml;
+}  // namespace Options
+/// \endcond
+
 namespace domain {
 /// Labels for the objects in a binary system.
 enum class ObjectLabel : int {
@@ -36,3 +44,16 @@ std::ostream& operator<<(std::ostream& s, const ObjectLabel x);
 template <ObjectLabel... Objects>
 struct object_list {};
 }  // namespace domain
+
+template <>
+struct Options::create_from_yaml<domain::ObjectLabel> {
+  template <typename Metavariables>
+  static domain::ObjectLabel create(const Options::Option& options) {
+    return create<void>(options);
+  }
+};
+
+template <>
+domain::ObjectLabel
+Options::create_from_yaml<domain::ObjectLabel>::create<void>(
+    const Options::Option& options);
