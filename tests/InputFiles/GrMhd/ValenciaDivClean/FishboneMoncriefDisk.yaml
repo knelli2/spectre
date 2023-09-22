@@ -168,6 +168,7 @@ Observers:
 
 Interpolator:
   DumpVolumeDataOnFailure: false
+  Verbosity: Silent
 
 InterpolationTargets:
   KerrHorizon:
