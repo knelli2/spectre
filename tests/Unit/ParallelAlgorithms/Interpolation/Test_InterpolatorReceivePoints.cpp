@@ -21,6 +21,7 @@
 #include "Domain/Domain.hpp"
 #include "Domain/Structure/BlockId.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolationTarget.hpp"
@@ -179,7 +180,7 @@ SPECTRE_TEST_CASE("Unit.NumericalAlgorithms.Interpolator.ReceivePoints",
       0.9, 4.9, domain::creators::Sphere::Excision{}, 1_st, 7_st, false);
 
   ActionTesting::MockRuntimeSystem<metavars> runner{
-      {domain_creator.create_domain()}};
+      {domain_creator.create_domain(), ::Verbosity::Silent}};
   ActionTesting::set_phase(make_not_null(&runner),
                            Parallel::Phase::Initialization);
   ActionTesting::emplace_component<interp_component>(&runner, 0);

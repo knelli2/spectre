@@ -6,12 +6,19 @@
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <limits>
+#include <sstream>
+#include <string>
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/Variables.hpp"
+#include "IO/Logging/Verbosity.hpp"
+#include "Parallel/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceiveVolumeData.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/Requires.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
@@ -64,9 +71,20 @@ struct CleanUpInterpolator {
             typename ArrayIndex>
   static void apply(
       db::DataBox<DbTags>& box,  // HorizonManager's box
-      const Parallel::GlobalCache<Metavariables>& /*cache*/,
+      const Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& /*array_index*/,
       const typename InterpolationTargetTag::temporal_id::type& temporal_id) {
+    std::stringstream ss{};
+    ss << std::setprecision(std::numeric_limits<double>::digits10 + 4)
+       << std::scientific;
+    const ::Verbosity& verbosity = Parallel::get<intrp::Tags::Verbosity>(cache);
+    const bool debug_print = verbosity >= ::Verbosity::Debug;
+    if (debug_print) {
+      ss << "Interpolator: For target "
+         << pretty_type::name<InterpolationTargetTag>() << ", for temporal id "
+         << temporal_id << ", ";
+    }
+
     // Signal that this InterpolationTarget is done at this time.
     db::mutate<Tags::InterpolatedVarsHolders<Metavariables>>(
         [&temporal_id](
@@ -85,7 +103,8 @@ struct CleanUpInterpolator {
     const auto& holders =
         db::get<Tags::InterpolatedVarsHolders<Metavariables>>(box);
     tmpl::for_each<typename Metavariables::interpolation_target_tags>(
-        [&holders, &this_temporal_id_is_done, &temporal_id](auto tag) {
+        [&holders, &this_temporal_id_is_done, &temporal_id, &ss,
+         &debug_print](auto tag) {
           using Tag = typename decltype(tag)::type;
           // Here we decide whether this interpolation target is "done" (i.e. it
           // does not need to interpolate) at this temporal_id. If it is "done",
@@ -107,6 +126,9 @@ struct CleanUpInterpolator {
                     .temporal_ids_when_data_has_been_interpolated;
             if (not alg::found(finished_temporal_ids, temporal_id)) {
               this_temporal_id_is_done = false;
+              if (debug_print) {
+                ss << "not finished for " << pretty_type::name<Tag>() << ", ";
+              }
             }
           }
         });
@@ -158,6 +180,14 @@ struct CleanUpInterpolator {
                 });
           },
           make_not_null(&box));
+
+      if (debug_print) {
+        ss << "finished interpolating and cleaned up interpolator.";
+      }
+    }
+
+    if (debug_print) {
+      Parallel::printf("%s\n", ss.str());
     }
   }
 };

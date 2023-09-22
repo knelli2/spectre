@@ -4,16 +4,21 @@
 #pragma once
 
 #include <algorithm>
+#include <sstream>
+#include <string>
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Domain/Tags.hpp"
-#include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
-#include "ParallelAlgorithms/Interpolation/Tags.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/SendPointsToInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/VerifyTemporalIdsAndSendPoints.hpp"
+#include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
 namespace intrp {
@@ -54,6 +59,8 @@ struct AddTemporalIdsToInterpolationTarget {
                     Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& /*array_index*/,
                     std::vector<TemporalId>&& temporal_ids) {
+    const ::Verbosity& verbosity = Parallel::get<intrp::Tags::Verbosity>(cache);
+    const bool verbose_print = verbosity >= ::Verbosity::Verbose;
     if constexpr (InterpolationTargetTag::compute_target_points::is_sequential::
                       value) {
       // InterpolationTarget is sequential.
@@ -81,6 +88,12 @@ struct AddTemporalIdsToInterpolationTarget {
       if (db::get<Tags::TemporalIds<TemporalId>>(box).empty() and
           pending_temporal_ids_was_empty_on_entry and
           not db::get<Tags::PendingTemporalIds<TemporalId>>(box).empty()) {
+        if (verbose_print) {
+          Parallel::printf("%s: Adding temporal ids %s to box.\n",
+                           pretty_type::name<InterpolationTargetTag>(),
+                           temporal_ids);
+        }
+
         auto& my_proxy =
             Parallel::get_parallel_component<ParallelComponent>(cache);
         Parallel::simple_action<
@@ -103,6 +116,11 @@ struct AddTemporalIdsToInterpolationTarget {
         Parallel::simple_action<
             Actions::VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>>(
             my_proxy);
+        if (verbose_print) {
+          Parallel::printf("%s: Adding temporal ids %s to box.\n",
+                           pretty_type::name<InterpolationTargetTag>(),
+                           temporal_ids);
+        }
       }
     }
   }

@@ -6,10 +6,14 @@
 #include <utility>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/TMPL.hpp"
 
 namespace intrp {
@@ -47,6 +51,11 @@ struct SendPointsToInterpolator {
         Parallel::get_parallel_component<Interpolator<Metavariables>>(cache);
     Parallel::simple_action<Actions::ReceivePoints<InterpolationTargetTag>>(
         receiver_proxy, temporal_id, std::move(coords));
+    if (Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
+      Parallel::printf("%s: Sending points to interpolator at temporal id %s\n",
+                       pretty_type::name<InterpolationTargetTag>(),
+                       temporal_id);
+    }
   }
 };
 

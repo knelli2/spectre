@@ -4,20 +4,27 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/VariablesTag.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/SendPointsToInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/VerifyTemporalIdsAndSendPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Literals.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/Requires.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
@@ -89,6 +96,17 @@ struct InterpolationTargetReceiveVars {
     // temporal_id.
     const auto& completed_ids =
         db::get<Tags::CompletedTemporalIds<TemporalId>>(box);
+    std::stringstream ss{};
+    ss << std::setprecision(std::numeric_limits<double>::digits10 + 4)
+       << std::scientific;
+    const ::Verbosity& verbosity = Parallel::get<intrp::Tags::Verbosity>(cache);
+    const bool debug_print = verbosity >= ::Verbosity::Debug;
+    const bool verbose_print = verbosity >= ::Verbosity::Verbose;
+    if (verbose_print) {
+      ss << pretty_type::name<InterpolationTargetTag>() << ": At temporal id "
+         << temporal_id << ", ";
+    }
+
     // (Search from the end because temporal_id is more likely to be
     // at the end of the list then at the beginning.)
     if (UNLIKELY(std::find(completed_ids.rbegin(), completed_ids.rend(),
@@ -128,9 +146,15 @@ struct InterpolationTargetReceiveVars {
         make_not_null(&box), vars_src, global_offsets, temporal_id);
     if (InterpolationTarget_detail::have_data_at_all_points<
             InterpolationTargetTag>(box, temporal_id)) {
+      if (verbose_print) {
+        ss << "calling callbacks";
+      }
       // All the valid points have been interpolated.
       if (InterpolationTarget_detail::call_callback<InterpolationTargetTag>(
               make_not_null(&box), make_not_null(&cache), temporal_id)) {
+        if (verbose_print) {
+          ss << " and cleaning up target.";
+        }
         InterpolationTarget_detail::clean_up_interpolation_target<
             InterpolationTargetTag>(make_not_null(&box), temporal_id);
         auto& interpolator_proxy =
@@ -153,8 +177,17 @@ struct InterpolationTargetReceiveVars {
             Parallel::simple_action<
                 SendPointsToInterpolator<InterpolationTargetTag>>(
                 my_proxy, temporal_ids.front());
-          } else if (not db::get<Tags::PendingTemporalIds<TemporalId>>(box)
-                             .empty()) {
+            if (verbose_print) {
+              ss << " Calling simple action to send points to interpolator.";
+            }
+          } else if (const auto& pending_ids =
+                         db::get<Tags::PendingTemporalIds<TemporalId>>(box);
+                     not pending_ids.empty()) {
+            if (verbose_print) {
+              using ::operator<<;
+              ss << " Verifying next pending temporal id out of "
+                 << pending_ids;
+            }
             auto& my_proxy = Parallel::get_parallel_component<
                 InterpolationTarget<Metavariables, InterpolationTargetTag>>(
                 cache);
@@ -162,7 +195,16 @@ struct InterpolationTargetReceiveVars {
                 InterpolationTargetTag>>(my_proxy);
           }
         }
+
+        if (verbose_print) {
+          Parallel::printf("%s\n", ss.str());
+        }
+      } else if (debug_print) {
+        Parallel::printf("%s\n", ss.str());
       }
+    } else if (debug_print) {
+      ss << "not enough data. Waiting";
+      Parallel::printf("%s\n", ss.str());
     }
   }
 };
