@@ -128,6 +128,7 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/ErrorHandling/FloatingPointExceptions.hpp"
 #include "Utilities/Functional.hpp"
+#include "Utilities/NoSuchType.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 #include "Utilities/TMPL.hpp"
@@ -146,6 +147,14 @@ class CProxy_GlobalCache;
 }  // namespace Parallel
 /// \endcond
 
+// Check if Spec is linked
+#ifdef HAS_SPEC_EXPORTER
+#include "PointwiseFunctions/AnalyticData/GeneralRelativity/SpecInitialData.hpp"
+using SpecInitialData = gr::AnalyticData::SpecInitialData;
+#else
+using SpecInitialData = NoSuchType;
+#endif
+
 namespace detail {
 
 template <size_t volume_dim>
@@ -155,7 +164,15 @@ struct ObserverTags {
   using variables_tag = typename system::variables_tag;
   using analytic_solution_fields = typename variables_tag::tags_list;
 
-  using initial_data_list = gh::Solutions::all_solutions<volume_dim>;
+  using initial_data_list =
+      tmpl::append<gh::Solutions::all_solutions<volume_dim>,
+                   tmpl::conditional_t<
+                       volume_dim == 3,
+                       tmpl::conditional_t<
+                           std::is_same_v<SpecInitialData, NoSuchType>,
+                           tmpl::list<gh::NumericInitialData>,
+                           tmpl::list<gh::NumericInitialData, SpecInitialData>>,
+                       tmpl::list<>>>;
 
   using analytic_compute = evolution::Tags::AnalyticSolutionsCompute<
       volume_dim, analytic_solution_fields, false, initial_data_list>;
@@ -253,25 +270,22 @@ template <size_t volume_dim, bool LocalTimeStepping>
 struct FactoryCreation : tt::ConformsTo<Options::protocols::FactoryCreation> {
   using system = gh::System<volume_dim>;
 
+  using observer_tags = detail::ObserverTags<volume_dim>;
+
   using factory_classes = tmpl::map<
       tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
       tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
-      tmpl::pair<
-          Event,
-          tmpl::flatten<tmpl::list<
-              Events::Completion, Events::MonitorMemory<volume_dim>,
-              typename detail::ObserverTags<volume_dim>::field_observations,
-              Events::time_events<system>>>>,
+      tmpl::pair<Event,
+                 tmpl::flatten<tmpl::list<
+                     Events::Completion, Events::MonitorMemory<volume_dim>,
+                     typename observer_tags::field_observations,
+                     Events::time_events<system>>>>,
       tmpl::pair<
           gh::BoundaryConditions::BoundaryCondition<volume_dim>,
           gh::BoundaryConditions::standard_boundary_conditions<volume_dim>>,
       tmpl::pair<gh::gauges::GaugeCondition, gh::gauges::all_gauges>,
-      tmpl::pair<
-          evolution::initial_data::InitialData,
-          tmpl::append<gh::Solutions::all_solutions<volume_dim>,
-                       tmpl::conditional_t<volume_dim == 3,
-                                           tmpl::list<gh::NumericInitialData>,
-                                           tmpl::list<>>>>,
+      tmpl::pair<evolution::initial_data::InitialData,
+                 typename observer_tags::initial_data_list>,
       tmpl::pair<LtsTimeStepper, TimeSteppers::lts_time_steppers>,
       tmpl::pair<PhaseChange, PhaseControl::factory_creatable_classes>,
       tmpl::pair<StepChooser<StepChooserUse::LtsStep>,
