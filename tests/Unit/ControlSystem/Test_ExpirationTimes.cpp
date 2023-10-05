@@ -164,9 +164,9 @@ void test_fot_measurement_expr_time() {
   const double fot_expr_time = control_system::function_of_time_expiration_time(
       time, old_measurement_timescales, new_measurement_timescales,
       measurements_per_update);
-  const double expected_fot_expr_time =
-      time + min(old_measurement_timescales) +
-      measurements_per_update * min(new_measurement_timescales);
+  const double min_measure = min(new_measurement_timescales);
+  double expected_fot_expr_time = time + min(old_measurement_timescales) +
+                                  min_measure + min_measure + min_measure;
 
   CHECK(fot_expr_time == expected_fot_expr_time);
 
@@ -175,8 +175,7 @@ void test_fot_measurement_expr_time() {
           time, old_measurement_timescales, new_measurement_timescales,
           measurements_per_update);
   const double expected_measurement_expr_time =
-      time + min(old_measurement_timescales) +
-      (double(measurements_per_update) - 0.5) * min(new_measurement_timescales);
+      expected_fot_expr_time - 0.5 * min_measure;
 
   CHECK(measurement_expr_time == expected_measurement_expr_time);
 }

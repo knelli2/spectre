@@ -196,6 +196,8 @@ class Trigger : public DenseTrigger {
       return min_measure_time;
     }
 
+    // If the way the next measurement time is calculated is changed, make sure
+    // to update ExpirationTimes.cpp as well
     return time + min_measure_time;
   }
 

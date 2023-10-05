@@ -10,8 +10,15 @@ double function_of_time_expiration_time(
     const double time, const DataVector& old_measurement_timescales,
     const DataVector& new_measurement_timescales,
     const int measurements_per_update) {
-  return time + min(old_measurement_timescales) +
-         measurements_per_update * min(new_measurement_timescales);
+  double expiration_time = time + min(old_measurement_timescales);
+  const double min_new_measurement_timescale = min(new_measurement_timescales);
+  // We calculate the new expiration time in this way so it matches with how the
+  // control system trigger calculates the next measurement time so doubles line
+  // up and aren't different by roundoff.
+  for (int i = 0; i < measurements_per_update; i++) {
+    expiration_time += min_new_measurement_timescale;
+  }
+  return expiration_time;
 }
 
 double measurement_expiration_time(const double time,

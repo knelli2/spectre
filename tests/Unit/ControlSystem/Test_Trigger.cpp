@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "ControlSystem/Trigger.hpp"
@@ -127,12 +128,17 @@ void test_trigger_no_replace() {
 
   set_time(0.5);
 
+  double expiration_time = control_system::function_of_time_expiration_time(
+      0.0, DataVector{1, 0.0}, DataVector{1, 0.5}, 2);
+
   // Now at the previous next check time, we should trigger. We also know the
   // new check time
   CHECK(trigger.is_triggered(box, cache, 0, component_p) ==
         std::optional{true});
   CHECK(trigger.next_check_time(box, cache, 0, component_p) ==
         std::optional{1.0});
+  CHECK(trigger.next_check_time(box, cache, 0, component_p).value() ==
+        expiration_time);
 
   set_time(0.75);
 
@@ -164,12 +170,17 @@ void test_trigger_no_replace() {
 
   set_time(2.0);
 
+  expiration_time = control_system::function_of_time_expiration_time(
+      1.0, DataVector{1, 0.0}, DataVector{1, 1.0}, 2);
+
   // At the next trigger time and timescales are valid so we can calculate
   // the next check time.
   CHECK(trigger.is_triggered(box, cache, 0, component_p) ==
         std::optional{true});
   CHECK(trigger.next_check_time(box, cache, 0, component_p) ==
         std::optional{3.0});
+  CHECK(trigger.next_check_time(box, cache, 0, component_p).value() ==
+        expiration_time);
 }
 
 void test_trigger_with_replace() {

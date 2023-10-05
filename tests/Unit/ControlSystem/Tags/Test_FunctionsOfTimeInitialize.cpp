@@ -228,10 +228,16 @@ void test_functions_of_time_tag() {
       creator, measurements_per_update, initial_time, option_holder1,
       option_holder2, option_holder3);
 
-  const double expiration_controlled_2 =
-      initial_time + update_fraction * timescale;
-  const double expiration_controlled_3 =
-      initial_time + update_fraction * timescale2;
+  const double min_measure = update_fraction * timescale /
+                             static_cast<double>(measurements_per_update);
+  const double min_measure_2 = update_fraction * timescale2 /
+                               static_cast<double>(measurements_per_update);
+  double expiration_controlled_2 = initial_time;
+  double expiration_controlled_3 = initial_time;
+  for (int i = 0; i < measurements_per_update; i++) {
+    expiration_controlled_2 += min_measure;
+    expiration_controlled_3 += min_measure_2;
+  }
   const double min_expiration_time =
       std::min(expiration_controlled_2, expiration_controlled_3);
 
