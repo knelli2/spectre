@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -76,6 +77,13 @@ struct HorizonFinderOptions {
     static constexpr Options::String help = {"Verbosity"};
     using type = ::Verbosity;
   };
+  struct VariablesToObserve {
+    static constexpr Options::String help = {
+        "What tensors to observe on the surface when the horizon finding event "
+        "is run."};
+    using type =
+        Options::Auto<std::vector<std::string>, Options::AutoLabel::None>;
+  };
 
   using options =
       tmpl::list<InitialGuess, HorizonName, HorizonFrame, FastFlow, Verbosity>;
@@ -106,6 +114,7 @@ struct HorizonFinderOptions {
   domain::ObjectLabel object_label{};
   ::FastFlow fast_flow{};
   ::Verbosity verbosity{::Verbosity::Quiet};
+  std::optional<std::vector<std::string>> variables_to_observe{};
 };
 
 bool operator==(const HorizonFinderOptions& lhs,

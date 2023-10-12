@@ -3,15 +3,26 @@
 
 #pragma once
 
+#include <deque>
+#include <map>
 #include <optional>
-#include <string>
+#include <set>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
-#include "DataStructures/DataBox/Tag.hpp"
+#include "DataStructures/DataBox/DataBoxTag.hpp"
+#include "IO/Logging/Verbosity.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "ParallelAlgorithms/ApparentHorizonFinder/OptionTags.hpp"
+#include "ParallelAlgorithms/ApparentHorizonFinder/Storage.hpp"
+#include "Utilities/TMPL.hpp"
 
 /// \cond
 class FastFlow;
+namespace Frame {
+struct NoFrame;
+}  // namespace Frame
 /// \endcond
 
 namespace ah::Tags {
@@ -39,5 +50,31 @@ struct HorizonFinders : db::SimpleTag {
   using option_tags = tmpl::list<OptionTags::HorizonFinders>;
 
   static type create_from_options(const type& option) { return option; }
+};
+
+struct VolumeDataAndCallbacks : db::SimpleTag {
+  using type = std::map<Storage::NumberAndId, Storage::VolumeDataAndCallbacks>;
+};
+
+struct InterpolatedVars : db::simpleTag {
+  using type = std::map<Storage::NumberAndId, Storage::InterpolatedVars>;
+};
+
+/// `temporal_id`s that we have already interpolated onto.
+struct CompletedTemporalIds : db::SimpleTag {
+  using type = std::set<Storage::NumberAndId>;
+};
+
+struct SurfaceAndPoints : db::simpleTag {
+  using type =
+      std::unordered_map<Storage::NumberAndId, Storage::SurfaceAndPoints>;
+};
+
+struct PreviousHorizons : db::SimpleTag {
+  using type = std::deque<std::pair<double, ylm::Strahlkorper<Frame::NoFrame>>>;
+};
+
+struct Verbosity : db::SimpleTag {
+  using type = ::Verbosity;
 };
 }  // namespace ah::Tags
