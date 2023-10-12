@@ -32,6 +32,7 @@ spectre_target_headers(
   InterpolationTarget.hpp
   ObserveCenters.hpp
   OptionTags.hpp
+  SingleHorizonFindIteration.hpp
   Storage.hpp
   Tags.hpp
   )
