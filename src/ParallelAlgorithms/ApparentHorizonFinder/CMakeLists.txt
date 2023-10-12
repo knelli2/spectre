@@ -62,4 +62,5 @@ target_link_libraries(
   ParallelInterpolation
   )
 
+  add_subdirectory(Actions)
   add_subdirectory(Callbacks)
