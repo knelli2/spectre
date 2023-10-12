@@ -8,6 +8,7 @@ add_spectre_library(${LIBRARY})
 spectre_target_sources(
   ${LIBRARY}
   PRIVATE
+  ComputeTargetPoints.cpp
   Destination.cpp
   FastFlow.cpp
   InterpolationTarget.cpp
@@ -23,6 +24,7 @@ spectre_target_headers(
   ComputeExcisionBoundaryVolumeQuantities.tpp
   ComputeHorizonVolumeQuantities.hpp
   ComputeHorizonVolumeQuantities.tpp
+  ComputeTargetPoints.hpp
   Destination.hpp
   FastFlow.hpp
   HorizonAliases.hpp
