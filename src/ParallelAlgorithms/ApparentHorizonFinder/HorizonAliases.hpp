@@ -36,6 +36,12 @@ using vars_to_interpolate_to_target =
                gr::Tags::SpatialChristoffelSecondKind<DataVector, Dim, Frame>,
                gr::Tags::SpatialRicci<DataVector, Dim, Frame>>;
 
+template <size_t Dim, typename Frame>
+using volume_vars_for_horizon_finding =
+    tmpl::list<gr::Tags::InverseSpatialMetric<DataVector, Dim, Frame>,
+               gr::Tags::ExtrinsicCurvature<DataVector, Dim, Frame>,
+               gr::Tags::SpatialChristoffelSecondKind<DataVector, Dim, Frame>>;
+
 template <typename Frame>
 using tags_for_observing =
     tmpl::list<gr::surfaces::Tags::AreaCompute<Frame>,
