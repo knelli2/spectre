@@ -23,3 +23,5 @@ spectre_target_headers(
   Sphere.hpp
   WedgeSectionTorus.hpp
 )
+
+add_subdirectory(RuntimeTargets)

@@ -30,6 +30,8 @@ set(LIBRARY_SOURCES
   Test_Tags.cpp
   )
 
+add_subdirectory(RuntimeTargets)
+
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")
 
 target_link_libraries(
