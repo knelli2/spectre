@@ -5,6 +5,7 @@ spectre_target_sources(
   ${LIBRARY}
   PRIVATE
   LineSegment.cpp
+  SpecifiedPoints.cpp
 )
 
 spectre_target_headers(
@@ -12,5 +13,6 @@ spectre_target_headers(
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
   LineSegment.hpp
+  SpecifiedPoints.hpp
   Target.hpp
 )
