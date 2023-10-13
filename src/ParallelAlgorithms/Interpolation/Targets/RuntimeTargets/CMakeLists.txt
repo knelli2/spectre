@@ -6,6 +6,7 @@ spectre_target_sources(
   PRIVATE
   LineSegment.cpp
   SpecifiedPoints.cpp
+  WedgeSectionTorus.cpp
 )
 
 spectre_target_headers(
@@ -15,4 +16,5 @@ spectre_target_headers(
   LineSegment.hpp
   SpecifiedPoints.hpp
   Target.hpp
+  WedgeSectionTorus.hpp
 )
