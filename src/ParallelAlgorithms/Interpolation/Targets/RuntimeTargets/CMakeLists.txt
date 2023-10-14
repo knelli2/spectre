@@ -7,6 +7,7 @@ spectre_target_sources(
   KerrHorizon.cpp
   LineSegment.cpp
   SpecifiedPoints.cpp
+  Sphere.cpp
   WedgeSectionTorus.cpp
 )
 
@@ -17,6 +18,7 @@ spectre_target_headers(
   KerrHorizon.hpp
   LineSegment.hpp
   SpecifiedPoints.hpp
+  Sphere.hpp
   Target.hpp
   WedgeSectionTorus.hpp
 )
