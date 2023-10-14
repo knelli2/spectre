@@ -19,6 +19,7 @@
 namespace Frame {
 struct Distorted;
 struct Inertial;
+struct NoFrame;
 }  // namespace Frame
 
 namespace ylm {
@@ -125,4 +126,5 @@ bool Strahlkorper<Frame>::point_is_contained(
 template class Strahlkorper<Frame::Inertial>;
 template class Strahlkorper<Frame::Grid>;
 template class Strahlkorper<Frame::Distorted>;
+template class Strahlkorper<Frame::NoFrame>;
 }  // namespace ylm

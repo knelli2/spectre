@@ -618,8 +618,8 @@ void time_deriv_of_strahlkorper(
       const gsl::not_null<Strahlkorper<FRAME(data)>*>,                        \
       const std::deque<std::pair<double, Strahlkorper<FRAME(data)>>>&);
 
-GENERATE_INSTANTIATIONS(INSTANTIATE,
-                        (Frame::Distorted, Frame::Grid, Frame::Inertial))
+GENERATE_INSTANTIATIONS(INSTANTIATE, (Frame::Distorted, Frame::Grid,
+                                      Frame::Inertial, Frame::NoFrame))
 
 #undef INSTANTIATE
 #undef FRAME
