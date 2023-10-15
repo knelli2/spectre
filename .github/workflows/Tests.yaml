@@ -430,7 +430,7 @@ jobs:
             # Disable building executable for this build for now because it
             # exceeds the available memory. See issue:
             # https://github.com/sxs-collaboration/spectre/issues/5472
-            test_executables: OFF
+            # test_executables: OFF
           # Test building with static libraries. Do so with clang in release
           # mode because these builds use up little disk space compared to GCC
           # builds or clang Debug builds
