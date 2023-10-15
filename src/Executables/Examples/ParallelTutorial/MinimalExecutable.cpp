@@ -17,7 +17,7 @@ struct Metavariables {
   static constexpr std::array<Parallel::Phase, 2> default_phase_order{
       {Parallel::Phase::Initialization, Parallel::Phase::Exit}};
 
-  static constexpr Options::String help{"A minimal executable"};
+  inline const static std::string help{"A minimal executable"};
 };
 // [metavariables_definition]
 

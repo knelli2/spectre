@@ -86,21 +86,21 @@ class KhInstability : public evolution::initial_data::InitialData,
   /// The adiabatic index of the fluid.
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the fluid."};
   };
 
   /// The vertical coordinate of the horizontal bimedian of the strip.
   struct StripBimedianHeight {
     using type = double;
-    static constexpr Options::String help = {"The height of the strip center."};
+    inline const static std::string help {"The height of the strip center."};
   };
 
   /// The thickness of the strip.
   struct StripThickness {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The thickness of the horizontal strip."};
   };
 
@@ -108,14 +108,14 @@ class KhInstability : public evolution::initial_data::InitialData,
   struct StripDensity {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The mass density in the horizontal strip."};
   };
 
   /// The velocity along \f$x\f$ in the strip
   struct StripVelocity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The velocity along x in the horizontal strip."};
   };
 
@@ -123,14 +123,14 @@ class KhInstability : public evolution::initial_data::InitialData,
   struct BackgroundDensity {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The mass density outside of the strip."};
   };
 
   /// The velocity along \f$x\f$ outside of the strip
   struct BackgroundVelocity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The velocity along x outside of the strip."};
   };
 
@@ -138,14 +138,14 @@ class KhInstability : public evolution::initial_data::InitialData,
   struct Pressure {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial (constant) pressure."};
   };
 
   /// The amplitude of the perturbation
   struct PerturbAmplitude {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The amplitude of the perturbation."};
   };
 
@@ -153,14 +153,14 @@ class KhInstability : public evolution::initial_data::InitialData,
   struct PerturbWidth {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The characteristic length for the width of the perturbation."};
   };
 
   /// The uniform magnetic field
   struct MagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {"The uniform magnetic field."};
+    inline const static std::string help {"The uniform magnetic field."};
   };
 
   using options = tmpl::list<AdiabaticIndex, StripBimedianHeight,
@@ -168,7 +168,7 @@ class KhInstability : public evolution::initial_data::InitialData,
                              BackgroundDensity, BackgroundVelocity, Pressure,
                              PerturbAmplitude, PerturbWidth, MagneticField>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Initial data to simulate the magnetized KH instability."};
 
   KhInstability() = default;

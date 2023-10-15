@@ -35,13 +35,13 @@ namespace helpers_mg = TestHelpers::LinearSolver::multigrid;
 namespace {
 
 struct MultigridSolver {
-  static constexpr Options::String help =
-      "Options for the iterative linear solver";
+  inline const static std::string help
+      {"Options for the iterative linear solver"};
 };
 
 struct RichardsonSmoother {
-  static constexpr Options::String help =
-      "Options for the iterative linear solver";
+  inline const static std::string help
+      {"Options for the iterative linear solver"};
 };
 
 struct Metavariables {

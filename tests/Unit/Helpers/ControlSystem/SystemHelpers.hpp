@@ -98,17 +98,17 @@ class FakeCreator : public DomainCreator<3> {
  private:
   struct NumberOfComponents {
     using type = std::unordered_map<std::string, size_t>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Num of components for function of time"};
   };
   struct NumberOfExcisions {
     using type = size_t;
-    static constexpr Options::String help = {"Num of excisions in the domain."};
+    inline const static std::string help {"Num of excisions in the domain."};
   };
 
  public:
   using options = tmpl::list<NumberOfComponents, NumberOfExcisions>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Num of components for all functions of time being tested."};
 
   FakeCreator() = default;

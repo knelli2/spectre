@@ -42,11 +42,11 @@ class TestTrigger : public Trigger {
 
   struct Result {
     using type = bool;
-    constexpr static Options::String help = "Result";
+    inline const static std::string help {"Result"};
   };
 
   using options = tmpl::list<Result>;
-  constexpr static Options::String help = "help";
+  inline const static std::string help {"help"};
 
   explicit TestTrigger(const bool result) : result_(result) {}
 

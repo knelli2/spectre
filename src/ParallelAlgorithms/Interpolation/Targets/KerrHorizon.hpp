@@ -56,30 +56,30 @@ namespace OptionHolders {
 struct KerrHorizon {
   struct LMax {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "KerrHorizon is expanded in Ylms up to l=LMax"};
   };
   struct Center {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {"Center of black hole"};
+    inline const static std::string help {"Center of black hole"};
   };
   struct Mass {
     using type = double;
-    static constexpr Options::String help = {"Mass of black hole"};
+    inline const static std::string help {"Mass of black hole"};
   };
   struct DimensionlessSpin {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Dimensionless spin of black hole"};
   };
   struct AngularOrdering {
     using type = intrp::AngularOrdering;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Chooses theta,phi ordering in 2d array"};
   };
   using options =
       tmpl::list<LMax, Center, Mass, DimensionlessSpin, AngularOrdering>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A Strahlkorper conforming to the horizon (in Kerr-Schild coordinates)"
       " of a Kerr black hole with a specified center, mass, and spin."};
 
@@ -114,7 +114,7 @@ namespace OptionTags {
 template <typename InterpolationTargetTag>
 struct KerrHorizon {
   using type = OptionHolders::KerrHorizon;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Options for interpolation onto Kerr horizon."};
   static std::string name() {
     return pretty_type::name<InterpolationTargetTag>();

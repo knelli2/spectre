@@ -27,27 +27,27 @@ namespace Punctures::AnalyticData {
 struct Puncture {
   struct Position {
     using type = std::array<double, 3>;
-    static constexpr Options::String help{"The position C of the puncture"};
+    inline const static std::string help{"The position C of the puncture"};
   };
   struct Mass {
     using type = double;
-    static constexpr Options::String help{"The puncture mass (bare mass) M"};
+    inline const static std::string help{"The puncture mass (bare mass) M"};
     static double lower_bound() { return 0.; }
   };
   struct Momentum {
     using type = std::array<double, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The dimensionless linear momentum P / M, where M is the bare mass of "
         "the puncture."};
   };
   struct Spin {
     using type = std::array<double, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The dimensionless angular momentum S / M^2, where M is the bare mass "
         "of the puncture."};
   };
   using options = tmpl::list<Position, Mass, Momentum, Spin>;
-  static constexpr Options::String help{"A puncture representing a black hole"};
+  inline const static std::string help{"A puncture representing a black hole"};
 
   std::array<double, 3> position{
       {std::numeric_limits<double>::signaling_NaN()}};
@@ -138,12 +138,12 @@ class MultiplePunctures : public elliptic::analytic_data::Background,
                           public elliptic::analytic_data::InitialGuess {
  public:
   struct Punctures {
-    static constexpr Options::String help =
-        "Parameters for each puncture, representing black holes";
+    inline const static std::string help
+        {"Parameters for each puncture, representing black holes"};
     using type = std::vector<Puncture>;
   };
   using options = tmpl::list<Punctures>;
-  static constexpr Options::String help = "Any number of black holes";
+  inline const static std::string help {"Any number of black holes"};
 
   MultiplePunctures() = default;
   MultiplePunctures(const MultiplePunctures&) = default;

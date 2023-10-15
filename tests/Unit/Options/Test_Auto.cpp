@@ -30,7 +30,7 @@ struct Base {
 
 struct Derived : Base {
   using options = tmpl::list<>;
-  static constexpr Options::String help = "halp";
+  inline const static std::string help {"halp"};
 };
 
 template <typename T>
@@ -124,20 +124,20 @@ class ExampleClass {
   struct AutoArg {
     using type = Options::Auto<int>;
     static type suggested_value() { return {}; }
-    static constexpr Options::String help =
-        "Integer that can be automatically chosen";
+    inline const static std::string help
+        {"Integer that can be automatically chosen"};
   };
   struct OptionalArg {
     using type = Options::Auto<double, Options::AutoLabel::None>;
-    static constexpr Options::String help = "Optional parameter";
+    inline const static std::string help {"Optional parameter"};
   };
   struct AllArg {
     using type = Options::Auto<std::vector<int>, Options::AutoLabel::All>;
-    static constexpr Options::String help = "Optional parameter all";
+    inline const static std::string help {"Optional parameter all"};
   };
 
-  static constexpr Options::String help =
-      "A class that can automatically choose an argument";
+  inline const static std::string help
+      {"A class that can automatically choose an argument"};
   using options = tmpl::list<AutoArg, OptionalArg, AllArg>;
 
   explicit ExampleClass(std::optional<int> auto_arg,
@@ -162,10 +162,10 @@ class NonCopyableArgument {
 
   struct AutoArg {
     using type = Options::Auto<std::unique_ptr<Base>>;
-    static constexpr Options::String help = "halp";
+    inline const static std::string help {"halp"};
   };
 
-  static constexpr Options::String help = "halp";
+  inline const static std::string help {"halp"};
   using options = tmpl::list<AutoArg>;
 
   explicit NonCopyableArgument(

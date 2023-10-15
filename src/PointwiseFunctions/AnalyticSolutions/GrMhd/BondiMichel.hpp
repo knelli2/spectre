@@ -175,14 +175,14 @@ class BondiMichel : public virtual evolution::initial_data::InitialData,
   /// The mass of the black hole.
   struct Mass {
     using type = double;
-    static constexpr Options::String help = {"Mass of the black hole."};
+    inline const static std::string help {"Mass of the black hole."};
     static type lower_bound() { return 0.0; }
   };
 
   /// The radius at which the fluid becomes supersonic.
   struct SonicRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Schwarzschild radius where fluid becomes supersonic."};
     static type lower_bound() { return 0.0; }
   };
@@ -190,7 +190,7 @@ class BondiMichel : public virtual evolution::initial_data::InitialData,
   /// The rest mass density of the fluid at the sonic radius.
   struct SonicDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The density of the fluid at the sonic radius."};
     static type lower_bound() { return 0.0; }
   };
@@ -198,7 +198,7 @@ class BondiMichel : public virtual evolution::initial_data::InitialData,
   /// The polytropic exponent for the polytropic fluid.
   struct PolytropicExponent {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The polytropic exponent for the polytropic fluid."};
     static type lower_bound() { return 1.0; }
   };
@@ -206,13 +206,13 @@ class BondiMichel : public virtual evolution::initial_data::InitialData,
   /// The strength of the radial magnetic field.
   struct MagFieldStrength {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The strength of the radial magnetic field."};
   };
 
   using options = tmpl::list<Mass, SonicRadius, SonicDensity,
                              PolytropicExponent, MagFieldStrength>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Bondi-Michel solution with a radial magnetic field using \n"
       "the Schwarzschild coordinate system. Quantities prefixed with \n"
       "`sonic` refer to field quantities evaluated at the radius \n"

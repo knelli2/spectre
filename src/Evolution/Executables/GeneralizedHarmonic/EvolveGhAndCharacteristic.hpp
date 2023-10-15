@@ -224,7 +224,7 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<3>,
                                  tmpl::pin<EvolutionMetavars>, tmpl::_1>>,
       cce_boundary_component, Cce::CharacteristicEvolution<EvolutionMetavars>>>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the Einstein field equations using the Generalized Harmonic "
       "formulation\n"
       "with a coupled CCE evolution for asymptotic wave data output.\n"

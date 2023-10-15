@@ -21,7 +21,7 @@ namespace intrp {
 class LinearSpanInterpolator : public SpanInterpolator {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help = {"Linear interpolator."};
+  inline const static std::string help {"Linear interpolator."};
 
   LinearSpanInterpolator() = default;
   LinearSpanInterpolator(const LinearSpanInterpolator&) = default;

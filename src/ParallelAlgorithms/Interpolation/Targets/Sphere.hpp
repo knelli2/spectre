@@ -57,25 +57,25 @@ namespace OptionHolders {
 struct Sphere {
   struct LMax {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The number of collocation points on each sphere will be equal to "
         "`(l_max + 1) * (2 * l_max + 1)`"};
   };
   struct Center {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {"Center of every sphere"};
+    inline const static std::string help {"Center of every sphere"};
   };
   struct Radius {
     using type = std::variant<double, std::vector<double>>;
-    static constexpr Options::String help = {"Radius of the sphere(s)"};
+    inline const static std::string help {"Radius of the sphere(s)"};
   };
   struct AngularOrdering {
     using type = intrp::AngularOrdering;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Chooses theta,phi ordering in 2d array"};
   };
   using options = tmpl::list<LMax, Center, Radius, AngularOrdering>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "An arbitrary number of spherical surface."};
   Sphere(const size_t l_max_in, const std::array<double, 3> center_in,
          const typename Radius::type& radius_in,
@@ -102,7 +102,7 @@ namespace OptionTags {
 template <typename InterpolationTargetTag>
 struct Sphere {
   using type = OptionHolders::Sphere;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Options for interpolation onto a sphere(s)."};
   static std::string name() {
     return pretty_type::name<InterpolationTargetTag>();

@@ -77,7 +77,7 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<VolumeDim> {
                                importers::ElementDataReader<EvolutionMetavars>,
                                gh_dg_element_array>>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the Einstein field equations using the Generalized Harmonic "
       "formulation\n"};
 };

@@ -50,32 +50,32 @@ namespace OptionTags {
 
 struct NonlinearSolverGroup {
   static std::string name() { return "NonlinearSolver"; }
-  static constexpr Options::String help = "The iterative nonlinear solver";
+  inline const static std::string help {"The iterative nonlinear solver"};
 };
 struct NewtonRaphsonGroup {
   static std::string name() { return "NewtonRaphson"; }
-  static constexpr Options::String help =
-      "Options for the Newton-Raphson nonlinear solver";
+  inline const static std::string help
+      {"Options for the Newton-Raphson nonlinear solver"};
   using group = NonlinearSolverGroup;
 };
 struct LinearSolverGroup {
   static std::string name() { return "LinearSolver"; }
-  static constexpr Options::String help =
-      "The iterative Krylov-subspace linear solver";
+  inline const static std::string help
+      {"The iterative Krylov-subspace linear solver"};
 };
 struct GmresGroup {
   static std::string name() { return "Gmres"; }
-  static constexpr Options::String help = "Options for the GMRES linear solver";
+  inline const static std::string help {"Options for the GMRES linear solver"};
   using group = LinearSolverGroup;
 };
 struct SchwarzSmootherGroup {
   static std::string name() { return "SchwarzSmoother"; }
-  static constexpr Options::String help = "Options for the Schwarz smoother";
+  inline const static std::string help {"Options for the Schwarz smoother"};
   using group = LinearSolverGroup;
 };
 struct MultigridGroup {
   static std::string name() { return "Multigrid"; }
-  static constexpr Options::String help = "Options for the multigrid";
+  inline const static std::string help {"Options for the multigrid"};
   using group = LinearSolverGroup;
 };
 

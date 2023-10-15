@@ -48,7 +48,7 @@ struct ExactInversePreconditioner {
 
   // Make option-creatable for factory tests
   using options = tmpl::list<>;
-  static constexpr Options::String help{"halp"};
+  inline const static std::string help{"halp"};
 
  private:
   // NOLINTNEXTLINE(spectre-mutable)

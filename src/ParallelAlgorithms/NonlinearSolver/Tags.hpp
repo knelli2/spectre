@@ -46,7 +46,7 @@ namespace OptionTags {
 template <typename OptionsGroup>
 struct SufficientDecrease {
   using type = double;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Fraction of decrease predicted by linearization"};
   static type lower_bound() { return 0.; }
   static type upper_bound() { return 1.; }
@@ -65,7 +65,7 @@ struct SufficientDecrease {
 template <typename OptionsGroup>
 struct DampingFactor {
   using type = double;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Multiply corrections by this factor"};
   static type lower_bound() { return 0.; }
   static type upper_bound() { return 1.; }
@@ -85,7 +85,7 @@ struct DampingFactor {
 template <typename OptionsGroup>
 struct MaxGlobalizationSteps {
   using type = size_t;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Maximum number of globalization steps"};
   static type suggested_value() { return 40; }
   using group = OptionsGroup;

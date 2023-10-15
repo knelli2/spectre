@@ -66,51 +66,51 @@ class ShuOsherTube : public MarkAsAnalyticData {
   /// Initial postition of the discontinuity
   struct JumpPosition {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial position of the discontinuity."};
   };
 
   struct LeftMassDensity {
     using type = double;
-    static constexpr Options::String help = {"The left mass density."};
+    inline const static std::string help {"The left mass density."};
     static type lower_bound() { return 0.0; }
   };
 
   struct LeftVelocity {
     using type = double;
-    static constexpr Options::String help = {"The left velocity."};
+    inline const static std::string help {"The left velocity."};
   };
 
   struct LeftPressure {
     using type = double;
-    static constexpr Options::String help = {"The left pressure."};
+    inline const static std::string help {"The left pressure."};
     static type lower_bound() { return 0.0; }
   };
 
   struct RightVelocity {
     using type = double;
-    static constexpr Options::String help = {"The right velocity."};
+    inline const static std::string help {"The right velocity."};
   };
 
   struct RightPressure {
     using type = double;
-    static constexpr Options::String help = {"The right pressure."};
+    inline const static std::string help {"The right pressure."};
     static type lower_bound() { return 0.0; }
   };
 
   struct Epsilon {
     using type = double;
-    static constexpr Options::String help = {"Sinusoid amplitude."};
+    inline const static std::string help {"Sinusoid amplitude."};
     static type lower_bound() { return 0.0; }
     static type upper_bound() { return 1.0; }
   };
 
   struct Lambda {
     using type = double;
-    static constexpr Options::String help = {"Sinusoid wavelength."};
+    inline const static std::string help {"Sinusoid wavelength."};
   };
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "1D Shu-Osher oscillatory shock tube."};
 
   using options =

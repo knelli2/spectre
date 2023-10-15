@@ -188,7 +188,7 @@ class UpwindPenalty final : public BoundaryCorrection<Dim> {
 
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Computes the UpwindPenalty boundary correction term for the scalar wave "
       "system."};
 

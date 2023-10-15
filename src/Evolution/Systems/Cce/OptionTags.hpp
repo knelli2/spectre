@@ -26,19 +26,19 @@ namespace OptionTags {
 
 /// %Option group
 struct Cce {
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Options for the Cce evolution system"};
 };
 
 /// %Option group
 struct Filtering {
-  static constexpr Options::String help = {"Options for the filtering in Cce"};
+  inline const static std::string help {"Options for the filtering in Cce"};
   using group = Cce;
 };
 
 /// %Option group for evolution-related quantities in the CCE system
 struct Evolution {
-  static constexpr Options::String help = {"Options for the CCE evolution"};
+  inline const static std::string help {"Options for the CCE evolution"};
   using group = Cce;
 };
 
@@ -48,13 +48,13 @@ template <typename OptionTag>
 struct CceEvolutionPrefix {
   using type = typename OptionTag::type;
   static std::string name() { return pretty_type::name<OptionTag>(); }
-  static constexpr Options::String help = OptionTag::help;
+  inline const static std::string help =OptionTag::help;
   using group = Evolution;
 };
 
 struct BondiSachsOutputFilePrefix {
   using type = std::string;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Filename prefix for dumping Bondi-Sachs data on worltube radii. Files "
       "will have this prefix prepended to 'CceRXXXX.h5' where XXXX will be the "
       "zero-padded extraction radius to the nearest integer."};
@@ -63,47 +63,47 @@ struct BondiSachsOutputFilePrefix {
 
 struct LMax {
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Maximum l value for spin-weighted spherical harmonics"};
   using group = Cce;
 };
 
 struct FilterLMax {
   using type = size_t;
-  static constexpr Options::String help{"l mode cutoff for angular filtering"};
+  inline const static std::string help{"l mode cutoff for angular filtering"};
   using group = Filtering;
 };
 
 struct RadialFilterAlpha {
   using type = double;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "alpha parameter in exponential radial filter"};
   using group = Filtering;
 };
 
 struct RadialFilterHalfPower {
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Half-power of the exponential radial filter argument"};
   using group = Filtering;
 };
 
 struct ObservationLMax {
   using type = size_t;
-  static constexpr Options::String help{"Maximum l value for swsh output"};
+  inline const static std::string help{"Maximum l value for swsh output"};
   using group = Cce;
 };
 
 struct NumberOfRadialPoints {
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Number of radial grid points in the spherical domain"};
   using group = Cce;
 };
 
 struct ExtractionRadius {
   using type = double;
-  static constexpr Options::String help{"Extraction radius of the CCE system."};
+  inline const static std::string help{"Extraction radius of the CCE system."};
   using group = Cce;
 };
 
@@ -111,7 +111,7 @@ struct StandaloneExtractionRadius {
   static std::string name() { return "ExtractionRadius"; }
   using type = Options::Auto<double>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Extraction radius of the CCE system for a standalone run. This may be "
       "set to \"Auto\" to infer the radius from the filename (often used for "
       "SpEC worldtube data). This option is unused if `H5IsBondiData` is "
@@ -121,14 +121,14 @@ struct StandaloneExtractionRadius {
 
 struct EndTime {
   using type = Options::Auto<double>;
-  static constexpr Options::String help{"End time for the Cce Evolution."};
+  inline const static std::string help{"End time for the Cce Evolution."};
   static type suggested_value() { return {}; }
   using group = Cce;
 };
 
 struct StartTime {
   using type = Options::Auto<double>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Cce Start time (default to earliest possible time)."};
   static type suggested_value() { return {}; }
   using group = Cce;
@@ -136,14 +136,14 @@ struct StartTime {
 
 struct BoundaryDataFilename {
   using type = std::string;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "H5 file to read the wordltube data from."};
   using group = Cce;
 };
 
 struct H5LookaheadTimes {
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Number of times steps from the h5 to cache each read."};
   static size_t suggested_value() { return 200; }
   using group = Cce;
@@ -151,14 +151,14 @@ struct H5LookaheadTimes {
 
 struct H5Interpolator {
   using type = std::unique_ptr<intrp::SpanInterpolator>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "The interpolator for imported h5 worldtube data."};
   using group = Cce;
 };
 
 struct H5IsBondiData {
   using type = bool;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "true for boundary data in Bondi form, false for metric data. Metric "
       "data is more readily available from Cauchy simulations, so historically "
       "has been the typical format provided by SpEC simulations. Bondi data is "
@@ -169,7 +169,7 @@ struct H5IsBondiData {
 
 struct FixSpecNormalization {
   using type = bool;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Set to true if corrections for SpEC data impurities should be applied "
       "automatically based on the `VersionHist.ver` data set in the H5. "
       "Typically, this should be set to true if the metric data is created "
@@ -179,14 +179,14 @@ struct FixSpecNormalization {
 
 struct AnalyticSolution {
   using type = std::unique_ptr<Solutions::WorldtubeData>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Analytic worldtube data for tests of CCE."};
   using group = Cce;
 };
 
 struct GhInterfaceManager {
   using type = InterfaceManagers::GhLocalTimeStepping;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Class to manage worldtube data from a GH system."};
   using group = Cce;
 };
@@ -194,7 +194,7 @@ struct GhInterfaceManager {
 struct ScriInterpolationOrder {
   static std::string name() { return "ScriInterpOrder"; }
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Order of time interpolation at scri+."};
   static size_t suggested_value() { return 5; }
   using group = Cce;
@@ -202,7 +202,7 @@ struct ScriInterpolationOrder {
 
 struct ScriOutputDensity {
   using type = size_t;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Number of scri output points per timestep."};
   static size_t suggested_value() { return 1; }
   using group = Cce;
@@ -211,7 +211,7 @@ struct ScriOutputDensity {
 template <bool evolve_ccm>
 struct InitializeJ {
   using type = std::unique_ptr<::Cce::InitializeJ::InitializeJ<evolve_ccm>>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "The initialization for the first hypersurface for J"};
   using group = Cce;
 };

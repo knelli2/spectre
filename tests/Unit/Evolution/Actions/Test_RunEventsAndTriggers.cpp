@@ -46,7 +46,7 @@ struct TestEvent : public Event {
 
   using compute_tags_for_observation_box = tmpl::list<>;
   using options = tmpl::list<>;
-  static constexpr Options::String help = "";
+  inline const static std::string help {""};
 
   TestEvent() = default;
 

@@ -44,20 +44,20 @@ class Step : public evolution::initial_data::InitialData,
   struct LeftValue {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help{"The value of U, left of the shock"};
+    inline const static std::string help{"The value of U, left of the shock"};
   };
   struct RightValue {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help{"The value of U, right of the shock"};
+    inline const static std::string help{"The value of U, right of the shock"};
   };
   struct InitialPosition {
     using type = double;
-    static constexpr Options::String help{"The shock's position at t==0"};
+    inline const static std::string help{"The shock's position at t==0"};
   };
 
   using options = tmpl::list<LeftValue, RightValue, InitialPosition>;
-  static constexpr Options::String help{"A propagating shock solution"};
+  inline const static std::string help{"A propagating shock solution"};
 
   Step(double left_value, double right_value, double initial_shock_position,
        const Options::Context& context = {});

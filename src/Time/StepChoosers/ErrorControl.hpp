@@ -134,26 +134,26 @@ class ErrorControl : public StepChooser<StepChooserUse>,
 
   struct AbsoluteTolerance {
     using type = double;
-    static constexpr Options::String help{"Target absolute tolerance"};
+    inline const static std::string help{"Target absolute tolerance"};
     static type lower_bound() { return 0.0; }
   };
 
   struct RelativeTolerance {
     using type = double;
-    static constexpr Options::String help{"Target relative tolerance"};
+    inline const static std::string help{"Target relative tolerance"};
     static type lower_bound() { return 0.0; }
   };
 
   struct MaxFactor {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Maximum factor to increase the step by"};
     static type lower_bound() { return 1.0; }
   };
 
   struct MinFactor {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Minimum factor to increase the step by"};
     static type lower_bound() { return 0.0; }
     static type upper_bound() { return 1.0; }
@@ -161,13 +161,13 @@ class ErrorControl : public StepChooser<StepChooserUse>,
 
   struct SafetyFactor {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Extra factor to apply to step estimate; can be used to decrease step "
         "size to improve step acceptance rate."};
     static type lower_bound() { return 0.0; }
   };
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Chooses a step based on a target relative and absolute error tolerance"};
   using options = tmpl::list<AbsoluteTolerance, RelativeTolerance, MaxFactor,
                              MinFactor, SafetyFactor>;

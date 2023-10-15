@@ -43,7 +43,7 @@ namespace TimeSteppers {
 class DormandPrince5 : public RungeKutta {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "The standard Dormand-Prince 5th-order time stepper."};
 
   DormandPrince5() = default;

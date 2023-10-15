@@ -70,14 +70,14 @@ class FixToAtmosphere {
   struct DensityOfAtmosphere {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {"Density of atmosphere"};
+    inline const static std::string help {"Density of atmosphere"};
   };
   /// \brief Rest mass density at which to impose the atmosphere. Should be
   /// greater than or equal to the density of the atmosphere.
   struct DensityCutoff {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Density to impose atmosphere at. Must be >= rho_atm"};
   };
   /// \brief For densities between DensityOfAtmosphere and
@@ -88,7 +88,7 @@ class FixToAtmosphere {
   struct TransitionDensityCutoff {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "For densities between DensityOfAtmosphere and TransitionDensityCutoff "
         "the velocity is transitioned away from atmosphere to avoid abrupt "
         "cutoffs.\n\n"
@@ -100,7 +100,7 @@ class FixToAtmosphere {
     using type = double;
     static type lower_bound() { return 0.0; }
     static type upper_bound() { return 1.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The maximum sqrt(v^i v^j gamma_{ij}) allowed when the density is "
         "below TransitionDensityCutoff."};
   };
@@ -108,7 +108,7 @@ class FixToAtmosphere {
   using options =
       tmpl::list<DensityOfAtmosphere, DensityCutoff, TransitionDensityCutoff,
                  MaxVelocityMagnitude>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "If the rest mass density is below DensityCutoff, it is set\n"
       "to DensityOfAtmosphere, and the pressure, specific internal energy\n"
       "(for one-dimensional equations of state), and specific enthalpy are\n"

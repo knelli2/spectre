@@ -76,44 +76,44 @@ class MagneticRotor : public evolution::initial_data::InitialData,
   /// Radius of the rotor.
   struct RotorRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial radius of the rotor."};
     static type lower_bound() { return 0.0; }
   };
   /// Density inside the rotor.
   struct RotorDensity {
     using type = double;
-    static constexpr Options::String help = {"Density inside RotorRadius."};
+    inline const static std::string help {"Density inside RotorRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// Density outside the rotor.
   struct BackgroundDensity {
     using type = double;
-    static constexpr Options::String help = {"Density outside RotorRadius."};
+    inline const static std::string help {"Density outside RotorRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// Uniform pressure inside and outside the rotor.
   struct Pressure {
     using type = double;
-    static constexpr Options::String help = {"Pressure."};
+    inline const static std::string help {"Pressure."};
     static type lower_bound() { return 0.0; }
   };
   /// Angular velocity inside the rotor.
   struct AngularVelocity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Angular velocity of matter inside RotorRadius"};
   };
   /// The x,y,z components of the uniform magnetic field threading the matter.
   struct MagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The x,y,z components of the uniform magnetic field."};
   };
   /// The adiabatic index of the ideal fluid.
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the ideal fluid."};
     static type lower_bound() { return 1.0; }
   };
@@ -122,7 +122,7 @@ class MagneticRotor : public evolution::initial_data::InitialData,
       tmpl::list<RotorRadius, RotorDensity, BackgroundDensity, Pressure,
                  AngularVelocity, MagneticField, AdiabaticIndex>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Magnetic rotor analytic initial data."};
 
   MagneticRotor() = default;

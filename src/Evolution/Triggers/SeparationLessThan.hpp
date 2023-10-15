@@ -66,12 +66,12 @@ class SeparationLessThan : public Trigger {
 
   struct Value {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Separation of the two horizons to compare against."};
   };
 
   using options = tmpl::list<Value>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Trigger when the separation between the two horizons is less than a "
       "certain distance."};
 

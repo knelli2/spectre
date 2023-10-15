@@ -416,7 +416,7 @@ struct EvolutionMetavars {
       initial_data_tag, equation_of_state_tag,
       tmpl::conditional_t<has_source_terms, source_term_tag, tmpl::list<>>>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the Newtonian Euler system in conservative form.\n\n"};
 
   static constexpr std::array<Parallel::Phase, 5> default_phase_order{

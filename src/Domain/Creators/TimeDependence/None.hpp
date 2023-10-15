@@ -39,7 +39,7 @@ class None final : public TimeDependence<MeshDim> {
   using maps_list = tmpl::list<>;
   using options = tmpl::list<>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "No time dependence in the in grid."};
 
   None() = default;

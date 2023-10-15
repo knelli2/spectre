@@ -41,24 +41,24 @@ namespace Solutions {
 struct TeukolskyWave : public SphericalMetricData {
   struct ExtractionRadius {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The extraction radius of the spherical solution"};
     static type lower_bound() { return 0.0; }
   };
   struct Amplitude {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The amplitude of the Teukolsky wave."};
     static type lower_bound() { return 0.0; }
   };
   struct Duration {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The characteristic duration of the Gaussian envelope."};
     static type lower_bound() { return 0.0; }
   };
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "An analytic solution derived from the linearized Teukolsky equation"};
 
   using options = tmpl::list<ExtractionRadius, Amplitude, Duration>;

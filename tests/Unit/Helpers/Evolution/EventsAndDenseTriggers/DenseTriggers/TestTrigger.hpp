@@ -49,16 +49,16 @@ class TestTrigger : public DenseTrigger {
 
   struct IsTriggered {
     using type = Options::Auto<bool, NotReady>;
-    constexpr static Options::String help = "IsTriggered";
+    inline const static std::string help {"IsTriggered"};
   };
 
   struct NextCheck {
     using type = Options::Auto<double, NotReady>;
-    constexpr static Options::String help = "NextCheck";
+    inline const static std::string help {"NextCheck"};
   };
 
   using options = tmpl::list<IsTriggered, NextCheck>;
-  constexpr static Options::String help = "help";
+  inline const static std::string help {"help"};
 
   TestTrigger(const std::optional<bool>& is_triggered,
               const std::optional<double>& next_check)
@@ -107,7 +107,7 @@ class BoxTrigger : public DenseTrigger {
   }
 
   using options = tmpl::list<>;
-  constexpr static Options::String help = "help";
+  inline const static std::string help {"help"};
 
   struct IsTriggered : db::SimpleTag {
     using type = std::optional<bool>;

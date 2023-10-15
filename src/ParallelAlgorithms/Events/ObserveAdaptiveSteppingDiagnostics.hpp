@@ -64,7 +64,7 @@ class ObserveAdaptiveSteppingDiagnostics : public Event {
   /// The name of the subfile inside the HDF5 file
   struct SubfileName {
     using type = std::string;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The name of the subfile inside the HDF5 file without an extension and "
         "without a preceding '/'."};
   };
@@ -76,8 +76,8 @@ class ObserveAdaptiveSteppingDiagnostics : public Event {
   /// \endcond
 
   using options = tmpl::list<SubfileName>;
-  static constexpr Options::String help =
-      "Observe diagnostics about adaptive time-stepping\n"
+  inline const static std::string help
+      {"Observe diagnostics about adaptive time-stepping\n"
       "\n"
       "Writes reduction quantities:\n"
       " - Time\n"
@@ -88,7 +88,7 @@ class ObserveAdaptiveSteppingDiagnostics : public Event {
       " - Number of step rejections\n"
       "\n"
       "The slab information is the same on all elements.  The step\n"
-      "information is summed over the elements.";
+      "information is summed over the elements."};
 
   ObserveAdaptiveSteppingDiagnostics() = default;
   explicit ObserveAdaptiveSteppingDiagnostics(const std::string& subfile_name)

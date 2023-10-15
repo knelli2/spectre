@@ -44,19 +44,19 @@ namespace TestHelpers::LinearSolver::multigrid {
 
 namespace OptionTags {
 struct LinearOperator {
-  static constexpr Options::String help =
-      "The linear operator A to invert. The outer list corresponds to "
+  inline const static std::string help
+      {"The linear operator A to invert. The outer list corresponds to "
       "multigrid levels, ordered from finest to coarsest grid. The inner list "
       "corresponds to the elements in the domain. The number of columns in "
       "each matrix corresponds to the number of grid points in the element, "
       "and the number of rows corresponds to the total number of grid points "
-      "in the domain.";
+      "in the domain."};
   using type = std::vector<std::vector<blaze::DynamicMatrix<double>>>;
 };
 struct OperatorIsMassive {
-  static constexpr Options::String help =
-      "Whether or not the linear operator includes a mass matrix. This is "
-      "relevant for projection operations between grids.";
+  inline const static std::string help
+      {"Whether or not the linear operator includes a mass matrix. This is "
+      "relevant for projection operations between grids."};
   using type = bool;
 };
 }  // namespace OptionTags

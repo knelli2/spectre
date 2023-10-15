@@ -18,10 +18,10 @@ class CreateFromOptions {
  public:
   struct CfoOption {
     using type = std::string;
-    static constexpr Options::String help = {"Option help text"};
+    inline const static std::string help {"Option help text"};
   };
 
-  static constexpr Options::String help = {"Class help text"};
+  inline const static std::string help {"Class help text"};
   using options = tmpl::list<CfoOption>;
 
   CreateFromOptions() = default;
@@ -40,7 +40,7 @@ class CreateFromOptions {
 
 struct Cfo {
   using type = CreateFromOptions;
-  static constexpr Options::String help = {"help"};
+  inline const static std::string help {"help"};
 };
 
 const char* const input_file_text = R"(
@@ -56,10 +56,10 @@ class CreateFromOptionsWithMetavariables {
   struct CfoOption {
     static std::string name() { return Metavariables::option_name(); }
     using type = std::string;
-    static constexpr Options::String help = {"Option help text"};
+    inline const static std::string help {"Option help text"};
   };
 
-  static constexpr Options::String help = {"Class help text"};
+  inline const static std::string help {"Class help text"};
   template <typename Metavariables>
   using options = tmpl::list<CfoOption<Metavariables>>;
 
@@ -82,7 +82,7 @@ struct Metavariables {
 
 struct CfoWithMetavariables {
   using type = CreateFromOptionsWithMetavariables;
-  static constexpr Options::String help = {"help"};
+  inline const static std::string help {"help"};
 };
 
 const char* const input_file_text_with_metavariables = R"(
@@ -94,9 +94,9 @@ CfoWithMetavariables:
 struct CreateFromOptionsAggregate {
   struct CfoOption {
     using type = std::string;
-    static constexpr Options::String help = {"Option help text"};
+    inline const static std::string help {"Option help text"};
   };
-  static constexpr Options::String help = {"Class help text"};
+  inline const static std::string help {"Class help text"};
   using options = tmpl::list<CfoOption>;
   // Define no constructors. The class can be aggregate-initialized.
   std::string str{};
@@ -104,7 +104,7 @@ struct CreateFromOptionsAggregate {
 
 struct CfoAggregate {
   using type = CreateFromOptionsAggregate;
-  static constexpr Options::String help = {"help"};
+  inline const static std::string help {"help"};
 };
 
 const char* const input_file_text_aggregate = R"(
@@ -167,7 +167,7 @@ enum class CreateFromOptionsAnimal { Cat, Dog };
 
 struct CfoAnimal {
   using type = CreateFromOptionsAnimal;
-  static constexpr Options::String help = {"Option help text"};
+  inline const static std::string help {"Option help text"};
 };
 }  // namespace
 
@@ -200,7 +200,7 @@ enum class CreateFromOptionsExoticAnimal { MexicanWalkingFish, Platypus };
 
 struct CfoExoticAnimal {
   using type = CreateFromOptionsExoticAnimal;
-  static constexpr Options::String help = {"Option help text"};
+  inline const static std::string help {"Option help text"};
 };
 }  // namespace
 

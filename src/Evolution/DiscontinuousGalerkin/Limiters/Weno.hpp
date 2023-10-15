@@ -167,7 +167,7 @@ class Weno<VolumeDim, tmpl::list<Tags...>> {
   /// documentation for details.
   struct Type {
     using type = WenoType;
-    static constexpr Options::String help = {"Type of WENO limiter"};
+    inline const static std::string help {"Type of WENO limiter"};
   };
   /// \brief The linear weight given to each neighbor
   ///
@@ -180,7 +180,7 @@ class Weno<VolumeDim, tmpl::list<Tags...>> {
     using type = double;
     static type lower_bound() { return 1e-6; }
     static type upper_bound() { return 0.1; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Linear weight for each neighbor element's solution"};
   };
   /// \brief The TVB constant for the minmod TCI
@@ -189,7 +189,7 @@ class Weno<VolumeDim, tmpl::list<Tags...>> {
   struct TvbConstant {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {"TVB constant 'm'"};
+    inline const static std::string help {"TVB constant 'm'"};
   };
   /// \brief Turn the limiter off
   ///
@@ -199,11 +199,11 @@ class Weno<VolumeDim, tmpl::list<Tags...>> {
   struct DisableForDebugging {
     using type = bool;
     static type suggested_value() { return false; }
-    static constexpr Options::String help = {"Disable the limiter"};
+    inline const static std::string help {"Disable the limiter"};
   };
   using options =
       tmpl::list<Type, NeighborWeight, TvbConstant, DisableForDebugging>;
-  static constexpr Options::String help = {"A WENO limiter for DG"};
+  inline const static std::string help {"A WENO limiter for DG"};
 
   Weno(WenoType weno_type, double neighbor_linear_weight, double tvb_constant,
        bool disable_for_debugging = false);

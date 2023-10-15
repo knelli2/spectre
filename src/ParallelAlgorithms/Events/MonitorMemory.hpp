@@ -94,7 +94,7 @@ class MonitorMemory : public Event {
   struct ComponentsToMonitor {
     using type =
         Options::Auto<std::vector<std::string>, Options::AutoLabel::All>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Names of parallel components to monitor the memory usage of. If you'd "
         "like to monitor all available parallel components, pass 'All' "
         "instead."};
@@ -102,8 +102,8 @@ class MonitorMemory : public Event {
 
   using options = tmpl::list<ComponentsToMonitor>;
 
-  static constexpr Options::String help =
-      "Observe memory usage of parallel components.";
+  inline const static std::string help
+      {"Observe memory usage of parallel components."};
 
   MonitorMemory() = default;
 

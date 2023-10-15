@@ -71,28 +71,28 @@ tnsr::I<DataType, Dim, CoordsFrame> radially_compressed_coordinates(
 ///
 /// \see radially_compressed_coordinates
 struct RadiallyCompressedCoordinatesOptions {
-  static constexpr Options::String help =
-      "Define radially compressed coordinates for visualizing large outer "
-      "radii.";
+  inline const static std::string help
+      {"Define radially compressed coordinates for visualizing large outer "
+      "radii."};
   struct InnerRadius {
     using type = double;
-    static constexpr Options::String help =
-        "Radially compressed coordinates begin at this radius, and coincide "
-        "with the original coordinates for smaller radii.";
+    inline const static std::string help
+        {"Radially compressed coordinates begin at this radius, and coincide "
+        "with the original coordinates for smaller radii."};
   };
   struct OuterRadius {
     using type = double;
-    static constexpr Options::String help =
-        "Outer radius of the domain which will be compressed down to a "
-        "comprehensible radius, namely to r_inner * log10(r_outer).";
+    inline const static std::string help
+        {"Outer radius of the domain which will be compressed down to a "
+        "comprehensible radius, namely to r_inner * log10(r_outer)."};
   };
   struct Compression {
     using type = CoordinateMaps::Distribution;
-    static constexpr Options::String help =
-        "Compression mode: 'Logarithmic' or 'Inverse'. If you use the same "
+    inline const static std::string help
+        {"Compression mode: 'Logarithmic' or 'Inverse'. If you use the same "
         "mode that you used to distribute radial grid points then the "
         "grid points will be distributed linearly in the radially compressed "
-        "coordinates.";
+        "coordinates."};
   };
   using options = tmpl::list<InnerRadius, OuterRadius, Compression>;
   void pup(PUP::er& p);
@@ -106,9 +106,9 @@ namespace OptionTags {
 struct RadiallyCompressedCoordinates {
   using type = Options::Auto<domain::RadiallyCompressedCoordinatesOptions,
                              Options::AutoLabel::None>;
-  static constexpr Options::String help =
-      "Define radially compressed coordinates for visualizing large outer "
-      "radii.";
+  inline const static std::string help
+      {"Define radially compressed coordinates for visualizing large outer "
+      "radii."};
 };
 
 }  // namespace OptionTags

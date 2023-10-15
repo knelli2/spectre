@@ -28,7 +28,7 @@ class er;
 namespace OptionTags {
 struct Name {
   using type = std::string;
-  static constexpr Options::String help{"A name"};
+  inline const static std::string help{"A name"};
 };
 }  // namespace OptionTags
 
@@ -90,7 +90,7 @@ void HelloWorld<Metavariables>::execute_next_phase(
 struct Metavars {
   using component_list = tmpl::list<HelloWorld<Metavars>>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Say hello from a singleton parallel component."};
 
   static constexpr std::array<Parallel::Phase, 3> default_phase_order{

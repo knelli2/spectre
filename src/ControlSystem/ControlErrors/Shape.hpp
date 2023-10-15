@@ -98,7 +98,7 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
   using object_centers = domain::object_list<Horizon>;
 
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Computes the control error for shape control. This should not take any "
       "options."};
 

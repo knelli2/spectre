@@ -43,11 +43,11 @@ class GhLocalTimeStepping : public GhInterfaceManager {
  public:
   struct BoundaryInterpolator {
     using type = std::unique_ptr<intrp::SpanInterpolator>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Interpolator for computing CCE data from GH time points"};
   };
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Interpolate data from the GH system to generate CCE inputs"};
 
   using options = tmpl::list<BoundaryInterpolator>;

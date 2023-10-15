@@ -814,13 +814,13 @@ struct TestMetavariables {
   // [component_list_example]
 
   // [help_string_example]
-  static constexpr Options::String help =
-      "An executable for testing the core functionality of the Algorithm. "
+  inline const static std::string help
+      {"An executable for testing the core functionality of the Algorithm. "
       "Actions that do not perform any operations (no-ops), invoking simple "
       "actions, mutating data in the DataBox, receiving data from other "
       "parallel components, and out-of-order execution of Actions are all "
       "tested. All tests are run just by running the executable, no input file "
-      "or command line arguments are required";
+      "or command line arguments are required"};
   // [help_string_example]
 
   // These phases are just here to separate out execution of the test. The names

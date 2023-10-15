@@ -48,7 +48,7 @@ class Tabulated3D : public EquationOfState<IsRelativistic, 3> {
   static constexpr size_t thermodynamic_dim = 3;
   static constexpr bool is_relativistic = IsRelativistic;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A tabulated three-dimensional equation of state.\n"
       "The energy density, pressure and sound speed "
       "are tabulated as a function of density, electron_fraction and "
@@ -56,12 +56,12 @@ class Tabulated3D : public EquationOfState<IsRelativistic, 3> {
 
   struct TableFilename {
     using type = std::string;
-    static constexpr Options::String help{"File name of the EOS table"};
+    inline const static std::string help{"File name of the EOS table"};
   };
 
   struct TableSubFilename {
     using type = std::string;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Subfile name of the EOS table, e.g., 'dd2'."};
   };
 

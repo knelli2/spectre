@@ -23,7 +23,7 @@ namespace TimeSteppers {
 class Rk5Tsitouras : public RungeKutta {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "An efficient 5th-order Runge-Kutta time stepper."};
 
   Rk5Tsitouras() = default;

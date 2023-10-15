@@ -73,55 +73,55 @@ class BlastWave : public evolution::initial_data::InitialData,
   /// Inside InnerRadius, density is InnerDensity.
   struct InnerRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Inside InnerRadius, density is InnerDensity."};
     static type lower_bound() { return 0.0; }
   };
   /// Outside OuterRadius, density is OuterDensity.
   struct OuterRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Outside OuterRadius, density is OuterDensity."};
     static type lower_bound() { return 0.0; }
   };
   /// Density at radii less than InnerRadius.
   struct InnerDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Density at radii less than InnerRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// Density at radii greater than OuterRadius.
   struct OuterDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Density at radii greater than OuterRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// Pressure at radii less than InnerRadius.
   struct InnerPressure {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Pressure at radii less than InnerRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// Pressure at radii greater than OuterRadius.
   struct OuterPressure {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Pressure at radii greater than OuterRadius."};
     static type lower_bound() { return 0.0; }
   };
   /// The x,y,z components of the uniform magnetic field threading the matter.
   struct MagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The x,y,z components of the uniform magnetic field."};
   };
   /// The adiabatic index of the ideal fluid.
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the ideal fluid."};
     static type lower_bound() { return 1.0; }
   };
@@ -129,7 +129,7 @@ class BlastWave : public evolution::initial_data::InitialData,
   struct GeometryOption {
     static std::string name() { return "Geometry"; }
     using type = Geometry;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The geometry of the blast wave, i.e. Cylindrical or Spherical."};
   };
 
@@ -137,7 +137,7 @@ class BlastWave : public evolution::initial_data::InitialData,
                              OuterDensity, InnerPressure, OuterPressure,
                              MagneticField, AdiabaticIndex, GeometryOption>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Cylindrical or spherical blast wave analytic initial data."};
 
   BlastWave() = default;

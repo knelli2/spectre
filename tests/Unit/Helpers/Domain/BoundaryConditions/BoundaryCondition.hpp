@@ -53,7 +53,7 @@ class BoundaryConditionBase
 
   void pup(PUP::er& p) override;
 
-  static constexpr Options::String help = {"Boundary conditions for tests."};
+  inline const static std::string help {"Boundary conditions for tests."};
 };
 
 /// \brief Concrete boundary condition
@@ -73,19 +73,19 @@ class TestBoundaryCondition final : public BoundaryConditionBase<Dim> {
   struct DirectionOptionTag {
     using type = std::string;
     static std::string name() { return "Direction"; }
-    static constexpr Options::String help =
-        "The direction the boundary condition operates in.";
+    inline const static std::string help
+        {"The direction the boundary condition operates in."};
   };
   struct BlockIdOptionTag {
     using type = size_t;
     static std::string name() { return "BlockId"; }
-    static constexpr Options::String help =
-        "The id of the block the boundary condition operates in.";
+    inline const static std::string help
+        {"The id of the block the boundary condition operates in."};
   };
 
   using options = tmpl::list<DirectionOptionTag, BlockIdOptionTag>;
 
-  static constexpr Options::String help = {"Boundary condition for testing."};
+  inline const static std::string help {"Boundary condition for testing."};
 
   WRAPPED_PUPable_decl_base_template(
       ::domain::BoundaryConditions::BoundaryCondition,

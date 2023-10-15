@@ -66,29 +66,29 @@ class AoWeno53 : public Reconstructor<Dim> {
  public:
   struct GammaHi {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The linear weight for the 5th-order stencil."};
   };
   struct GammaLo {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The linear weight for the central 3rd-order stencil."};
   };
   struct Epsilon {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The parameter added to the oscillation indicators to avoid division "
         "by zero"};
   };
   struct NonlinearWeightExponent {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The exponent q to which the oscillation indicators are raised"};
   };
 
   using options =
       tmpl::list<GammaHi, GammaLo, Epsilon, NonlinearWeightExponent>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Adaptive-order WENO reconstruction hybridizing orders 5 and 3."};
 
   AoWeno53() = default;

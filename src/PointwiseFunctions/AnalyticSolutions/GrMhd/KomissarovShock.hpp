@@ -53,21 +53,21 @@ class KomissarovShock
 
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the ideal fluid"};
     static type lower_bound() { return 1.0; }
   };
   struct LeftRestMassDensity {
     using type = double;
     static std::string name() { return "LeftDensity"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid rest mass density in the left half-domain"};
     static type lower_bound() { return 0.0; }
   };
   struct RightRestMassDensity {
     using type = double;
     static std::string name() { return "RightDensity"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid rest mass density in the right half-domain"};
     static type lower_bound() { return 0.0; }
   };
@@ -75,7 +75,7 @@ class KomissarovShock
   struct LeftElectronFraction {
     using type = double;
     static std::string name() { return "LeftElectronFraction"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid electron fraction in the left half-domain"};
     static type lower_bound() { return 0.0; }
     static type upper_bound() { return 1.0; }
@@ -83,48 +83,48 @@ class KomissarovShock
   struct RightElectronFraction {
     using type = double;
     static std::string name() { return "RightElectronFraction"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid electron fraction in the right half-domain"};
     static type lower_bound() { return 0.0; }
     static type upper_bound() { return 1.0; }
   };
   struct LeftPressure {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid pressure in the left half-domain"};
     static type lower_bound() { return 0.0; }
   };
   struct RightPressure {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid pressure in the right half-domain"};
     static type lower_bound() { return 0.0; }
   };
   struct LeftSpatialVelocity {
     using type = std::array<double, 3>;
     static std::string name() { return "LeftVelocity"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid spatial velocity in the left half-domain"};
   };
   struct RightSpatialVelocity {
     using type = std::array<double, 3>;
     static std::string name() { return "RightVelocity"; };
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid spatial velocity in the right half-domain"};
   };
   struct LeftMagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Magnetic field in the left half-domain"};
   };
   struct RightMagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Magnetic field in the right half-domain"};
   };
   struct ShockSpeed {
     using type = double;
-    static constexpr Options::String help = {"Propagation speed of the shock"};
+    inline const static std::string help {"Propagation speed of the shock"};
   };
 
   using options =
@@ -133,7 +133,7 @@ class KomissarovShock
                  RightPressure, LeftSpatialVelocity, RightSpatialVelocity,
                  LeftMagneticField, RightMagneticField, ShockSpeed>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Analytic initial data for a Komissarov shock test. The fluid variables "
       "are set homogeneously on either half of the domain left and right of "
       "x=0."};

@@ -37,7 +37,7 @@ struct BoundaryCorrection : public BoundaryCorrectionBase {
   ~BoundaryCorrection() override = default;
 
   using options = tmpl::list<>;
-  static constexpr Options::String help = {"Halp"};
+  inline const static std::string help {"Halp"};
 
   std::unique_ptr<BoundaryCorrectionBase> get_clone() const override {
     return std::make_unique<BoundaryCorrection>(*this);

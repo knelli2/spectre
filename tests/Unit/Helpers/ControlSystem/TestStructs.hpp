@@ -39,7 +39,7 @@ struct ControlError : tt::ConformsTo<control_system::protocols::ControlError> {
   void pup(PUP::er& /*p*/) {}
 
   using options = tmpl::list<>;
-  static constexpr Options::String help{"Example control error."};
+  inline const static std::string help{"Example control error."};
 
   template <typename Metavariables, typename... QueueTags>
   DataVector operator()(

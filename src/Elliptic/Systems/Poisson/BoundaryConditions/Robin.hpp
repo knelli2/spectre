@@ -32,24 +32,24 @@ class Robin : public elliptic::BoundaryConditions::BoundaryCondition<Dim> {
   using Base = elliptic::BoundaryConditions::BoundaryCondition<Dim>;
 
  public:
-  static constexpr Options::String help =
-      "Robin boundary conditions a * u + b * n_i grad(u)^i = c. The boundary "
+  inline const static std::string help
+      {"Robin boundary conditions a * u + b * n_i grad(u)^i = c. The boundary "
       "condition is imposed as Neumann-type (i.e. on n_i grad(u)^i) if abs(b) "
-      "> 0 and as Dirichlet-type (i.e. on u) if b = 0.";
+      "> 0 and as Dirichlet-type (i.e. on u) if b = 0."};
 
   struct DirichletWeight {
     using type = double;
-    static constexpr Options::String help = "The parameter 'a'";
+    inline const static std::string help {"The parameter 'a'"};
   };
 
   struct NeumannWeight {
     using type = double;
-    static constexpr Options::String help = "The parameter 'b'";
+    inline const static std::string help {"The parameter 'b'"};
   };
 
   struct Constant {
     using type = double;
-    static constexpr Options::String help = "The parameter 'c'";
+    inline const static std::string help {"The parameter 'c'"};
   };
 
   using options = tmpl::list<DirichletWeight, NeumannWeight, Constant>;

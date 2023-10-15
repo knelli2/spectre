@@ -28,18 +28,18 @@ namespace OptionTags {
 template <typename OptionsGroup>
 struct MaxLevels {
   using type = Options::Auto<size_t>;
-  static constexpr Options::String help =
-      "Maximum number of levels in the multigrid hierarchy. Includes the "
+  inline const static std::string help
+      {"Maximum number of levels in the multigrid hierarchy. Includes the "
       "finest grid, i.e. set to '1' to disable multigrids. Set to 'Auto' to "
-      "coarsen all the way up to single-element blocks.";
+      "coarsen all the way up to single-element blocks."};
   using group = OptionsGroup;
 };
 
 template <typename OptionsGroup>
 struct OutputVolumeData {
   using type = bool;
-  static constexpr Options::String help =
-      "Record volume data for debugging purposes.";
+  inline const static std::string help
+      {"Record volume data for debugging purposes."};
   using group = OptionsGroup;
   static bool suggested_value() { return false; }
 };
@@ -48,13 +48,13 @@ template <typename OptionsGroup>
 struct EnablePreSmoothing {
   static std::string name() { return "PreSmoothing"; }
   using type = bool;
-  static constexpr Options::String help =
-      "Set to 'False' to disable pre-smoothing altogether (\"cascading "
+  inline const static std::string help
+      {"Set to 'False' to disable pre-smoothing altogether (\"cascading "
       "multigrid\"). Note that pre-smoothing can be necessary to remove "
       "high-frequency modes in the data that get restricted to coarser grids, "
       "since such high-frequency modes can introduce aliasing. However, when "
       "running only a single V-cycle as preconditioner, the initial field is "
-      "typically zero, so pre-smoothing may not be worthwile.";
+      "typically zero, so pre-smoothing may not be worthwile."};
   using group = OptionsGroup;
 };
 
@@ -62,13 +62,13 @@ template <typename OptionsGroup>
 struct EnablePostSmoothingAtBottom {
   static std::string name() { return "PostSmoothingAtBottom"; }
   using type = bool;
-  static constexpr Options::String help =
-      "Set to 'False' to skip post-smoothing on the coarsest grid. This means "
+  inline const static std::string help
+      {"Set to 'False' to skip post-smoothing on the coarsest grid. This means "
       "only pre-smoothing runs on the coarsest grid, so the coarsest grid "
       "experiences less smoothing altogether. This is typically only "
       "desirable if the coarsest grid covers the domain with a single "
       "element, or very few, so pre-smoothing is already exceptionally "
-      "effective and hence post-smoothing is unnecessary on the coarsest grid.";
+      "effective and hence post-smoothing is unnecessary on the coarsest grid."};
   using group = OptionsGroup;
 };
 

@@ -57,43 +57,43 @@ class CubicScale final : public TimeDependence<MeshDim> {
   /// \brief The initial time of the functions of time.
   struct InitialTime {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial time of the functions of time"};
   };
   /// \brief The outer boundary or pivot point of the
   /// `domain::CoordinateMaps::TimeDependent::CubicScale` map
   struct OuterBoundary {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Outer boundary or pivot point of the map"};
   };
   /// \brief The initial values of the expansion factors.
   struct InitialExpansion {
     using type = std::array<double, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Expansion values at initial time."};
   };
   /// \brief The velocity of the expansion factors.
   struct Velocity {
     using type = std::array<double, 2>;
-    static constexpr Options::String help = {"The rate of expansion."};
+    inline const static std::string help {"The rate of expansion."};
   };
   /// \brief The acceleration of the expansion factors.
   struct Acceleration {
     using type = std::array<double, 2>;
-    static constexpr Options::String help = {"The acceleration of expansion."};
+    inline const static std::string help {"The acceleration of expansion."};
   };
   /// \brief Whether to use linear scaling or cubic scaling.
   struct UseLinearScaling {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Whether or not to turn on cubic scaling."};
   };
 
   using options = tmpl::list<InitialTime, OuterBoundary, UseLinearScaling,
                              InitialExpansion, Velocity, Acceleration>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A spatial radial scaling either based on a cubic scaling or a simple\n"
       "linear scaling.\n"
       "\n"

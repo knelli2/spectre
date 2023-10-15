@@ -67,7 +67,7 @@ struct EvolutionMetavars : public GhValenciaDivCleanTemplateBase<
   using initialize_initial_data_dependent_quantities_actions =
       typename defaults::initialize_initial_data_dependent_quantities_actions;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the Valencia formulation of the GRMHD system with divergence "
       "cleaning, coupled to a dynamic spacetime evolved with the Generalized "
       "Harmonic formulation\n"

@@ -139,31 +139,31 @@ class Enthalpy : public EquationOfState<true, 1> {
 
   struct ReferenceDensity {
     using type = double;
-    static constexpr Options::String help = {"Reference density rho_0"};
+    inline const static std::string help {"Reference density rho_0"};
     static double lower_bound() { return 0.0; }
   };
 
   struct MinimumDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Minimum valid density rho_min,"
         " for this parametrization"};
     static double lower_bound() { return 0.0; }
   };
   struct MaximumDensity {
     using type = double;
-    static constexpr Options::String help = {"Maximum density for this EoS"};
+    inline const static std::string help {"Maximum density for this EoS"};
     static double lower_bound() { return 0.0; }
   };
 
   struct PolynomialCoefficients {
     using type = std::vector<double>;
-    static constexpr Options::String help = {"Polynomial coefficients a_i"};
+    inline const static std::string help {"Polynomial coefficients a_i"};
   };
 
   struct TrigScaling {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fundamental wavenumber of trig "
         "functions, k"};
     static double lower_bound() { return 0.0; }
@@ -171,30 +171,30 @@ class Enthalpy : public EquationOfState<true, 1> {
 
   struct SinCoefficients {
     using type = std::vector<double>;
-    static constexpr Options::String help = {"Sine coefficients b_j"};
+    inline const static std::string help {"Sine coefficients b_j"};
   };
   struct CosCoefficients {
     using type = std::vector<double>;
-    static constexpr Options::String help = {"Cosine coefficients c_j"};
+    inline const static std::string help {"Cosine coefficients c_j"};
   };
   struct StitchedLowDensityEoS {
     using type = LowDensityEoS;
     static std::string name() {
       return pretty_type::short_name<LowDensityEoS>();
     }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Low density EoS stitched at the MinimumDensity"};
   };
 
   struct TransitionDeltaEpsilon {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "the change in internal energy across the low-"
         "to-high-density transition, generically 0.0"};
     static double lower_bound() { return 0.0; }
   };
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "An EoS with a parametrized value h(log(rho/rho_0)) with h the specific "
       "enthalpy and rho the baryon rest mass density.  The enthalpy is "
       "expanded as a sum of polynomial terms and trigonometric corrections. "

@@ -42,8 +42,8 @@ namespace helpers_distributed = DistributedLinearSolverAlgorithmTestHelpers;
 namespace {
 
 struct SchwarzSmoother {
-  static constexpr Options::String help =
-      "Options for the iterative Schwarz smoother";
+  inline const static std::string help
+      {"Options for the iterative Schwarz smoother"};
 };
 
 blaze::DynamicMatrix<double> combine_matrix_slices(

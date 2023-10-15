@@ -42,21 +42,21 @@
 namespace TestHelpers::NonlinearSolver {
 
 struct Source : db::SimpleTag {
-  static constexpr Options::String help = "The source b in the equation Ax=b.";
+  inline const static std::string help {"The source b in the equation Ax=b."};
   using type = blaze::DynamicVector<double>;
   static constexpr bool pass_metavariables = false;
   using option_tags = tmpl::list<Source>;
   static type create_from_options(const type& option) { return option; }
 };
 struct InitialGuess : db::SimpleTag {
-  static constexpr Options::String help = "The initial guess for the vector x.";
+  inline const static std::string help {"The initial guess for the vector x."};
   using type = blaze::DynamicVector<double>;
   static constexpr bool pass_metavariables = false;
   using option_tags = tmpl::list<InitialGuess>;
   static type create_from_options(const type& option) { return option; }
 };
 struct ExpectedResult : db::SimpleTag {
-  static constexpr Options::String help = "The solution x in the equation Ax=b";
+  inline const static std::string help {"The solution x in the equation Ax=b"};
   using type = blaze::DynamicVector<double>;
   static constexpr bool pass_metavariables = false;
   using option_tags = tmpl::list<ExpectedResult>;

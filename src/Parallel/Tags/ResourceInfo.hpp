@@ -19,7 +19,7 @@ namespace OptionTags {
 template <typename Metavariables>
 struct ResourceInfo {
   using type = Parallel::ResourceInfo<Metavariables>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Options for allocating resources. This information will be used when "
       "placing Array and Singleton parallel components on the requested "
       "resources."};

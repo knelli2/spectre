@@ -27,16 +27,16 @@ template <elliptic::BoundaryConditionType BoundaryConditionType>
 struct ZeroHelpString;
 template <>
 struct ZeroHelpString<elliptic::BoundaryConditionType::Dirichlet> {
-  static constexpr Options::String help =
-      "Zero Dirichlet boundary conditions imposed on the displacement vector, "
-      "i.e. the elastic material is held fixed at this boundary.";
+  inline const static std::string help
+      {"Zero Dirichlet boundary conditions imposed on the displacement vector, "
+      "i.e. the elastic material is held fixed at this boundary."};
 };
 template <>
 struct ZeroHelpString<elliptic::BoundaryConditionType::Neumann> {
-  static constexpr Options::String help =
-      "Zero Neumann boundary conditions imposed on the stress tensor "
+  inline const static std::string help
+      {"Zero Neumann boundary conditions imposed on the stress tensor "
       "perpendicular to the surface, i.e. the elastic material is free to "
-      "deform at this boundary.";
+      "deform at this boundary."};
 };
 
 }  // namespace detail
@@ -57,8 +57,8 @@ class Zero : public elliptic::BoundaryConditions::BoundaryCondition<Dim> {
  public:
   static std::string name();
   using options = tmpl::list<>;
-  static constexpr Options::String help =
-      detail::ZeroHelpString<BoundaryConditionType>::help;
+  inline const static std::string help
+      =detail::ZeroHelpString<BoundaryConditionType>::help;
 
   Zero() = default;
   Zero(const Zero&) = default;

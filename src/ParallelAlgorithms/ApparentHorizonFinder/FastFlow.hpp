@@ -65,42 +65,42 @@ class FastFlow {
 
   struct Flow {
     using type = FlowType;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Flow method: Jacobi, Curvature, or Fast"};
     static type suggested_value() { return FlowType::Fast; }
   };
 
   struct Alpha {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Alpha parameter in PRD 57, 863 (1998)"};
     static type suggested_value() { return 1.0; }
   };
 
   struct Beta {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Beta parameter in PRD 57, 863 (1998)"};
     static type suggested_value() { return 0.5; }
   };
 
   struct AbsTol {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Convergence found if R_{Y_lm} < AbsTol"};
     static type suggested_value() { return 1.e-12; }
   };
 
   struct TruncationTol {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Convergence found if R_{Y_lm} < TruncationTol*R_{mesh}"};
     static type suggested_value() { return 1.e-2; }
   };
 
   struct DivergenceTol {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fraction that residual can increase before dying"};
     static type suggested_value() { return 1.2; }
     static type lower_bound() { return 1.0; }
@@ -108,21 +108,21 @@ class FastFlow {
 
   struct DivergenceIter {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Num iterations residual can increase before dying"};
     static type suggested_value() { return 5; }
   };
 
   struct MaxIts {
     using type = size_t;
-    static constexpr Options::String help = {"Maximum number of iterations."};
+    inline const static std::string help {"Maximum number of iterations."};
     static type suggested_value() { return 100; }
   };
 
   using options = tmpl::list<Flow, Alpha, Beta, AbsTol, TruncationTol,
                              DivergenceTol, DivergenceIter, MaxIts>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Find a Strahlkorper using a 'fast flow' method.\n"
       "Based on Gundlach, PRD 57, 863 (1998).\n"
       "Expands the surface in terms of spherical harmonics Y_lm up to a given\n"

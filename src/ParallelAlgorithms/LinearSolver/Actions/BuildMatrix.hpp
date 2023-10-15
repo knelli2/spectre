@@ -42,7 +42,7 @@ namespace OptionTags {
 
 struct BuildMatrixOptionsGroup {
   static std::string name() { return "BuildMatrix"; }
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Options for building the explicit matrix representation of the linear "
       "operator. This is done by applying the linear operator to unit "
       "vectors and is useful for debugging and analysis only, not to actually "
@@ -52,7 +52,7 @@ struct BuildMatrixOptionsGroup {
 struct MatrixSubfileName {
   using type = std::string;
   using group = BuildMatrixOptionsGroup;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Subfile name in the volume data H5 files where the matrix will be "
       "stored. Each observation in the subfile is a column of the matrix. The "
       "row index is the order of elements defined by the ElementId in the "

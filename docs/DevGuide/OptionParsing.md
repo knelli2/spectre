@@ -82,7 +82,7 @@ Example:
 
 ## Constructible classes
 
-A class that defines `static constexpr Options::String help` and a
+A class that defines `inline const static std::string help` and a
 typelist of option structs `options` can be created by the option
 parser.  When the class is requested, the option parser will parse
 each of the options in the `options` list, and then supply them to the

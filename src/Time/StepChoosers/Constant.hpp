@@ -27,7 +27,7 @@ class Constant : public StepChooser<StepChooserUse> {
   WRAPPED_PUPable_decl_template(Constant);  // NOLINT
   /// \endcond
 
-  static constexpr Options::String help{"Suggests a constant step size."};
+  inline const static std::string help{"Suggests a constant step size."};
 
   explicit Constant(const double value) : value_(value) {
     ASSERT(value_ > 0., "Requested step magnitude should be positive.");

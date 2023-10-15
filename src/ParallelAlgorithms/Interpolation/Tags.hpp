@@ -31,7 +31,7 @@ namespace OptionTags {
  * \brief Groups option tags for InterpolationTargets.
  */
 struct InterpolationTargets {
-  static constexpr Options::String help{"Options for interpolation targets"};
+  inline const static std::string help{"Options for interpolation targets"};
 };
 
 /*!
@@ -39,7 +39,7 @@ struct InterpolationTargets {
  * \brief Groups option tags for the Interpolator.
  */
 struct Interpolator {
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Options related to the Interpolator parallel component"};
 };
 
@@ -47,7 +47,7 @@ struct Interpolator {
 /// Interpolator upon a failure.
 struct DumpVolumeDataOnFailure {
   using type = bool;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Whether or not to dump all volume data currently stored by the "
       "interpolator. Volume data is written to the file corresponding to the "
       "node it was collected on."};

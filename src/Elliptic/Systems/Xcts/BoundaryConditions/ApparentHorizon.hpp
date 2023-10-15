@@ -104,41 +104,41 @@ class ApparentHorizon
   using Base = elliptic::BoundaryConditions::BoundaryCondition<3>;
 
  public:
-  static constexpr Options::String help =
-      "Impose the boundary is a quasi-equilibrium apparent horizon.";
+  inline const static std::string help
+      {"Impose the boundary is a quasi-equilibrium apparent horizon."};
 
   struct Center {
     using type = std::array<double, 3>;
-    static constexpr Options::String help =
-        "The center of the excision surface representing the apparent-horizon "
-        "surface";
+    inline const static std::string help
+        {"The center of the excision surface representing the apparent-horizon "
+        "surface"};
   };
   struct Rotation {
     using type = std::array<double, 3>;
-    static constexpr Options::String help =
-        "The rotational parameters 'Omega' on the surface, which parametrize "
+    inline const static std::string help
+        {"The rotational parameters 'Omega' on the surface, which parametrize "
         "the spin of the black hole. The rotational parameters enter the "
         "Dirichlet boundary conditions for the shift in a term "
-        "'Omega x (r - Center)', where 'r' are the coordinates on the surface.";
+        "'Omega x (r - Center)', where 'r' are the coordinates on the surface."};
   };
   struct Lapse {
     using type = Options::Auto<
         std::unique_ptr<elliptic::analytic_data::AnalyticSolution>>;
-    static constexpr Options::String help =
-        "Specify an analytic solution to impose a Dirichlet condition on the "
+    inline const static std::string help
+        {"Specify an analytic solution to impose a Dirichlet condition on the "
         "lapse. The analytic solution will be evaluated at coordinates "
         "centered at the apparent horizon. "
         "Alternatively, set this option to 'None' "
         "to impose a zero von-Neumann boundary condition on the lapse. Note "
         "that the latter will not result in the standard Kerr-Schild slicing "
-        "for a single black hole.";
+        "for a single black hole."};
   };
   struct NegativeExpansion {
     using type = Options::Auto<
         std::unique_ptr<elliptic::analytic_data::AnalyticSolution>,
         Options::AutoLabel::None>;
-    static constexpr Options::String help =
-        "Specify an analytic solution to impose its expansion at the excision "
+    inline const static std::string help
+        {"Specify an analytic solution to impose its expansion at the excision "
         "surface. The analytic solution will be evaluated at coordinates "
         "centered at the apparent horizon. "
         "If the excision surface lies within the solution's "
@@ -146,7 +146,7 @@ class ApparentHorizon
         "excision surface will lie within an apparent horizon. Alternatively, "
         "set this option to 'None' to impose the expansion is zero at the "
         "excision surface, meaning the excision surface _is_ an apparent "
-        "horizon.";
+        "horizon."};
   };
 
   using options = tmpl::list<Center, Rotation, Lapse, NegativeExpansion>;

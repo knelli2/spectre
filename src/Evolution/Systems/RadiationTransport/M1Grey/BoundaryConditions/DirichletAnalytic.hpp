@@ -54,7 +54,7 @@ class DirichletAnalytic<tmpl::list<NeutrinoSpecies...>> final
     : public BoundaryCondition<tmpl::list<NeutrinoSpecies...>> {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "DirichletAnalytic boundary conditions using either analytic solution or "
       "analytic data."};
 

@@ -179,13 +179,13 @@ namespace OptionTags {
 /// Groups option tags related to recording data, e.g. file names.
 struct Group {
   static std::string name() { return "Observers"; }
-  static constexpr Options::String help = {"Options for recording data"};
+  inline const static std::string help {"Options for recording data"};
 };
 
 /// The name of the H5 file on disk to which all volume data is written.
 struct VolumeFileName {
   using type = std::string;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Name of the volume data file without extension"};
   using group = Group;
 };
@@ -193,7 +193,7 @@ struct VolumeFileName {
 /// The name of the H5 file on disk to which all reduction data is written.
 struct ReductionFileName {
   using type = std::string;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Name of the reduction data file without extension"};
   using group = Group;
 };
@@ -201,7 +201,7 @@ struct ReductionFileName {
 /// The name of the H5 file on disk to which all surface data is written.
 struct SurfaceFileName {
   using type = std::string;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Name of the surface data file without extension"};
   using group = Group;
 };

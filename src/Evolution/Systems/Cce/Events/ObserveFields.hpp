@@ -164,17 +164,17 @@ class ObserveFields : public Event {
   /// \endcond
 
   struct VariablesToObserve {
-    static constexpr Options::String help = "Subset of variables to observe";
+    inline const static std::string help {"Subset of variables to observe"};
     using type = std::vector<std::string>;
     static size_t lower_bound_on_size() { return 1; }
   };
 
   using options = tmpl::list<VariablesToObserve>;
 
-  static constexpr Options::String help =
-      "Observe volume tensor fields on the characteristic grid. Writes volume "
+  inline const static std::string help
+      {"Observe volume tensor fields on the characteristic grid. Writes volume "
       "quantities from the tensors listed in the 'VariablesToObserve' "
-      "option to the `/Cce/VolumeData` subfile of the reduction h5 file.\n";
+      "option to the `/Cce/VolumeData` subfile of the reduction h5 file.\n"};
 
   ObserveFields() = default;
 

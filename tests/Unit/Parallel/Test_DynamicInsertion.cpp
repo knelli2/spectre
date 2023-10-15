@@ -325,9 +325,9 @@ struct TestMetavariables {
   using component_list = tmpl::list<amr::Component<TestMetavariables>,
                                     TestArray<TestMetavariables>>;
 
-  static constexpr Options::String help =
-      "An executable for testing the dynamic insertion and deletion of "
-      "elements of an array parallel component";
+  inline const static std::string help
+      {"An executable for testing the dynamic insertion and deletion of "
+      "elements of an array parallel component"};
 
   static constexpr std::array<Parallel::Phase, 4> default_phase_order{
       {Parallel::Phase::Initialization, Parallel::Phase::Execute,

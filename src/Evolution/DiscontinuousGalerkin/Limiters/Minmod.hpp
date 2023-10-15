@@ -158,7 +158,7 @@ class Minmod<VolumeDim, tmpl::list<Tags...>> {
   /// two points per dimension, the recommended type is `LambdaPiN`.
   struct Type {
     using type = MinmodType;
-    static constexpr Options::String help = {"Type of minmod"};
+    inline const static std::string help {"Type of minmod"};
   };
   /// \brief The TVB constant
   ///
@@ -167,7 +167,7 @@ class Minmod<VolumeDim, tmpl::list<Tags...>> {
   struct TvbConstant {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {"TVB constant 'm'"};
+    inline const static std::string help {"TVB constant 'm'"};
   };
   /// \brief Turn the limiter off
   ///
@@ -177,10 +177,10 @@ class Minmod<VolumeDim, tmpl::list<Tags...>> {
   struct DisableForDebugging {
     using type = bool;
     static type suggested_value() { return false; }
-    static constexpr Options::String help = {"Disable the limiter"};
+    inline const static std::string help {"Disable the limiter"};
   };
   using options = tmpl::list<Type, TvbConstant, DisableForDebugging>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A minmod-based generalized slope limiter.\n"
       "The different types of minmod are more or less aggressive in trying\n"
       "to reduce slopes. The TVB correction allows the limiter to ignore\n"

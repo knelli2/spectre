@@ -54,7 +54,7 @@ namespace mutate_cache {
 namespace OptionTags {
 struct VectorOfDoubles {
   static std::string name() { return "VectorOfDoubles"; }
-  static constexpr Options::String help = "Options for vector of doubles";
+  inline const static std::string help {"Options for vector of doubles"};
   using type = std::vector<double>;
 };
 }  // namespace OptionTags
@@ -469,8 +469,8 @@ struct TestMetavariables {
                  CheckMemoryMonitorRelatedMethods<TestMetavariables>,
                  observers::ObserverWriter<TestMetavariables>>;
 
-  static constexpr Options::String help =
-      "An executable for testing mutable items in the GlobalCache.";
+  inline const static std::string help
+      {"An executable for testing mutable items in the GlobalCache."};
 
   static constexpr std::array<Parallel::Phase, 18> default_phase_order{
       {Parallel::Phase::Initialization, Parallel::Phase::Register,

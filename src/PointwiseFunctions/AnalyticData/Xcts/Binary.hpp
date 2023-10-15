@@ -315,49 +315,49 @@ class Binary : public elliptic::analytic_data::Background,
                public elliptic::analytic_data::InitialGuess {
  public:
   struct XCoords {
-    static constexpr Options::String help =
-        "The coordinates on the x-axis where the two objects are placed";
+    inline const static std::string help
+        {"The coordinates on the x-axis where the two objects are placed"};
     using type = std::array<double, 2>;
   };
   struct ObjectLeft {
-    static constexpr Options::String help =
-        "The object placed on the negative x-axis";
+    inline const static std::string help
+        {"The object placed on the negative x-axis"};
     using type = std::unique_ptr<IsolatedObjectBase>;
   };
   struct ObjectRight {
-    static constexpr Options::String help =
-        "The object placed on the positive x-axis";
+    inline const static std::string help
+        {"The object placed on the positive x-axis"};
     using type = std::unique_ptr<IsolatedObjectBase>;
   };
   struct AngularVelocity {
-    static constexpr Options::String help =
-        "Orbital angular velocity 'Omega0' about the z-axis. Added to the "
-        "background shift as a term 'Omega0 x r'.";
+    inline const static std::string help
+        {"Orbital angular velocity 'Omega0' about the z-axis. Added to the "
+        "background shift as a term 'Omega0 x r'."};
     using type = double;
   };
   struct Expansion {
-    static constexpr Options::String help =
-        "The expansion parameter 'adot0', which is a radial velocity over "
-        "radius. Added to the background shift as a term 'adot0 r^i'";
+    inline const static std::string help
+        {"The expansion parameter 'adot0', which is a radial velocity over "
+        "radius. Added to the background shift as a term 'adot0 r^i'"};
     using type = double;
   };
   struct LinearVelocity {
-    static constexpr Options::String help =
-        "Constant velocity 'v0' added to the background shift to control the "
-        "linear momentum of the system.";
+    inline const static std::string help
+        {"Constant velocity 'v0' added to the background shift to control the "
+        "linear momentum of the system."};
     using type = std::array<double, 3>;
   };
   struct FalloffWidths {
-    static constexpr Options::String help =
-        "The widths for the window functions around the two objects, or 'None' "
-        "to disable the Gaussian falloff.";
+    inline const static std::string help
+        {"The widths for the window functions around the two objects, or 'None' "
+        "to disable the Gaussian falloff."};
     using type = Options::Auto<std::array<double, 2>, Options::AutoLabel::None>;
   };
   using options = tmpl::list<XCoords, ObjectLeft, ObjectRight, AngularVelocity,
                              Expansion, LinearVelocity, FalloffWidths>;
-  static constexpr Options::String help =
-      "Binary compact-object data in general relativity, constructed from "
-      "superpositions of two isolated objects.";
+  inline const static std::string help
+      {"Binary compact-object data in general relativity, constructed from "
+      "superpositions of two isolated objects."};
 
   Binary() = default;
   Binary(const Binary&) = delete;

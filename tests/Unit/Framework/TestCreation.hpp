@@ -29,7 +29,7 @@ struct looks_like_tag<T, std::void_t<typename T::type>> : std::true_type {};
 template <typename T>
 struct TestCreationOpt {
   using type = T;
-  static constexpr Options::String help = {"halp"};
+  inline const static std::string help {"halp"};
 };
 
 template <typename Tag, typename = void>

@@ -119,20 +119,20 @@ class HalfSpaceMirror : public elliptic::analytic_data::AnalyticSolution {
 
   struct BeamWidth {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The lasers beam width r_0 with FWHM = 2*sqrt(ln 2)*r_0"};
     static type lower_bound() { return 0.0; }
   };
 
   struct Material {
     using type = constitutive_relation_type;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The material properties of the beam"};
   };
 
   struct IntegrationIntervals {
     using type = size_t;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Workspace size for numerical integrals. Increase if integrals fail to "
         "reach the prescribed tolerance at large distances relative to the "
         "beam width. The suggested values for workspace size and tolerances "
@@ -143,7 +143,7 @@ class HalfSpaceMirror : public elliptic::analytic_data::AnalyticSolution {
 
   struct AbsoluteTolerance {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Absolute tolerance for numerical integrals"};
     static type lower_bound() { return 0.; }
     static type suggested_value() { return 1e-12; }
@@ -151,7 +151,7 @@ class HalfSpaceMirror : public elliptic::analytic_data::AnalyticSolution {
 
   struct RelativeTolerance {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Relative tolerance for numerical integrals"};
     static type lower_bound() { return 0.; }
     static type upper_bound() { return 1.; }
@@ -160,7 +160,7 @@ class HalfSpaceMirror : public elliptic::analytic_data::AnalyticSolution {
 
   using options = tmpl::list<BeamWidth, Material, IntegrationIntervals,
                              AbsoluteTolerance, RelativeTolerance>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A semi-infinite mirror on which a laser introduces stress perpendicular "
       "to the mirrors surface."};
 

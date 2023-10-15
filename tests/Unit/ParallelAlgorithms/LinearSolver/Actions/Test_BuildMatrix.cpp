@@ -75,7 +75,7 @@ struct TestResult {
 };
 
 struct Metavariables {
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Test building an explicit matrix representation of the linear operator"};
   static constexpr size_t volume_dim = 1;
   using system =

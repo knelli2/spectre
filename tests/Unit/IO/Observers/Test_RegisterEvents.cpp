@@ -38,11 +38,11 @@ class SomeEvent : public Event {
  public:
   struct SubfileName {
     using type = std::string;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The The name of the subfile inside the HDF5 file"};
   };
 
-  static constexpr Options::String help = "halp";
+  inline const static std::string help {"halp"};
 
   using options = tmpl::list<SubfileName>;
 

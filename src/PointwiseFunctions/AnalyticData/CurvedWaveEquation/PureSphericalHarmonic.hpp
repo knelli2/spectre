@@ -44,27 +44,27 @@ class PureSphericalHarmonic : public MarkAsAnalyticData {
  public:
   struct Radius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The radius of the spherical harmonic profile"};
     static type lower_bound() { return 0.0; }
   };
 
   struct Width {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The width of the spherical harmonic profile."};
     static type lower_bound() { return 0.0; }
   };
 
   struct Mode {
     using type = std::pair<size_t, int>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The l-mode and m-mode of the spherical harmonic Ylm"};
   };
 
   using options = tmpl::list<Radius, Width, Mode>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Initial data for a pure spherical harmonic mode truncated by a circular "
       "Gaussian window funtion. The expression is taken from Scheel(2003), "
       "equations 4.1-4.3."};

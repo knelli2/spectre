@@ -33,7 +33,7 @@ class RefineAtPunctures : public amr::Criterion {
  public:
   using options = tmpl::list<>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "h-refine (split) elements containing a puncture, and p-refine "
       "everywhere else."};
 

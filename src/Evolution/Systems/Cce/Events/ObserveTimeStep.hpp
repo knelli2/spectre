@@ -44,7 +44,7 @@ class ObserveTimeStep : public Event {
   /// The name of the subfile inside the HDF5 file
   struct SubfileName {
     using type = std::string;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The name of the subfile inside the HDF5 file without an extension and "
         "without a preceding '/'. The subfile will be written into the "
         "subgroup '/Cce'."};
@@ -52,7 +52,7 @@ class ObserveTimeStep : public Event {
 
   struct PrintTimeToTerminal {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Whether to print the time to screen."};
   };
 
@@ -63,14 +63,14 @@ class ObserveTimeStep : public Event {
   /// \endcond
 
   using options = tmpl::list<SubfileName, PrintTimeToTerminal>;
-  static constexpr Options::String help =
-      "Observe the size of the time step for the characteristic evolution.\n"
+  inline const static std::string help
+      {"Observe the size of the time step for the characteristic evolution.\n"
       "\n"
       "Writes quantities:\n"
       "- Time\n"
       "- Time Step\n"
       "\n"
-      "The subfile will be written into the subgroup '/Cce'.";
+      "The subfile will be written into the subgroup '/Cce'."};
 
   ObserveTimeStep() = default;
   explicit ObserveTimeStep(const std::string& subfile_name,

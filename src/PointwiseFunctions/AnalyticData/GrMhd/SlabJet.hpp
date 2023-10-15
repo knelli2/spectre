@@ -66,65 +66,65 @@ class SlabJet : public evolution::initial_data::InitialData,
 
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the ideal fluid"};
     static double lower_bound() { return 1.; }
   };
   struct AmbientDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid rest mass density outside the jet"};
     static double lower_bound() { return 0.; }
     static double suggested_value() { return 10.; }
   };
   struct AmbientPressure {
     using type = double;
-    static constexpr Options::String help = {"Fluid pressure outside the jet"};
+    inline const static std::string help {"Fluid pressure outside the jet"};
     static double lower_bound() { return 0.; }
     static double suggested_value() { return 0.01; }
   };
   struct AmbientElectronFraction {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Electron fraction outside the jet"};
     static double lower_bound() { return 0.; }
     static double upper_bound() { return 1.; }
   };
   struct JetDensity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid rest mass density of the jet inlet"};
     static double lower_bound() { return 0.; }
     static double suggested_value() { return 0.1; }
   };
   struct JetPressure {
     using type = double;
-    static constexpr Options::String help = {"Fluid pressure of the jet inlet"};
+    inline const static std::string help {"Fluid pressure of the jet inlet"};
     static double lower_bound() { return 0.; }
     static double suggested_value() { return 0.01; }
   };
   struct JetElectronFraction {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Electron fraction of the jet inlet"};
     static double lower_bound() { return 0.; }
     static double upper_bound() { return 1.; }
   };
   struct JetVelocity {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fluid spatial velocity of the jet inlet"};
   };
   struct InletRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Radius of the jet inlet around y=0"};
     static double lower_bound() { return 0.; }
     static double suggested_value() { return 1.; }
   };
   struct MagneticField {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initially uniform magnetic field"};
     static std::array<double, 3> suggested_value() { return {{1., 0., 0.}}; }
   };
@@ -134,7 +134,7 @@ class SlabJet : public evolution::initial_data::InitialData,
                  AmbientElectronFraction, JetDensity, JetPressure,
                  JetElectronFraction, JetVelocity, InletRadius, MagneticField>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Analytic initial data for a jet test."};
 
   SlabJet() = default;

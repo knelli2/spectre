@@ -106,28 +106,28 @@ class BentBeam : public elliptic::analytic_data::AnalyticSolution {
 
   struct Length {
     using type = double;
-    static constexpr Options::String help{"The beam length"};
+    inline const static std::string help{"The beam length"};
     static type lower_bound() { return 0.0; }
   };
   struct Height {
     using type = double;
-    static constexpr Options::String help{"The beam height"};
+    inline const static std::string help{"The beam height"};
     static type lower_bound() { return 0.0; }
   };
   struct BendingMoment {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The bending moment applied to the beam"};
     static type lower_bound() { return 0.0; }
   };
   struct Material {
     using type = constitutive_relation_type;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The material properties of the beam"};
   };
 
   using options = tmpl::list<Length, Height, BendingMoment, Material>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A 2D slice through an elastic beam which is subject to a bending "
       "moment. The bending moment is applied along the length of the beam, "
       "i.e. the x-axis, so that the beam's left and right ends are bent "

@@ -170,14 +170,14 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   /// Options for an excision region in the domain
   struct Excision {
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Excise the interior of the object, leaving a spherical hole in its "
         "absence."};
     template <typename BoundaryConditionsBase>
     struct BoundaryCondition {
       static std::string name() { return "ExciseWithBoundaryCondition"; }
       using type = std::unique_ptr<BoundaryConditionsBase>;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "The boundary condition to impose on the excision surface."};
     };
     template <typename Metavariables>
@@ -190,39 +190,39 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   /// Options for one of the two objects in the binary domain
   struct Object {
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options for an object in a binary domain."};
     struct InnerRadius {
       using type = double;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "Inner coordinate radius of Layer 1."};
       static double lower_bound() { return 0.; }
     };
     struct OuterRadius {
       using type = double;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "Outer coordinate radius of Layer 1"};
       static double lower_bound() { return 0.; }
     };
     struct XCoord {
       using type = double;
-      static constexpr Options::String help = {"x-coordinate of center."};
+      inline const static std::string help {"x-coordinate of center."};
     };
     struct Interior {
       using type = Options::Auto<Excision>;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "Specify 'ExciseWithBoundaryCondition' and a boundary condition to "
           "excise Layer 0, leaving a spherical hole in its absence, or set to "
           "'Auto' to fill the interior."};
     };
     struct ExciseInterior {
       using type = bool;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "Excise Layer 0, leaving a spherical hole in its absence."};
     };
     struct UseLogarithmicMap {
       using type = bool;
-      static constexpr Options::String help = {
+      inline const static std::string help {
           "Use a logarithmically spaced radial grid in the part of Layer 1 "
           "enveloping the object (requires the interior is excised)"};
     };
@@ -276,12 +276,12 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   // Simpler version of an object: a single cube centered on (xCoord,0,0)
   struct CartesianCubeAtXCoord {
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options to set a single cube at a location on the x-axis"};
     struct XCoord {
       static std::string name() { return "CartesianCubeAtXCoord"; }
       using type = double;
-      static constexpr Options::String help = {"x-coordinate of center."};
+      inline const static std::string help {"x-coordinate of center."};
     };
     using options = tmpl::list<XCoord>;
     bool is_excised() const { return false; }
@@ -290,20 +290,20 @@ class BinaryCompactObject : public DomainCreator<3> {
 
   struct ObjectA {
     using type = std::variant<Object, CartesianCubeAtXCoord>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options for the object to the right of the origin (along the positive "
         "x-axis)."};
   };
 
   struct ObjectB {
     using type = std::variant<Object, CartesianCubeAtXCoord>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options for the object to the left of the origin (along the negative "
         "x-axis)."};
   };
 
   struct Envelope {
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options for the sphere enveloping the two objects."};
   };
 
@@ -311,12 +311,12 @@ class BinaryCompactObject : public DomainCreator<3> {
     using group = Envelope;
     static std::string name() { return "Radius"; }
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Radius of the sphere enveloping the two objects."};
   };
 
   struct OuterShell {
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Options for the outer spherical shell."};
   };
 
@@ -324,14 +324,14 @@ class BinaryCompactObject : public DomainCreator<3> {
     using group = OuterShell;
     static std::string name() { return "Radius"; }
     using type = double;
-    static constexpr Options::String help = {"Radius of the entire domain."};
+    inline const static std::string help {"Radius of the entire domain."};
   };
 
   struct OpeningAngle {
     using group = OuterShell;
     static std::string name() { return "OpeningAngle"; }
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The combined opening angle of the two half wedges of the outer shell"
         " in degrees. A value of 120.0 partitions the x-y and x-z slices of the"
         " outer shell into six Blocks of equal angular size."};
@@ -342,7 +342,7 @@ class BinaryCompactObject : public DomainCreator<3> {
         std::variant<size_t, std::array<size_t, 3>,
                      std::vector<std::array<size_t, 3>>,
                      std::unordered_map<std::string, std::array<size_t, 3>>>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial refinement level in each block of the domain. See main help "
         "text for details."};
   };
@@ -352,14 +352,14 @@ class BinaryCompactObject : public DomainCreator<3> {
         std::variant<size_t, std::array<size_t, 3>,
                      std::vector<std::array<size_t, 3>>,
                      std::unordered_map<std::string, std::array<size_t, 3>>>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial number of grid points in the elements of each block of the "
         "domain. See main help text for details."};
   };
 
   struct UseEquiangularMap {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Distribute grid points equiangularly."};
     static bool suggested_value() { return true; }
   };
@@ -368,7 +368,7 @@ class BinaryCompactObject : public DomainCreator<3> {
     using group = Envelope;
     static std::string name() { return "RadialDistribution"; }
     using type = CoordinateMaps::Distribution;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The distribution of radial grid points in the envelope, the layer "
         "made of ten bulged Frustums."};
   };
@@ -377,7 +377,7 @@ class BinaryCompactObject : public DomainCreator<3> {
     using group = OuterShell;
     static std::string name() { return "RadialDistribution"; }
     using type = CoordinateMaps::Distribution;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The distribution of radial grid points in Layer 5, the outer "
         "spherical shell that covers the wave zone."};
   };
@@ -386,8 +386,8 @@ class BinaryCompactObject : public DomainCreator<3> {
   struct OuterBoundaryCondition {
     using group = OuterShell;
     static std::string name() { return "BoundaryCondition"; }
-    static constexpr Options::String help =
-        "Options for the outer boundary conditions.";
+    inline const static std::string help
+        {"Options for the outer boundary conditions."};
     using type = std::unique_ptr<BoundaryConditionsBase>;
   };
 
@@ -395,7 +395,7 @@ class BinaryCompactObject : public DomainCreator<3> {
   struct TimeDependentMaps {
     using type =
         Options::Auto<bco::TimeDependentMapOptions, Options::AutoLabel::None>;
-    static constexpr Options::String help = bco::TimeDependentMapOptions::help;
+    inline const static std::string help =bco::TimeDependentMapOptions::help;
   };
 
   template <typename Metavariables>
@@ -419,7 +419,7 @@ class BinaryCompactObject : public DomainCreator<3> {
                        TimeDependentMaps>,
       time_independent_options<Metavariables>>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A general domain for two compact objects. Each object is represented by "
       "a cube along the x-axis. Object A is located on the right and Object B "
       "is located on the left. Their locations should be chosen such that "

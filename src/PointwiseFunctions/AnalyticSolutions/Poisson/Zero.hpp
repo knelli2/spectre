@@ -25,7 +25,7 @@ template <size_t Dim>
 class Zero : public elliptic::analytic_data::AnalyticSolution {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "The trivial solution, useful as initial guess."};
 
   Zero() = default;

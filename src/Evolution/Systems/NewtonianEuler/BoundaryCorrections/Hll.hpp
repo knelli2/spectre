@@ -90,7 +90,7 @@ class Hll final : public BoundaryCorrection<Dim> {
   };
 
   using options = tmpl::list<>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Computes the HLL boundary correction term for the "
       "Newtonian Euler/hydrodynamics system."};
 

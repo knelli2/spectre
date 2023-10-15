@@ -28,16 +28,16 @@ class EveryNIterations : public Trigger {
 
   struct N {
     using type = uint64_t;
-    static constexpr Options::String help{"How frequently to trigger."};
+    inline const static std::string help{"How frequently to trigger."};
     static type lower_bound() { return 1; }
   };
   struct Offset {
     using type = uint64_t;
-    static constexpr Options::String help{"First iteration to trigger on."};
+    inline const static std::string help{"First iteration to trigger on."};
   };
 
   using options = tmpl::list<N, Offset>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Trigger every N iterations after a given offset."};
 
   EveryNIterations(const uint64_t interval, const uint64_t offset)

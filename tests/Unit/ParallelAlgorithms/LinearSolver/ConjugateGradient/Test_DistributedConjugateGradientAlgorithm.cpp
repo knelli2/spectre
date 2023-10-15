@@ -25,8 +25,8 @@ namespace helpers_distributed = DistributedLinearSolverAlgorithmTestHelpers;
 namespace {
 
 struct ParallelCg {
-  static constexpr Options::String help =
-      "Options for the iterative linear solver";
+  inline const static std::string help
+      {"Options for the iterative linear solver"};
 };
 
 struct Metavariables {

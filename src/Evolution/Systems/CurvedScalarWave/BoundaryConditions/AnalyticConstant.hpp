@@ -34,11 +34,11 @@ class AnalyticConstant final : public BoundaryCondition<Dim> {
  public:
   struct Amplitude {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Amplitude of the scalar at the boundary"};
   };
   using options = tmpl::list<Amplitude>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Boundary conditions which impose a constant scalar at the boundary."};
 
   AnalyticConstant(double amplitude);

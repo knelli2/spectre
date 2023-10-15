@@ -75,14 +75,14 @@ struct ConformalFactor : InitializeJ<false> {
   struct AngularCoordinateTolerance {
     using type = double;
     static std::string name() { return "AngularCoordTolerance"; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Tolerance of initial angular coordinates for CCE"};
     static type lower_bound() { return 1.0e-14; }
     static type upper_bound() { return 1.0e-3; }
   };
   struct MaxIterations {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Number of linearized inversion iterations."};
     static type lower_bound() { return 10; }
     static type upper_bound() { return 1000; }
@@ -90,27 +90,27 @@ struct ConformalFactor : InitializeJ<false> {
   };
   struct RequireConvergence {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "If true, initialization will error if it hits MaxIterations"};
     static type suggested_value() { return true; }
   };
   struct OptimizeL0Mode {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "If true, the average value of the conformal factor will be included "
         "during optimization; otherwise it will be omitted (filtered)."};
     static type suggested_value() { return false; }
   };
   struct UseBetaIntegralEstimate {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "If true, the iterative algorithm will calculate an estimate of the "
         "asymptotic beta value using the 1/r part of the initial J."};
     static type suggested_value() { return true; }
   };
   struct ConformalFactorIterationHeuristic {
     using type = ::Cce::InitializeJ::ConformalFactorIterationHeuristic;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The heuristic method used to set the spin-weighted Jacobian factors "
         "when iterating to minimize the asymptotic conformal factor."};
     static type suggested_value() {
@@ -120,14 +120,14 @@ struct ConformalFactor : InitializeJ<false> {
   };
   struct UseInputModes {
     using type = bool;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "If true, the 1/r part of J will be set using modes read from the "
         "input file, or from a specified h5 file. If false, the inverse cubic "
         "scheme will determine the 1/r part of J."};
   };
   struct InputModesFromFile {
     using type = std::string;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "A filename from which to retrieve a set of modes (from InitialJ.dat) "
         "to use to determine the 1/r part of J on the initial hypersurface. "
         "The modes are parsed in l-ascending, m-ascending, m-varies-fastest, "
@@ -135,7 +135,7 @@ struct ConformalFactor : InitializeJ<false> {
   };
   struct InputModes {
     using type = std::vector<std::complex<double>>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "An explicit list of modes to use to set the 1/r part of J on the "
         "initial hypersurface. They are parsed in l-ascending, m-ascending, "
         "m-varies-fastest order."};
@@ -147,7 +147,7 @@ struct ConformalFactor : InitializeJ<false> {
                  ConformalFactorIterationHeuristic, UseInputModes,
                  Options::Alternatives<tmpl::list<InputModesFromFile>,
                                        tmpl::list<InputModes>>>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Generate CCE initial data based on choosing an angular conformal factor "
       "based on the value of the CCE scalar beta in an attempt to make the "
       "time variable approximately asymptotically inertial"};

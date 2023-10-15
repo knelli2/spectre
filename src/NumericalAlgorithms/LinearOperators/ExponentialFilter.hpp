@@ -63,8 +63,8 @@ class Exponential {
   /// rescaled by.
   struct Alpha {
     using type = double;
-    static constexpr Options::String help =
-        "exp(-alpha) is rescaling of highest coefficient";
+    inline const static std::string help
+        {"exp(-alpha) is rescaling of highest coefficient"};
     static type lower_bound() { return 0.0; }
   };
 
@@ -77,28 +77,28 @@ class Exponential {
    */
   struct HalfPower {
     using type = unsigned;
-    static constexpr Options::String help =
-        "Half of the exponent in the generalized Gaussian";
+    inline const static std::string help
+        {"Half of the exponent in the generalized Gaussian"};
     static type lower_bound() { return 1; }
   };
 
   /// \brief Turn the filter off
   struct Enable {
     using type = bool;
-    static constexpr Options::String help = {"Enable the filter"};
+    inline const static std::string help {"Enable the filter"};
   };
 
   struct BlocksToFilter {
     using type =
         Options::Auto<std::vector<std::string>, Options::AutoLabel::All>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "List of blocks or block groups to apply filtering to. All other "
         "blocks will have no filtering. You can also specify 'All' to do "
         "filtering in all blocks of the domain."};
   };
 
   using options = tmpl::list<Alpha, HalfPower, Enable, BlocksToFilter>;
-  static constexpr Options::String help = {"An exponential filter."};
+  inline const static std::string help {"An exponential filter."};
   static std::string name() {
     return "ExpFilter" + std::to_string(FilterIndex);
   }

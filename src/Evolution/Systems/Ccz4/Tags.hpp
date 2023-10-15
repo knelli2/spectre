@@ -374,7 +374,7 @@ namespace OptionTags {
  */
 struct Group {
   static std::string name() { return "Ccz4"; }
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Options for the CCZ4 evolution system"};
   using group = evolution::OptionTags::SystemGroup;
 };

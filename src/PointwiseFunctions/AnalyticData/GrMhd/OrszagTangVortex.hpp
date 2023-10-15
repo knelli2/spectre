@@ -69,7 +69,7 @@ class OrszagTangVortex
 
   using options = tmpl::list<>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "The relativistic Orszag-Tang vortex"};
 
   OrszagTangVortex();

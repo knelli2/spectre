@@ -34,7 +34,7 @@ namespace Xcts::Solutions {
 class Flatness : public elliptic::analytic_data::AnalyticSolution {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Flat spacetime, useful as initial guess."};
 
   Flatness() = default;

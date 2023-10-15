@@ -50,7 +50,7 @@ class Barotropic3D : public EquationOfState<ColdEquilEos::is_relativistic, 3> {
   static std::string name() {
     return "Barotropic3D(" + pretty_type::name<ColdEquilEos>() + ")";
   }
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "An 3D EoS which is independent of electron fraction and temperature. "
       "Contains an underlying 1D EoS which is dependent only "
       "on rest mass density."};
@@ -59,7 +59,7 @@ class Barotropic3D : public EquationOfState<ColdEquilEos::is_relativistic, 3> {
     static std::string name() {
       return pretty_type::short_name<ColdEquilEos>();
     }
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The underlying Eos which is being represented as a "
         "3D Eos.  Must be a 1D EoS"};
   };

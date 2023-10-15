@@ -99,20 +99,20 @@ class IsotropicHomogeneous : public ConstitutiveRelation<Dim> {
 
   struct BulkModulus {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The incompressibility of the material"};
     static type lower_bound() { return 0.0; }
   };
 
   struct ShearModulus {
     using type = double;
-    static constexpr Options::String help = {"The rigidity of the material"};
+    inline const static std::string help {"The rigidity of the material"};
     static type lower_bound() { return 0.0; }
   };
 
   using options = tmpl::list<BulkModulus, ShearModulus>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A constitutive relation that describes an isotropic, homogeneous "
       "material in terms of two elastic moduli. These bulk and shear moduli "
       "indicate the material's resistance to volume and shape changes, "

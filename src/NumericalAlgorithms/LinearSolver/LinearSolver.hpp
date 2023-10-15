@@ -137,9 +137,9 @@ class PreconditionedLinearSolver : public LinearSolver<LinearSolverRegistrars> {
     static std::string name() { return "Preconditioner"; }
     // Support factory-creatable preconditioners by storing them as unique-ptrs
     using type = Options::Auto<PreconditionerType, Options::AutoLabel::None>;
-    static constexpr Options::String help =
-        "An approximate linear solve in every iteration that helps the "
-        "algorithm converge.";
+    inline const static std::string help
+        {"An approximate linear solve in every iteration that helps the "
+        "algorithm converge."};
   };
 
  protected:

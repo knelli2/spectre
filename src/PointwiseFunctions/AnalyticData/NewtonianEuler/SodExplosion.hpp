@@ -58,39 +58,39 @@ class SodExplosion : public MarkAsAnalyticData {
   /// Initial radius of the discontinuity
   struct InitialRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial radius of the discontinuity."};
     static type lower_bound() { return 0.0; }
   };
 
   struct InnerMassDensity {
     using type = double;
-    static constexpr Options::String help = {"The inner mass density."};
+    inline const static std::string help {"The inner mass density."};
     static type lower_bound() { return 0.0; }
   };
 
   struct InnerPressure {
     using type = double;
-    static constexpr Options::String help = {"The inner pressure."};
+    inline const static std::string help {"The inner pressure."};
     static type lower_bound() { return 0.0; }
   };
 
   struct OuterMassDensity {
     using type = double;
-    static constexpr Options::String help = {"The outer mass density."};
+    inline const static std::string help {"The outer mass density."};
     static type lower_bound() { return 0.0; }
   };
 
   struct OuterPressure {
     using type = double;
-    static constexpr Options::String help = {"The outer pressure."};
+    inline const static std::string help {"The outer pressure."};
     static type lower_bound() { return 0.0; }
   };
 
   using options = tmpl::list<InitialRadius, InnerMassDensity, InnerPressure,
                              OuterMassDensity, OuterPressure>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Cylindrical or spherical Sod explosion."};
 
   SodExplosion() = default;

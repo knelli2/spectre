@@ -47,7 +47,7 @@ class FfeBreakdown : public evolution::initial_data::InitialData,
                      public MarkAsAnalyticData {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{"A FFE breakdown problem"};
+  inline const static std::string help{"A FFE breakdown problem"};
 
   FfeBreakdown() = default;
   FfeBreakdown(const FfeBreakdown&) = default;

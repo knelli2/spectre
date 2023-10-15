@@ -92,7 +92,7 @@ class Sinusoid : public evolution::initial_data::InitialData,
                  public MarkAsAnalyticData {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A solution that is periodic over the interval [0,2pi]. The solution "
       "starts as a sinusoid: u(x,0) = sin(x) and develops a "
       "discontinuity at x=pi and t=1."};

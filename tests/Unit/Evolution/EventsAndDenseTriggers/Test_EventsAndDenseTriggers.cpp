@@ -60,7 +60,7 @@ class TestEvent : public Event {
   }
 
   using options = tmpl::list<>;
-  static constexpr Options::String help = "help";
+  inline const static std::string help {"help"};
 
   TestEvent() = default;
 

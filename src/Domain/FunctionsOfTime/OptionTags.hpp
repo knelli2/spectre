@@ -15,7 +15,7 @@ namespace domain::FunctionsOfTime::OptionTags {
  * \brief Groups options for reading in FunctionOfTime data from SpEC
  */
 struct CubicFunctionOfTimeOverride {
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Options for importing FunctionOfTimes from SpEC"};
 };
 
@@ -24,7 +24,7 @@ struct CubicFunctionOfTimeOverride {
  */
 struct FunctionOfTimeFile {
   using type = Options::Auto<std::string, Options::AutoLabel::None>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Path to an H5 file containing SpEC FunctionOfTime data"};
   using group = CubicFunctionOfTimeOverride;
 };
@@ -34,7 +34,7 @@ struct FunctionOfTimeFile {
  */
 struct FunctionOfTimeNameMap {
   using type = std::map<std::string, std::string>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "String pairs mapping spec names to spectre names"};
   using group = CubicFunctionOfTimeOverride;
 };

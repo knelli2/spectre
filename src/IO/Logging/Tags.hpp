@@ -22,7 +22,7 @@ namespace OptionTags {
 template <typename OptionsGroup>
 struct Verbosity {
   using type = ::Verbosity;
-  static constexpr Options::String help{"Verbosity"};
+  inline const static std::string help{"Verbosity"};
   using group = OptionsGroup;
 };
 }  // namespace OptionTags

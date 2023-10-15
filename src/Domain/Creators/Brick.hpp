@@ -50,37 +50,37 @@ class Brick : public DomainCreator<3> {
 
   struct LowerBound {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence of [x,y,z] for lower bounds."};
   };
 
   struct UpperBound {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence of [x,y,z] for upper bounds."};
   };
   struct IsPeriodicIn {
     using type = std::array<bool, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence for [x,y,z], true if periodic."};
   };
 
   struct InitialRefinement {
     using type = std::array<size_t, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial refinement level in [x,y,z]."};
   };
 
   struct InitialGridPoints {
     using type = std::array<size_t, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial number of grid points in [x,y,z]."};
   };
 
   struct TimeDependence {
     using type =
         std::unique_ptr<domain::creators::time_dependence::TimeDependence<3>>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The time dependence of the moving mesh domain."};
   };
 
@@ -90,8 +90,8 @@ class Brick : public DomainCreator<3> {
       return "BoundaryConditionIn" +
              std::string{Dim == 0 ? 'X' : (Dim == 1 ? 'Y' : 'Z')};
     }
-    static constexpr Options::String help =
-        "The boundary condition to impose on all sides.";
+    inline const static std::string help
+        {"The boundary condition to impose on all sides."};
     using type = std::unique_ptr<BoundaryConditionsBase>;
   };
 
@@ -121,7 +121,7 @@ class Brick : public DomainCreator<3> {
           options_periodic>,
       tmpl::list<TimeDependence>>;
 
-  static constexpr Options::String help{"Creates a 3D brick."};
+  inline const static std::string help{"Creates a 3D brick."};
 
   Brick(typename LowerBound::type lower_xyz,
         typename UpperBound::type upper_xyz,

@@ -61,11 +61,11 @@ struct TestCreatable : public PhaseChange {
   template <typename Metavariables>
   using participating_components = tmpl::list<>;
 
-  static constexpr Options::String help{"Creatable for test"};
+  inline const static std::string help{"Creatable for test"};
 
   struct IntOption {
     using type = int;
-    static constexpr Options::String help{"Option parameter"};
+    inline const static std::string help{"Option parameter"};
   };
 
   using options = tmpl::list<IntOption>;

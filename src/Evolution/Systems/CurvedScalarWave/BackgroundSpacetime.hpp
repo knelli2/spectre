@@ -14,7 +14,7 @@ namespace CurvedScalarWave {
 namespace OptionTags {
 
 struct BackgroundSpacetimeGroup {
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "The background spacetime on which the scalar wave "
       "propagates."};
   static std::string name() { return "BackgroundSpacetime"; }
@@ -22,7 +22,7 @@ struct BackgroundSpacetimeGroup {
 
 template <typename BackgroundType>
 struct BackgroundSpacetime {
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Options for the background spacetime on which the scalar wave "
       "propagates."};
   static std::string name() {

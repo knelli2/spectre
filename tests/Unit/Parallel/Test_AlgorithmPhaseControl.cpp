@@ -77,7 +77,7 @@ struct RegisterTrigger : public Trigger {
   using PUP::able::register_constructor;
   WRAPPED_PUPable_decl_template(RegisterTrigger);  // NOLINT
 
-  static constexpr Options::String help{"Trigger for going to Register."};
+  inline const static std::string help{"Trigger for going to Register."};
   using options = tmpl::list<>;
 
   using argument_tags = tmpl::list<Tags::Step>;
@@ -91,7 +91,7 @@ struct SolveTrigger : public Trigger {
   using PUP::able::register_constructor;
   WRAPPED_PUPable_decl_template(SolveTrigger);  // NOLINT
 
-  static constexpr Options::String help{"Trigger for going to Solve."};
+  inline const static std::string help{"Trigger for going to Solve."};
   using options = tmpl::list<>;
 
   using argument_tags = tmpl::list<Tags::Step>;
@@ -348,8 +348,8 @@ struct TestMetavariables {
   using const_global_cache_tags =
       tmpl::list<PhaseControl::Tags::PhaseChangeAndTriggers>;
 
-  static constexpr Options::String help =
-      "An executable for testing basic phase control flow.";
+  inline const static std::string help
+      {"An executable for testing basic phase control flow."};
 
   static std::string repeat(const std::string& input, const size_t times) {
     std::string output;

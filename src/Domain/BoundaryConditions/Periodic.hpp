@@ -48,7 +48,7 @@ struct Periodic final : public SystemBoundaryConditionBaseClass,
                         public MarkAsPeriodic {
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Periodic boundary conditions.\n\nNote: Not all domain creators will "
       "allow you to specify periodic boundary conditions since they may not "
       "make sense."};

@@ -49,7 +49,7 @@ class Equilibrium3D : public EquationOfState<EquilEos::is_relativistic, 3> {
   static std::string name() {
     return "Equilibrium3D(" + pretty_type::name<EquilEos>() + ")";
   }
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "An 3D EoS which is independent of electron fraction. "
       "Contains an underlying 2D EoS which is dependent only "
       "on rest mass density and temperature/internal energy."};
@@ -57,7 +57,7 @@ class Equilibrium3D : public EquationOfState<EquilEos::is_relativistic, 3> {
   struct UnderlyingEos {
     using type = EquilEos;
     static std::string name() { return pretty_type::short_name<EquilEos>(); }
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The underlying Eos which is being represented as a "
         "3D Eos.  Must be a 2D EoS"};
   };

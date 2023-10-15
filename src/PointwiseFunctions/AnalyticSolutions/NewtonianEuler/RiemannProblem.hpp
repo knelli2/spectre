@@ -141,57 +141,57 @@ class RiemannProblem : public MarkAsAnalyticSolution {
   /// The adiabatic index of the fluid.
   struct AdiabaticIndex {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The adiabatic index of the fluid."};
   };
 
   /// Initial position of the discontinuity
   struct InitialPosition {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial position of the discontinuity."};
   };
 
   /// The mass density on the left of the initial discontinuity
   struct LeftMassDensity {
     using type = double;
-    static constexpr Options::String help = {"The left mass density."};
+    inline const static std::string help {"The left mass density."};
   };
 
   /// The velocity on the left of the initial discontinuity
   struct LeftVelocity {
     using type = std::array<double, Dim>;
-    static constexpr Options::String help = {"The left velocity."};
+    inline const static std::string help {"The left velocity."};
   };
 
   /// The pressure on the left of the initial discontinuity
   struct LeftPressure {
     using type = double;
-    static constexpr Options::String help = {"The left pressure."};
+    inline const static std::string help {"The left pressure."};
   };
 
   /// The mass density on the right of the initial discontinuity
   struct RightMassDensity {
     using type = double;
-    static constexpr Options::String help = {"The right mass density."};
+    inline const static std::string help {"The right mass density."};
   };
 
   /// The velocity on the right of the initial discontinuity
   struct RightVelocity {
     using type = std::array<double, Dim>;
-    static constexpr Options::String help = {"The right velocity."};
+    inline const static std::string help {"The right velocity."};
   };
 
   /// The pressure on the right of the initial discontinuity
   struct RightPressure {
     using type = double;
-    static constexpr Options::String help = {"The right pressure."};
+    inline const static std::string help {"The right pressure."};
   };
 
   /// The tolerance for solving for \f$p_*\f$.
   struct PressureStarTol {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The tolerance for the numerical solution for p star"};
     static type suggested_value() { return 1.e-9; }
   };
@@ -236,7 +236,7 @@ class RiemannProblem : public MarkAsAnalyticSolution {
                              LeftVelocity, LeftPressure, RightMassDensity,
                              RightVelocity, RightPressure, PressureStarTol>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Riemann Problem in 1, 2 or 3D along any coordinate axis."};
 
   RiemannProblem() = default;

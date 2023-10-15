@@ -115,23 +115,23 @@ void assign_du_components_from_l_factors(
 struct LinearizedBondiSachs : public SphericalMetricData {
   struct InitialModes {
     using type = std::array<std::complex<double>, 2>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The initial modes of the Robinson-Trautman scalar"};
   };
   struct ExtractionRadius {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The extraction radius of the spherical solution"};
     static type lower_bound() { return 0.0; }
   };
   struct Frequency {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The frequency of the linearized modes."};
     static type lower_bound() { return 0.0; }
   };
 
-  static constexpr Options::String help{
+  inline const static std::string help{
     "A linearized Bondi-Sachs analytic solution"};
 
   using options = tmpl::list<InitialModes, ExtractionRadius, Frequency>;

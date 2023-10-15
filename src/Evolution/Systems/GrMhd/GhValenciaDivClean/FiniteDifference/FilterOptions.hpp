@@ -26,13 +26,13 @@ struct FilterOptions {
   /// Must be positive and less than 1.
   struct SpacetimeDissipation {
     using type = Options::Auto<double, Options::AutoLabel::None>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The amount of Kreiss-Oliger filter dissipation to apply. Must be "
         "positive and less than 1. If 'None' then no dissipation is applied."};
   };
   using options = tmpl::list<SpacetimeDissipation>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Parameters for controlling filter on the FD grid."};
 
   FilterOptions() = default;

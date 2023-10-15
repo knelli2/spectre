@@ -60,13 +60,13 @@ class DirichletAnalytic final : public BoundaryCondition {
  public:
   /// \brief What analytic solution/data to prescribe.
   struct AnalyticPrescription {
-    static constexpr Options::String help =
-        "What analytic solution/data to prescribe.";
+    inline const static std::string help
+        {"What analytic solution/data to prescribe."};
     using type = std::unique_ptr<evolution::initial_data::InitialData>;
   };
 
   using options = tmpl::list<AnalyticPrescription>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "DirichletAnalytic boundary conditions setting the value of U to "
       "the analytic solution or analytic data."};
 

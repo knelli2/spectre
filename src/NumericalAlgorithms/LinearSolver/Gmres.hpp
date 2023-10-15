@@ -168,25 +168,25 @@ class Gmres final : public PreconditionedLinearSolver<Preconditioner,
 
   struct ConvergenceCriteria {
     using type = Convergence::Criteria;
-    static constexpr Options::String help =
-        "Determine convergence of the algorithm";
+    inline const static std::string help
+        {"Determine convergence of the algorithm"};
   };
   struct Restart {
     using type = Options::Auto<size_t, Options::AutoLabel::None>;
-    static constexpr Options::String help =
-        "Iterations to run before restarting, or 'None' to disable restarting. "
+    inline const static std::string help
+        {"Iterations to run before restarting, or 'None' to disable restarting. "
         "Note that the solver is not guaranteed to converge anymore if you "
-        "enable restarting.";
+        "enable restarting."};
     static type suggested_value() { return {}; }
   };
   struct Verbosity {
     using type = ::Verbosity;
-    static constexpr Options::String help = "Logging verbosity";
+    inline const static std::string help {"Logging verbosity"};
   };
 
  public:
-  static constexpr Options::String help =
-      "A serial GMRES iterative solver for nonsymmetric linear systems of\n"
+  inline const static std::string help
+      {"A serial GMRES iterative solver for nonsymmetric linear systems of\n"
       "equations Ax=b. It will converge to numerical precision in at most N_A\n"
       "iterations, where N_A is the number of equations represented by the\n"
       "linear operator A, but will ideally converge to a reasonable\n"
@@ -202,7 +202,7 @@ class Gmres final : public PreconditionedLinearSolver<Preconditioner,
       "non-positive-definite matrices and is not guaranteed to converge\n"
       "within N_A iterations anymore when restarting is activated.\n"
       "Activate restarting by setting the 'Restart' option to N_restart, or\n"
-      "deactivate restarting by setting it to 'None'.";
+      "deactivate restarting by setting it to 'None'."};
   using options = tmpl::flatten<tmpl::list<
       ConvergenceCriteria, Verbosity, Restart,
       tmpl::conditional_t<std::is_same_v<Preconditioner, NoPreconditioner>,

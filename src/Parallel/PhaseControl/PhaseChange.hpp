@@ -73,7 +73,7 @@ enum ArbitrationStrategy {
  *    functions to set the starting state of the tags in
  *    `phase_change_decision_data` for which they are responsible.
  *
- * In addition to the `options` type alias and `static constexpr Options::String
+ * In addition to the `options` type alias and `static const std::string
  * help` variable needed to be option-creatable, a derived class of
  * `PhaseChange` must specify the type aliases:
  * - `argument_tags`: A `tmpl::list` of tags from the

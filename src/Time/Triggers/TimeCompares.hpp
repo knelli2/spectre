@@ -33,16 +33,16 @@ class TimeCompares : public Trigger {
 
   struct Comparison {
     using type = Options::Comparator;
-    constexpr static Options::String help = "Comparison type";
+    inline const static std::string help {"Comparison type"};
   };
 
   struct Value {
     using type = double;
-    constexpr static Options::String help = "Value to compare to";
+    inline const static std::string help {"Value to compare to"};
   };
 
   using options = tmpl::list<Comparison, Value>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Trigger based on a comparison with the time."};
 
   explicit TimeCompares(const Options::Comparator comparator, const double time)

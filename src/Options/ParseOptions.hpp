@@ -372,7 +372,7 @@ Parser<OptionList, Group>::Parser(std::string help_text)
                               << " is too long for nice formatting, "
                                  "please shorten the name to "
                               << max_label_size_ << " characters or fewer");
-    ASSERT(std::strlen(T::help) > 0,
+    ASSERT(T::help.length() > 0,
            "You must supply a help string of non-zero length for " << label);
   });
 }

@@ -66,17 +66,17 @@ namespace OptionTags {
 // split over all elements. In a context where the linear operator represents a
 // DG discretization, M is the number of collocation points per element.
 struct LinearOperator {
-  static constexpr Options::String help = "The linear operator A to invert.";
+  inline const static std::string help {"The linear operator A to invert."};
   using type = std::vector<blaze::DynamicMatrix<double>>;
 };
 // Both of the following options expect a list of N vectors that have a size of
 // M each, so that they constitute a vector of total size N*M (see above).
 struct Source {
-  static constexpr Options::String help = "The source b in the equation Ax=b.";
+  inline const static std::string help {"The source b in the equation Ax=b."};
   using type = std::vector<blaze::DynamicVector<double>>;
 };
 struct ExpectedResult {
-  static constexpr Options::String help = "The solution x in the equation Ax=b";
+  inline const static std::string help {"The solution x in the equation Ax=b"};
   using type = std::vector<blaze::DynamicVector<double>>;
 };
 }  // namespace OptionTags

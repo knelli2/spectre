@@ -17,7 +17,7 @@
 namespace {
 struct ExampleVolumeData {
   static std::string name() { return "Example"; }
-  static constexpr Options::String help = "Example volume data";
+  inline const static std::string help {"Example volume data"};
 };
 }  // namespace
 

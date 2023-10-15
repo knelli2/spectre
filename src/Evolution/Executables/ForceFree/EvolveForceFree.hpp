@@ -256,7 +256,7 @@ struct EvolutionMetavars {
                  observers::ObserverWriter<EvolutionMetavars>,
                  dg_element_array_component>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the GRFFE system with divergence cleaning.\n"};
 
   static constexpr std::array<Parallel::Phase, 5> default_phase_order{

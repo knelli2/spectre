@@ -47,43 +47,43 @@ class Rectangle : public DomainCreator<2> {
 
   struct LowerBound {
     using type = std::array<double, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence of [x,y] for lower bounds."};
   };
 
   struct UpperBound {
     using type = std::array<double, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence of [x,y] for upper bounds."};
   };
   struct IsPeriodicIn {
     using type = std::array<bool, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence for [x,y], true if periodic."};
   };
 
   struct InitialRefinement {
     using type = std::array<size_t, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial refinement level in [x,y]."};
   };
 
   struct InitialGridPoints {
     using type = std::array<size_t, 2>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial number of grid points in [x,y]."};
   };
   struct TimeDependence {
     using type =
         std::unique_ptr<domain::creators::time_dependence::TimeDependence<2>>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The time dependence of the moving mesh domain."};
   };
   template <typename BoundaryConditionsBase>
   struct BoundaryCondition {
     static std::string name() { return "BoundaryCondition"; }
-    static constexpr Options::String help =
-        "The boundary condition to impose on all sides.";
+    inline const static std::string help
+        {"The boundary condition to impose on all sides."};
     using type = std::unique_ptr<BoundaryConditionsBase>;
   };
 
@@ -104,7 +104,7 @@ class Rectangle : public DomainCreator<2> {
           options_periodic>,
       tmpl::list<TimeDependence>>;
 
-  static constexpr Options::String help{"Creates a 2D rectangle."};
+  inline const static std::string help{"Creates a 2D rectangle."};
 
   Rectangle(
       typename LowerBound::type lower_xy, typename UpperBound::type upper_xy,

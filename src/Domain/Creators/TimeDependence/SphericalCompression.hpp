@@ -72,45 +72,45 @@ class SphericalCompression final : public TimeDependence<3> {
   /// \brief The initial time of the function of time.
   struct InitialTime {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The initial time of the function of time"};
   };
   /// \brief Minimum radius for the SphericalCompression map
   struct MinRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Min radius for SphericalCompression map."};
   };
   /// \brief Maximum radius for the SphericalCompression map
   struct MaxRadius {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Max radius for SphericalCompression map."};
   };
   /// \brief Center for the SphericalCompression map
   struct Center {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Center for the SphericalCompression map."};
   };
   /// \brief Initial value for function of time for the spherical compression
   struct InitialValue {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Spherical compression value at initial time."};
   };
   /// \brief Initial radial velocity for the function of time for the spherical
   /// compression
   struct InitialVelocity {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Spherical compression initial radial velocity."};
   };
   /// \brief Initial radial acceleration for the function of time for the
   /// spherical compression
   struct InitialAcceleration {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Spherical compression initial radial acceleration."};
   };
 
@@ -122,7 +122,7 @@ class SphericalCompression final : public TimeDependence<3> {
       tmpl::list<InitialTime, MinRadius, MaxRadius, Center, InitialValue,
                  InitialVelocity, InitialAcceleration>;
 
-  static constexpr Options::String help = {"A spherical compression."};
+  inline const static std::string help {"A spherical compression."};
 
   SphericalCompression() = default;
   ~SphericalCompression() override = default;

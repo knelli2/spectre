@@ -105,45 +105,45 @@ class RotatedBricks : public DomainCreator<3> {
 
   struct LowerBound {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence [x,y,z] for lower bound in the target frame."};
   };
 
   struct Midpoint {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence [x,y,z] for midpoint in the target frame."};
   };
 
   struct UpperBound {
     using type = std::array<double, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence [x,y,z] for upper bound in the target frame."};
   };
 
   struct IsPeriodicIn {
     using type = std::array<bool, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Sequence in [x,y,z], true if periodic."};
   };
 
   struct InitialRefinement {
     using type = std::array<size_t, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial refinement level in [x, y, z]."};
   };
 
   struct InitialGridPoints {
     using type = std::array<std::array<size_t, 2>, 3>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Initial number of grid points in [[x], [y], [z]]."};
   };
 
   template <typename BoundaryConditionsBase>
   struct BoundaryCondition {
     static std::string name() { return "BoundaryCondition"; }
-    static constexpr Options::String help =
-        "The boundary condition to impose on all sides.";
+    inline const static std::string help
+        {"The boundary condition to impose on all sides."};
     using type = std::unique_ptr<BoundaryConditionsBase>;
   };
 
@@ -162,7 +162,7 @@ class RotatedBricks : public DomainCreator<3> {
                   typename Metavariables::system>>>,
           options_periodic>>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "A DomainCreator useful for testing purposes.\n"
       "RotatedBricks uses eight rotated Blocks to create the rectangular\n"
       "prism [LowerX,UpperX] x [LowerY,UpperY] x [LowerZ,UpperZ]. The\n"

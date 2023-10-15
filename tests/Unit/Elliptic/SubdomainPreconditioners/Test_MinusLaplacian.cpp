@@ -85,7 +85,7 @@ PUP::able::PUP_ID BoundaryCondition<Dim>::my_PUP_ID = 0;  // NOLINT
 template <size_t Dim>
 struct TestSolver {
   using options = tmpl::list<>;
-  static constexpr Options::String help = "halp";
+  inline const static std::string help {"halp"};
 
   template <typename LinearOperator, typename... OperatorArgs>
   Convergence::HasConverged solve(

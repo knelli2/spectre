@@ -80,19 +80,19 @@ class Persson : public Criterion {
  public:
   struct VariablesToMonitor {
     using type = std::vector<std::string>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The tensors to monitor for h-refinement."};
     static size_t lower_bound_on_size() { return 1; }
   };
   struct NumHighestModes {
     using type = size_t;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Number of highest modes to monitor the power of."};
     static size_t lower_bound() { return 1; }
   };
   struct Exponent {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The exponent at which the modes should decrease. "
         "Corresponds to a \"relative tolerance\" of N^(-alpha), where N is the "
         "number of grid points minus 'NumHighestModes'. "
@@ -103,7 +103,7 @@ class Persson : public Criterion {
   };
   struct AbsoluteTolerance {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "If any tensor component has a power in the highest modes above this "
         "value, the element will be h-refined in that direction. "
         "Set to 0 to disable."};
@@ -111,7 +111,7 @@ class Persson : public Criterion {
   };
   struct CoarseningFactor {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Factor applied to both relative and absolute tolerance to trigger "
         "h-coarsening. Set to 0 to disable h-coarsening altogether. "
         "Set closer to 1 to trigger h-coarsening more aggressively. "
@@ -124,7 +124,7 @@ class Persson : public Criterion {
   using options = tmpl::list<VariablesToMonitor, NumHighestModes, Exponent,
                              AbsoluteTolerance, CoarseningFactor>;
 
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Refine the grid so the power in the highest modes stays below the "
       "tolerance"};
 

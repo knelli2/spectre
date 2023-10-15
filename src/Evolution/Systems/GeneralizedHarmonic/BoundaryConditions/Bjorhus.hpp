@@ -105,13 +105,13 @@ class ConstraintPreservingBjorhus final : public BoundaryCondition<Dim> {
   struct TypeOptionTag {
     using type = detail::ConstraintPreservingBjorhusType;
     static std::string name() { return "Type"; }
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Whether to impose ConstraintPreserving, with or without physical "
         "terms for VMinus."};
   };
 
   using options = tmpl::list<TypeOptionTag>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "ConstraintPreservingBjorhus boundary conditions setting the value of the"
       "time derivatives of the spacetime metric, Phi and Pi to expressions that"
       "prevent the influx of constraint violations and reflections."};

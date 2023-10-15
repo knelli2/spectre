@@ -96,14 +96,14 @@ class AdaptiveOrder : public Reconstructor {
 
   struct Alpha5 {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The alpha parameter in the Persson convergence measurement. 4 is the "
         "right value, but anything in the range of 3-5 is 'reasonable'. "
         "Smaller values allow for more oscillations."};
   };
   struct Alpha7 {
     using type = Options::Auto<double, Options::AutoLabel::None>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The alpha parameter in the Persson convergence measurement. 4 is the "
         "right value, but anything in the range of 3-5 is 'reasonable'. "
         "Smaller values allow for more oscillations. If not specified then "
@@ -111,7 +111,7 @@ class AdaptiveOrder : public Reconstructor {
   };
   struct Alpha9 {
     using type = Options::Auto<double, Options::AutoLabel::None>;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The alpha parameter in the Persson convergence measurement. 4 is the "
         "right value, but anything in the range of 3-5 is 'reasonable'. "
         "Smaller values allow for more oscillations. If not specified then "
@@ -119,14 +119,14 @@ class AdaptiveOrder : public Reconstructor {
   };
   struct LowOrderReconstructor {
     using type = FallbackReconstructorType;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "The 2nd/3rd-order reconstruction scheme to use if unlimited 5th-order "
         "isn't okay."};
   };
 
   using options = tmpl::list<Alpha5, Alpha7, Alpha9, LowOrderReconstructor>;
 
-  static constexpr Options::String help{"Adaptive-order reconstruction."};
+  inline const static std::string help{"Adaptive-order reconstruction."};
   AdaptiveOrder() = default;
   AdaptiveOrder(AdaptiveOrder&&) = default;
   AdaptiveOrder& operator=(AdaptiveOrder&&) = default;

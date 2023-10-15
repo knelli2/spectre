@@ -42,13 +42,13 @@ class Controller {
  public:
   struct UpdateFraction {
     using type = double;
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Fraction of damping timescale used to determine how often to update "
         "functions of time."};
   };
 
   using options = tmpl::list<UpdateFraction>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Computes control signal used to reset highest derivative of a function "
       "of time. Also determines when a function of time needs to be updated "
       "next."};

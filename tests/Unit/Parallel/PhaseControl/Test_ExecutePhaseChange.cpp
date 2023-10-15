@@ -55,7 +55,7 @@ struct TestPhaseChange : public PhaseChange {
   }
 
   using options = tmpl::list<>;
-  static constexpr Options::String help{"Phase change tester"};
+  inline const static std::string help{"Phase change tester"};
 
   using argument_tags = tmpl::list<>;
   using return_tags = tmpl::list<>;

@@ -214,7 +214,7 @@ struct ArrayComponent {
 struct Metavariables {
   using component_list = tmpl::list<ArrayComponent<Metavariables>>;
 
-  static constexpr Options::String help = "Test section reductions";
+  inline const static std::string help {"Test section reductions"};
 
   static constexpr std::array<Parallel::Phase, 3> default_phase_order{
       {Parallel::Phase::Initialization, Parallel::Phase::Testing,

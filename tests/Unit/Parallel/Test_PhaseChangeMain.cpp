@@ -206,7 +206,7 @@ struct TestMetavariables {
       tmpl::list<PhaseChangeTest::ArrayComponent<TestMetavariables>,
                  PhaseChangeTest::GroupComponent<TestMetavariables>>;
 
-  static constexpr Options::String help = "";
+  inline const static std::string help {""};
 
   static constexpr std::array<Parallel::Phase, 3> default_phase_order{
       {Parallel::Phase::Initialization, Parallel::Phase::Evolve,

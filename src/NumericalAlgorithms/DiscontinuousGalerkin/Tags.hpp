@@ -50,7 +50,7 @@ namespace OptionTags {
  */
 struct NumericalFluxGroup {
   static std::string name() { return "NumericalFlux"; }
-  static constexpr Options::String help = "The numerical flux scheme";
+  inline const static std::string help {"The numerical flux scheme"};
 };
 
 /*!
@@ -61,7 +61,7 @@ struct NumericalFluxGroup {
 template <typename NumericalFluxType>
 struct NumericalFlux {
   static std::string name() { return pretty_type::name<NumericalFluxType>(); }
-  static constexpr Options::String help = "Options for the numerical flux";
+  inline const static std::string help {"Options for the numerical flux"};
   using type = NumericalFluxType;
   using group = NumericalFluxGroup;
 };

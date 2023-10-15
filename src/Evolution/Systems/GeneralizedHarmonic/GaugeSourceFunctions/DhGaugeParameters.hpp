@@ -35,21 +35,21 @@ struct DhGaugeParameters<true> {
   std::array<double, 3> amplitudes;
   std::array<int, 3> exponents;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A struct holding the parameters for initializing damped harmonic "
       "gauge, including a roll-on from the initial gauge."};
 
   /// The rollon start time
   struct RollOnStartTime {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Simulation time to start rolling on the damped harmonic gauge"};
   };
 
   /// The width of the Gaussian for the gauge rollon
   struct RollOnTimeWindow {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "The width of the Gaussian that controls how quickly the gauge is "
         "rolled on."};
   };
@@ -58,7 +58,7 @@ struct DhGaugeParameters<true> {
   /// gauge.
   struct SpatialDecayWidth {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Spatial width of weight function used in the damped harmonic "
         "gauge."};
   };
@@ -67,7 +67,7 @@ struct DhGaugeParameters<true> {
   /// harmonic gauge.
   struct Amplitudes {
     using type = std::array<double, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Amplitudes [AL1, AL2, AS] for the damped harmonic gauge."};
   };
 
@@ -75,7 +75,7 @@ struct DhGaugeParameters<true> {
   /// harmonic gauge.
   struct Exponents {
     using type = std::array<int, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Exponents [eL1, eL2, eS] for the damped harmonic gauge."};
   };
 
@@ -98,7 +98,7 @@ struct DhGaugeParameters<false> {
   std::array<double, 3> amplitudes;
   std::array<int, 3> exponents;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "A struct holding the parameters for initializing damped harmonic "
       "gauge with no roll-on from the initial gauge."};
 
@@ -106,7 +106,7 @@ struct DhGaugeParameters<false> {
   /// gauge.
   struct SpatialDecayWidth {
     using type = double;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Spatial width of weight function used in the damped harmonic "
         "gauge."};
   };
@@ -115,7 +115,7 @@ struct DhGaugeParameters<false> {
   /// harmonic gauge.
   struct Amplitudes {
     using type = std::array<double, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Amplitudes [AL1, AL2, AS] for the damped harmonic gauge."};
   };
 
@@ -123,7 +123,7 @@ struct DhGaugeParameters<false> {
   /// harmonic gauge.
   struct Exponents {
     using type = std::array<int, 3>;
-    static constexpr Options::String help{
+    inline const static std::string help{
         "Exponents [eL1, eL2, eS] for the damped harmonic gauge."};
   };
 

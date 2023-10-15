@@ -56,7 +56,7 @@ struct Metavariables {
                              Xcts::Geometry::Curved, conformal_matter_scale>;
   using solver = elliptic::nonlinear_solver::Solver<Metavariables>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Find the solution to an XCTS problem."};
 
   using analytic_solution_fields = tmpl::append<typename system::primal_fields,

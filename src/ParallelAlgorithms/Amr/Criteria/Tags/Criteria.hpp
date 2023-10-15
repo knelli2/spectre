@@ -20,7 +20,7 @@ namespace OptionTags {
 /// \ingroup OptionTagsGroup
 /// Options for AMR criteria
 struct Criteria {
-  static constexpr Options::String help = "Options for AMR criteria";
+  inline const static std::string help {"Options for AMR criteria"};
   using type = std::vector<std::unique_ptr<amr::Criterion>>;
   using group = amr::OptionTags::AmrGroup;
 };

@@ -61,7 +61,7 @@ class MonotonisedCentral : public Reconstructor {
 
  public:
   using options = tmpl::list<>;
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Monotonised central reconstruction scheme."};
 
   MonotonisedCentral() = default;

@@ -610,7 +610,7 @@ struct EvolutionMetavars<InitialData, tmpl::list<InterpolationTargetTags...>> {
       initial_data_tag, equation_of_state_tag,
       grmhd::ValenciaDivClean::Tags::ConstraintDampingParameter>;
 
-  static constexpr Options::String help{
+  inline const static std::string help{
       "Evolve the Valencia formulation of the GRMHD system with divergence "
       "cleaning.\n\n"};
 

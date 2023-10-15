@@ -96,42 +96,42 @@ class FixConservatives {
   struct MinimumValueOfD {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Minimum value of rest-mass density times lorentz factor"};
   };
   /// \brief Cutoff below which \f$D = \rho W\f$ is set to MinimumValueOfD
   struct CutoffD {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Cutoff below which D is set to MinimumValueOfD"};
   };
   /// \brief Minimum value of electron fraction \f$Y_e\f$
   struct MinimumValueOfYe {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Minimum value of electron fraction"};
   };
   /// \brief Cutoff below which \f$Y_e\f$ is set to MinimumValueOfYe
   struct CutoffYe {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Cutoff below which Y_e is set to MinimumValueOfYe"};
   };
   /// \brief Safety factor \f$\epsilon_B\f$.
   struct SafetyFactorForB {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Safety factor for magnetic field bound."};
   };
   /// \brief Safety factor \f$\epsilon_S\f$.
   struct SafetyFactorForS {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Safety factor for momentum density bound above density cutoff."};
   };
   /// \brief Cutoff in \f$\rho_0 W\f$ below which we use a stricter safety
@@ -139,7 +139,7 @@ class FixConservatives {
   struct SafetyFactorForSCutoffD {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Below this value of rest mass density time Lorentz factor, limit S "
         "more agressively."};
   };
@@ -150,7 +150,7 @@ class FixConservatives {
   struct SafetyFactorForSSlope {
     using type = double;
     static type lower_bound() { return 0.0; }
-    static constexpr Options::String help = {
+    inline const static std::string help {
         "Slope of safety factor for momentum density bound below "
         "SafetyFactorForSCutoffD, express as a function of log10(rho*W)."};
   };
@@ -158,7 +158,7 @@ class FixConservatives {
   using options = tmpl::list<MinimumValueOfD, CutoffD, MinimumValueOfYe,
                              CutoffYe, SafetyFactorForB, SafetyFactorForS,
                              SafetyFactorForSCutoffD, SafetyFactorForSSlope>;
-  static constexpr Options::String help = {
+  inline const static std::string help {
       "Variable fixing used in Foucart's thesis.\n"};
 
   FixConservatives(const double minimum_rest_mass_density_times_lorentz_factor,

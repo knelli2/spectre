@@ -29,15 +29,15 @@ template <typename OptionsGroup>
 struct MaxOverlap {
   using type = size_t;
   using group = OptionsGroup;
-  static constexpr Options::String help =
-      "Number of points that subdomains can extend into neighbors";
+  inline const static std::string help
+      {"Number of points that subdomains can extend into neighbors"};
 };
 
 template <typename SolverType, typename OptionsGroup>
 struct SubdomainSolver {
   using type = SolverType;
   using group = OptionsGroup;
-  static constexpr Options::String help = "The linear solver on subdomains";
+  inline const static std::string help {"The linear solver on subdomains"};
 };
 
 template <typename OptionsGroup>
@@ -45,22 +45,22 @@ struct SkipSubdomainSolverResets {
   static std::string name() { return "SkipResets"; }
   using type = bool;
   using group = OptionsGroup;
-  static constexpr Options::String help =
-      "Skip resets of the subdomain solver. This only has an effect in cases "
+  inline const static std::string help
+      {"Skip resets of the subdomain solver. This only has an effect in cases "
       "where the operator changes, e.g. between nonlinear-solver iterations. "
       "Skipping resets avoids expensive re-building of the operator, but comes "
       "at the cost of less accurate preconditioning and thus potentially more "
       "preconditioned iterations. Whether or not this helps convergence "
-      "overall is highly problem-dependent.";
+      "overall is highly problem-dependent."};
 };
 
 template <typename OptionsGroup>
 struct ObservePerCoreReductions {
   using type = bool;
   using group = OptionsGroup;
-  static constexpr Options::String help =
-      "Output statistics per-core in a file per-node, e.g. to assess the load "
-      "(im)balance of subdomain solves.";
+  inline const static std::string help
+      {"Output statistics per-core in a file per-node, e.g. to assess the load "
+      "(im)balance of subdomain solves."};
 };
 
 }  // namespace OptionTags

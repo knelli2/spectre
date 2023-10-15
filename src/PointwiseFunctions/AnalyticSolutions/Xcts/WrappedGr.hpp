@@ -260,7 +260,7 @@ class WrappedGr<GrSolution, HasMhd, tmpl::list<GrSolutionOptions...>>
   static constexpr size_t Dim = 3;
 
   using options = typename GrSolution::options;
-  static constexpr Options::String help = GrSolution::help;
+  inline const static std::string help =GrSolution::help;
   static std::string name() { return pretty_type::name<GrSolution>(); }
 
   WrappedGr() = default;
