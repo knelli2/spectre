@@ -10,17 +10,26 @@
 #include <unordered_map>
 #include <vector>
 
+#include "DataStructures/DataVector.hpp"
 #include "DataStructures/IdPair.hpp"
-#include "DataStructures/Tensor/TypeAliases.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/BlockId.hpp"
+#include "Parallel/GlobalCache.hpp"
 
 /// \cond
-class DataVector;
 template <size_t VolumeDim>
 class Domain;
 template <size_t VolumeDim>
 class Block;
+namespace domain::Tags {
+template <size_t VolumeDim>
+struct Domain;
+struct FunctionsOfTime;
+}  // namespace domain::Tags
+namespace Frame {
+struct NoFrame;
+}  // namespace Frame
 /// \endcond
 
 template <size_t Dim>
@@ -76,3 +85,79 @@ block_logical_coordinates_single_point(
     double time = std::numeric_limits<double>::signaling_NaN(),
     const domain::FunctionsOfTimeMap& functions_of_time = {});
 /// @}
+
+namespace block_logical_detail {
+template <size_t Dim, typename Frame>
+void points_in_frame(
+    const gsl::not_null<tnsr::I<DataVector, Dim, Frame>*> points_with_frame,
+    const tnsr::I<DataVector, Dim, ::Frame::NoFrame>& points_no_frame) {
+  for (size_t i = 0; i < Dim; i++) {
+    points_with_frame->get(i).set_data_ref(
+        const_cast<DataVector&>(points_no_frame.get(i)).data(),
+        points_no_frame.get(i).size());
+  }
+}
+}  // namespace block_logical_detail
+
+template <size_t Dim, typename Metavariables>
+std::vector<std::optional<
+    IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>
+block_logical_coordinates_in_frame(
+    const Parallel::GlobalCache<Metavariables>& cache, const double time,
+    const tnsr::I<DataVector, Dim, Frame::NoFrame>& points_no_frame,
+    const std::string& frame) {
+  const Domain<Dim>& domain = get<domain::Tags::Domain<Dim>>(cache);
+
+  if (frame == "Grid") {
+    // Frame is grid frame, so don't need any FunctionsOfTime,
+    // whether or not the maps are time_dependent.
+    tnsr::I<DataVector, Dim, Frame::Grid> points_with_frame{};
+    block_logical_detail::points_in_frame(make_not_null(&points_with_frame),
+                                          points_no_frame);
+    return ::block_logical_coordinates(domain, points_with_frame);
+  }
+
+  if (domain.is_time_dependent()) {
+    if constexpr (Parallel::is_in_mutable_global_cache<
+                      Metavariables, domain::Tags::FunctionsOfTime>) {
+      // Whoever calls this function when the maps are time-dependent is
+      // responsible for ensuring that functions_of_time are up to date at the
+      // time.
+      const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+      // It's either Distorted or Inertial now
+      if (frame == "Distorted") {
+        tnsr::I<DataVector, Dim, Frame::Distorted> points_with_frame{};
+        block_logical_detail::points_in_frame(make_not_null(&points_with_frame),
+                                              points_no_frame);
+        return ::block_logical_coordinates(domain, points_with_frame, time,
+                                           functions_of_time);
+      } else {
+        tnsr::I<DataVector, Dim, Frame::Inertial> points_with_frame{};
+        block_logical_detail::points_in_frame(make_not_null(&points_with_frame),
+                                              points_no_frame);
+        return ::block_logical_coordinates(domain, points_with_frame, time,
+                                           functions_of_time);
+      }
+    } else {
+      // We error here because the maps are time-dependent, yet
+      // the cache does not contain FunctionsOfTime.  It would be
+      // nice to make this a compile-time error; however, we want
+      // the code to compile for the completely time-independent
+      // case where there are no FunctionsOfTime in the cache at
+      // all.  Unfortunately, checking whether the maps are
+      // time-dependent is currently not constexpr.
+      ERROR(
+          "There is a time-dependent CoordinateMap in at least one "
+          "of the Blocks, but FunctionsOfTime are not in the "
+          "GlobalCache.  If you intend to use a time-dependent "
+          "CoordinateMap, please add FunctionsOfTime to the GlobalCache.");
+    }
+  }
+
+  // Time-independent case. Regardless of what the frame actually is, Grid,
+  // Distorted, and Inertial are all the same so we just choose Grid.
+  tnsr::I<DataVector, Dim, Frame::Grid> points_with_frame{};
+  block_logical_detail::points_in_frame(make_not_null(&points_with_frame),
+                                        points_no_frame);
+  return ::block_logical_coordinates(domain, points_with_frame);
+}
