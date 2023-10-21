@@ -10,6 +10,7 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
+#include "Domain/StrahlkorperTransformations.hpp"
 #include "IO/H5/TensorData.hpp"
 #include "IO/Observer/ObserverComponent.hpp"
 #include "IO/Observer/ReductionActions.hpp"
@@ -95,10 +96,11 @@ struct ObserveSurfaceData
   using const_global_cache_tags = tmpl::list<observers::Tags::SurfaceFileName>;
 
   template <typename DbTags, typename Metavariables, typename TemporalId>
-  static void apply(const db::DataBox<DbTags>& box,
-                    Parallel::GlobalCache<Metavariables>& cache,
-                    const TemporalId& temporal_id) {
-    const auto& strahlkorper = get<ylm::Tags::Strahlkorper<HorizonFrame>>(box);
+  static bool apply(
+      const gsl::not_null<db::DataBox<DbTags>*> box,
+      const gsl::not_null<Parallel::GlobalCache<Metavariables>*> cache,
+      const TemporalId& temporal_id) {
+    const auto& strahlkorper = get<ylm::Tags::Strahlkorper<HorizonFrame>>(*box);
     const ylm::Spherepack& ylm = strahlkorper.ylm_spherepack();
 
     // Output the inertial-frame coordinates of the Stralhlkorper.
@@ -110,8 +112,30 @@ struct ObserveSurfaceData
     if constexpr (db::tag_is_retrievable_v<
                       ylm::Tags::CartesianCoords<::Frame::Inertial>,
                       db::DataBox<DbTags>>) {
+      if constexpr (not std::is_same_v<HorizonFrame, ::Frame::Inertial>) {
+        db::mutate_apply<
+            tmpl::list<ylm::Tags::CartesianCoords<::Frame::Inertial>>,
+            tmpl::list<domain::Tags::Domain<Metavariables::volume_dim>>>(
+            [&cache, &strahlkorper, &temporal_id](
+                const gsl::not_null<tnsr::I<DataVector, 3, ::Frame::Inertial>*>
+                    inertial_strahlkorper_coords,
+                const Domain<Metavariables::volume_dim>& domain) {
+              // Note that functions_of_time must already be up to
+              // date at temporal_id because they were used in the AH
+              // search above.
+              const auto& functions_of_time =
+                  get<domain::Tags::FunctionsOfTime>(*cache);
+              strahlkorper_coords_in_different_frame(
+                  inertial_strahlkorper_coords, strahlkorper, domain,
+                  functions_of_time,
+                  InterpolationTarget_detail::get_temporal_id_value(
+                      temporal_id));
+            },
+            box);
+      }
+
       const auto& inertial_strahlkorper_coords =
-          get<ylm::Tags::CartesianCoords<::Frame::Inertial>>(box);
+          get<ylm::Tags::CartesianCoords<::Frame::Inertial>>(*box);
       tensor_components.push_back(
           {"InertialCoordinates_x"s, get<0>(inertial_strahlkorper_coords)});
       tensor_components.push_back(
@@ -130,7 +154,7 @@ struct ObserveSurfaceData
     tmpl::for_each<TagsToObserve>([&box, &tensor_components](auto tag_v) {
       using Tag = tmpl::type_from<decltype(tag_v)>;
       const auto tag_name = db::tag_name<Tag>();
-      const auto& tensor = get<Tag>(box);
+      const auto& tensor = get<Tag>(*box);
       for (size_t i = 0; i < tensor.size(); ++i) {
         tensor_components.emplace_back(tag_name + tensor.component_suffix(i),
                                        tensor[i]);
@@ -151,12 +175,12 @@ struct ObserveSurfaceData
     const observers::ObservationId observation_id{time, subfile_path + ".vol"};
 
     auto& proxy = Parallel::get_parallel_component<
-        observers::ObserverWriter<Metavariables>>(cache);
+        observers::ObserverWriter<Metavariables>>(*cache);
 
     // We call this on proxy[0] because the 0th element of a NodeGroup is
     // always guaranteed to be present.
     Parallel::threaded_action<observers::ThreadedActions::WriteVolumeData>(
-        proxy[0], Parallel::get<observers::Tags::SurfaceFileName>(cache),
+        proxy[0], Parallel::get<observers::Tags::SurfaceFileName>(*cache),
         subfile_path, observation_id,
         std::vector<ElementVolumeData>{{surface_name, tensor_components,
                                         extents_vector, bases_vector,
@@ -184,6 +208,8 @@ struct ObserveSurfaceData
         observers::ThreadedActions::WriteReductionDataRow>(
         proxy[0], ylm_subfile_name, std::move(ylm_legend),
         std::make_tuple(std::move(ylm_data)));
+
+    return true;
   }
 };
 }  // namespace callbacks
