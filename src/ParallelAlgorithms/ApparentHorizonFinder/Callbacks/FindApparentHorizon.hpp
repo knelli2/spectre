@@ -33,6 +33,7 @@
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
+#include "Utilities/TypeTraits/CreateIsCallable.hpp"
 
 /// \cond
 namespace ylm::Tags {
@@ -55,6 +56,10 @@ struct TemporalIds;
 
 namespace intrp {
 namespace callbacks {
+namespace detail {
+CREATE_IS_CALLABLE(apply)
+CREATE_IS_CALLABLE_V(apply)
+}  // namespace detail
 
 /// \brief post interpolation callback (see
 /// intrp::protocols::PostInterpolationCallback) that does a FastFlow iteration
@@ -429,7 +434,13 @@ struct FindApparentHorizon
           typename InterpolationTargetTag::post_horizon_find_callbacks>(
           [&box, &cache, &temporal_id](auto callback_v) {
             using callback = tmpl::type_from<decltype(callback_v)>;
-            callback::apply(*box, *cache, temporal_id);
+            if constexpr (detail::is_apply_callable_v<callback, decltype(*box),
+                                                      decltype(*cache),
+                                                      decltype(temporal_id)>) {
+              callback::apply(*box, *cache, temporal_id);
+            } else {
+              callback::apply(box, cache, temporal_id);
+            }
           });
     }
 
