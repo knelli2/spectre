@@ -144,8 +144,11 @@ struct Sphere : tt::ConformsTo<intrp::protocols::ComputeTargetPoints> {
   using is_sequential = std::false_type;
   using frame = Frame;
 
-  using simple_tags =
-      tmpl::list<ylm::Tags::Strahlkorper<Frame>, Tags::AllCoords<Frame>>;
+  using simple_tags = tmpl::append<
+      tmpl::list<ylm::Tags::Strahlkorper<Frame>, Tags::AllCoords<Frame>>,
+      tmpl::conditional_t<
+          std::is_same_v<Frame, ::Frame::Inertial>, tmpl::list<>,
+          tmpl::list<ylm::Tags::CartesianCoords<::Frame::Inertial>>>>;
   using compute_tags = typename ylm::Tags::compute_items_tags<Frame>;
 
   template <typename DbTags, typename Metavariables>
