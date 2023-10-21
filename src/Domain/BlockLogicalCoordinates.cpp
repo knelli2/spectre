@@ -133,7 +133,33 @@ block_logical_coordinates_single_point(
   return logical_point;
 }
 
-template <size_t Dim, typename Fr>
+template <size_t Dim>
+std::optional<tnsr::I<double, Dim, ::Frame::BlockLogical>>
+block_logical_coordinates_single_point_in_frame(
+    const tnsr::I<double, Dim, ::Frame::NoFrame>& input_point,
+    const std::string& frame, const Block<Dim>& block, double time,
+    const functions_of_time_type& functions_of_time) {
+  const auto transform_point = [&](const auto frame_v) {
+    using frame = std::decay_t<decltype(frame_v)>;
+    tnsr::I<double, Dim, frame> input_point_with_frame{};
+    for (size_t i = 0; i < Dim; i++) {
+      input_point_with_frame.get(i) = input_point.get(i);
+    }
+
+    return block_logical_coordinates_single_point(input_point_with_frame, block,
+                                                  time, functions_of_time);
+  };
+
+  if (frame == "Grid") {
+    return transform_point(Frame::Grid{});
+  } else if (frame == "Distorted") {
+    return transform_point(Frame::Distorted{});
+  } else {
+    return transform_point(Frame::Inertial{});
+  }
+}
+
+template <size_t Dim, typename F>
 std::vector<BlockLogicalCoords<Dim>> block_logical_coordinates(
     const Domain<Dim>& domain, const tnsr::I<DataVector, Dim, Fr>& x,
     const double time, const domain::FunctionsOfTimeMap& functions_of_time) {

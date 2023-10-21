@@ -41,11 +41,10 @@ namespace intrp::Targets {
  */
 template <size_t Dim>
 class Target : public PUP::able {
- private:
+ public:
   using BlockCoords = std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>;
 
- public:
   /// \cond
   Target() = default;
   Target(const Target&) = default;
@@ -66,10 +65,11 @@ class Target : public PUP::able {
   using argument_tags = tmpl::list<>;
 
   template <typename Metavariables>
-  BlockCoords operator()(const Parallel::GlobalCache<Metavariables>& cache,
-                         const double time, const std::string& frame) const {
-    return block_logical_coordinates_in_frame(
-        cache, time, this->target_points_no_frame(), frame);
+  std::optional<BlockCoords> operator()(
+      const Parallel::GlobalCache<Metavariables>& cache, const double time,
+      const std::string& frame) const {
+    return {block_logical_coordinates_in_frame(
+        cache, time, this->target_points_no_frame(), frame)};
   }
 
   /*!
@@ -91,7 +91,7 @@ class Target : public PUP::able {
    * frame at runtime.
    */
   template <typename DbTags, typename Metavariables>
-  BlockCoords block_logical_coordinates(
+  std::optional<BlockCoords> block_logical_coordinates(
       const db::DataBox<DbTags>& box,
       const Parallel::GlobalCache<Metavariables>& cache, const double time,
       const std::string& frame) {

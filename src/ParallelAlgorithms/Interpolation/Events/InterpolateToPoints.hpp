@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/ObservationBox.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/IdPair.hpp"
 #include "Domain/ElementLogicalCoordinates.hpp"
@@ -42,7 +43,7 @@ struct ObserverMesh;
 
 namespace intrp::Events {
 /// \cond
-template <size_t Dim, typename SourceVarTags>
+template <size_t Dim, typename VolumeTensorTags, typename TargetTensorTags>
 class InterpolateToPoints;
 /// \endcond
 
@@ -56,8 +57,15 @@ class InterpolateToPoints;
  * have each target be responsible for intelligently computing the
  * `block_logical_coordinates` for it's own points.
  */
-template <size_t Dim, typename... SourceVarTags>
-class InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>> : public Event {
+template <size_t Dim, typename... VolumeTensorTags,
+          typename... TargetTensorTags>
+class InterpolateToPoints<Dim, tmpl::list<VolumeTensorTags...>,
+                          tmpl::list<TargetTensorTags...>> : public Event {
+  using available_volume_tensors = tmpl::list<VolumeTensorTags...>;
+  using available_target_tensors = tmpl::list<TargetTensorTags...>;
+  using available_tags_to_observe =
+      tmpl::list<VolumeTensorTags... TargetTensorTags...>;
+
  public:
   /// \cond
   explicit InterpolateToPoints(CkMigrateMessage* /*unused*/) {}
@@ -111,6 +119,8 @@ class InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>> : public Event {
           }
           return result;
         }()) {
+    // TODO: Somehow need to figure out how to build a tree of dependencies for
+    // the target tags because the target tags will need certain volume tags
     std::unordered_set<std::string> valid_tensors{};
     tmpl::for_each<available_tags_to_observe>([&valid_tensors](auto tag_v) {
       using tag = tmpl::type_from<decltype(tag_v)>;
@@ -127,16 +137,16 @@ class InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>> : public Event {
     }
   }
 
-  using compute_tags_for_observation_box = tmpl::list<>;
+  using compute_tags_for_observation_box = tmpl::list<VolumeTensorTags...>;
 
-  using argument_tags =
-      tmpl::list<::Tags::DataBox, Tags::Time, ::Events::Tags::ObserverMesh<Dim>,
-                 SourceVarTags...>;
+  using argument_tags = tmpl::list<::Tags::ObservationBox, Tags::Time,
+                                   ::Events::Tags::ObserverMesh<Dim>>;
 
-  template <typename DbTags, typename ParallelComponent, typename Metavariables>
-  void operator()(const db::DataBox<DbTags>& box, const double time,
-                  const Mesh<Dim>& mesh,
-                  const typename SourceVarTags::type&... source_vars_input,
+  template <typename DbTags, typename ComputeTagList,
+            typename ParallelComponent, typename Metavariables>
+  void operator()(const ObservationBox<DbTags, ComputeTagList>& box,
+                  const double time, const Mesh<Dim>& mesh,
+                  const typename VolumeTensorTags::type&... source_vars_input,
                   Parallel::GlobalCache<Metavariables>& cache,
                   const ElementId<Dim>& array_index,
                   const ParallelComponent* const /*meta*/,
@@ -162,14 +172,19 @@ class InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>> : public Event {
   std::unordered_set<std::string> variables_to_observe_{};
 };
 
-template <size_t Dim, typename... SourceVarTags>
-template <typename DbTags, typename ParallelComponent, typename Metavariables>
-void InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>>::operator()(
-    const db::DataBox<DbTags>& box, const double time, const Mesh<Dim>& mesh,
-    const typename SourceVarTags::type&... source_vars_input,
-    Parallel::GlobalCache<Metavariables>& cache,
-    const ElementId<Dim>& array_index, const ParallelComponent* const /*meta*/,
-    const ObservationValue& /*observation_value*/) const {
+template <size_t Dim, typename... VolumeTensorTags,
+          typename... TargetTensorTags>
+template <typename DbTags, typename ComputeTagList, typename ParallelComponent,
+          typename Metavariables>
+void InterpolateToPoints<Dim, tmpl::list<VolumeTensorTags...>,
+                         tmpl::list<TargetTensorTags...>>::
+operator()(const ObservationBox<DbTags, ComputeTagList>& box, const double time,
+           const Mesh<Dim>& mesh,
+           const typename VolumeTensorTags::type&... source_vars_input,
+           Parallel::GlobalCache<Metavariables>& cache,
+           const ElementId<Dim>& array_index,
+           const ParallelComponent* const /*meta*/,
+           const ObservationValue& /*observation_value*/) const {
   const std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>
       block_logical_coords =
@@ -192,7 +207,7 @@ void InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>>::operator()(
       std::initializer_list<size_t>{
           mesh.number_of_grid_points() *
           std::decay_t<decltype(
-              value(typename SourceVarTags::type{}))>::size()...},
+              value(typename VolumeTensorTags::type{}))>::size()...},
       0_st));
 
   // There are points in this element, so interpolate to them and
@@ -203,6 +218,14 @@ void InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>>::operator()(
   // 2. Set up interpolator
   intrp::Irregular<Dim> interpolator(
       mesh, element_coord_holder.element_logical_coords);
+
+    
+  // NOTE: Outer vector is number of components of all tensors. Inner vector is
+  // number of grid points in this element. This will also need some kind of
+  // global offsets which can be retrieved from the element_coord_holders.
+  // TODO: Make this an unordered_map of names, then on target loop over compile
+  // time list and then components and get name.
+  std::vector<std::vector<double>> volume_tensors_to_send{};
 
   // 3. Interpolate and send interpolated data to target
   // auto& receiver_proxy = Parallel::get_parallel_component<
@@ -218,18 +241,22 @@ void InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>>::operator()(
   //     time);
 }
 
-template <size_t Dim, typename... SourceVarTags>
-void InterpolateToPoints<Dim, tmpl::list<SourceVarTags...>>::pup(PUP::er& p) {
+template <size_t Dim, typename... VolumeTensorTags,
+          typename... TargetTensorTags>
+void InterpolateToPoints<Dim, tmpl::list<VolumeTensorTags...>,
+                         tmpl::list<TargetTensorTags...>>::pup(PUP::er& p) {
   p | frame_;
   p | target_;
   p | variables_to_observe_;
 }
 
 /// \cond
-template <size_t Dim, typename... SourceVarTags>
-PUP::able::PUP_ID InterpolateToPoints<Dim,
-                                      tmpl::list<SourceVarTags...>>::my_PUP_ID =
-    0;  // NOLINT
+template <size_t Dim, typename... VolumeTensorTags,
+          typename... TargetTensorTags>
+PUP::able::PUP_ID
+    InterpolateToPoints<Dim, tmpl::list<VolumeTensorTags...>,
+                        tmpl::list<TargetTensorTags...>>::my_PUP_ID =
+        0;  // NOLINT
 /// \endcond
 
 }  // namespace intrp::Events

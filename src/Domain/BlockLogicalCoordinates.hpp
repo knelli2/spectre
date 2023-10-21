@@ -86,6 +86,18 @@ block_logical_coordinates_single_point(
     const domain::FunctionsOfTimeMap& functions_of_time = {});
 /// @}
 
+template <size_t Dim>
+std::optional<tnsr::I<double, Dim, ::Frame::BlockLogical>>
+block_logical_coordinates_single_point_in_frame(
+    const tnsr::I<double, Dim, ::Frame::NoFrame>& input_point,
+    const std::string& frame, const Block<Dim>& block,
+    double time = std::numeric_limits<double>::signaling_NaN(),
+    const std::unordered_map<
+        std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+        functions_of_time = std::unordered_map<
+            std::string,
+            std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>{});
+
 namespace block_logical_detail {
 template <size_t Dim, typename Frame>
 void points_in_frame(
