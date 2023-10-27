@@ -18,7 +18,7 @@
 #include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/RegisterDerivedWithCharm.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Helpers/DataStructures/MakeWithRandomValues.hpp"
 #include "Helpers/Domain/CoordinateMaps/TestMapHelpers.hpp"
@@ -491,8 +491,7 @@ void test_analytical_jacobian(const TransitionFunction& transition_func,
 
 template <typename Generator>
 void test_inverse(const gsl::not_null<Generator*> generator) {
-  using TransitionFunc =
-      CoordinateMaps::ShapeMapTransitionFunctions::SphereTransition;
+  using TransitionFunc = CoordinateMaps::ShapeMapTransitionFunctions::Sphere;
   const double time = 1.0;
   const TransitionFunc sphere_transition{1.0, 1.5};
   CoordinateMaps::TimeDependent::Shape shape{
@@ -544,8 +543,8 @@ SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.TimeDependent.Shape",
                   "[Domain][Unit]") {
   domain::CoordinateMaps::ShapeMapTransitionFunctions::
       register_derived_with_charm();
-  const CoordinateMaps::ShapeMapTransitionFunctions::SphereTransition
-      sphere_transition{1e-7, 100.};
+  const CoordinateMaps::ShapeMapTransitionFunctions::Sphere sphere_transition{
+      1e-7, 100.};
 
   MAKE_GENERATOR(generator);
 

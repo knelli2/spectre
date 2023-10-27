@@ -44,7 +44,7 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  * can be forwarded to templated implementation methods held by the derived
  * classes only.
  *
- * For an example, see SphereTransition.
+ * For an example, see Sphere.
  *
  * #### Design Decisions:
  *

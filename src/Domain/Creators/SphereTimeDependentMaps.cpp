@@ -16,7 +16,7 @@
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 #include "Domain/FunctionsOfTime/FixedSpeedCubic.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
@@ -109,9 +109,9 @@ void TimeDependentMapOptions::build_maps(const std::array<double, 3>& center,
                                          const double outer_radius) {
   std::unique_ptr<domain::CoordinateMaps::ShapeMapTransitionFunctions::
                       ShapeMapTransitionFunction>
-      transition_func =
-          std::make_unique<domain::CoordinateMaps::ShapeMapTransitionFunctions::
-                               SphereTransition>(inner_radius, outer_radius);
+      transition_func = std::make_unique<
+          domain::CoordinateMaps::ShapeMapTransitionFunctions::Sphere>(
+          inner_radius, outer_radius);
   shape_map_ = ShapeMap{center,         initial_l_max_,
                         initial_l_max_, std::move(transition_func),
                         shape_name,     size_name};

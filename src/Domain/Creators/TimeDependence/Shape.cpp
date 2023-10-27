@@ -18,7 +18,7 @@
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
 #include "Domain/CoordinateMaps/MapInstantiationMacros.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 #include "Domain/Creators/TimeDependence/TimeDependence.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
@@ -33,8 +33,7 @@
 
 namespace domain {
 namespace creators::time_dependence {
-using SphereTransition =
-    domain::CoordinateMaps::ShapeMapTransitionFunctions::SphereTransition;
+using Sphere = domain::CoordinateMaps::ShapeMapTransitionFunctions::Sphere;
 
 template <domain::ObjectLabel Label>
 Shape<Label>::Shape(const double initial_time, const size_t l_max,
@@ -49,8 +48,8 @@ Shape<Label>::Shape(const double initial_time, const size_t l_max,
       center_(center),
       inner_radius_(inner_radius),
       outer_radius_(outer_radius),
-      transition_func_(std::make_unique<SphereTransition>(
-          SphereTransition{inner_radius, outer_radius})) {
+      transition_func_(
+          std::make_unique<Sphere>(Sphere{inner_radius, outer_radius})) {
   using ::operator<<;
   if (mass <= 0.0) {
     PARSE_ERROR(context,
@@ -65,7 +64,7 @@ Shape<Label>::Shape(const double initial_time, const size_t l_max,
                     << spin << ") is greater than one.");
   }
   // There is no PARSE_ERROR for the `inner_radius` < `outer_radius` condition
-  // because the SphereTransition already checks for this condition.
+  // because the Sphere already checks for this condition.
 }
 
 template <domain::ObjectLabel Label>

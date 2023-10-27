@@ -6,13 +6,12 @@
 #include <array>
 #include <limits>
 
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
-SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Shape.SphereTransition",
-                  "[Domain][Unit]") {
-  SphereTransition sphere_transition{2., 4.};
+SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Shape.Sphere", "[Domain][Unit]") {
+  Sphere sphere_transition{2., 4.};
   constexpr double eps = std::numeric_limits<double>::epsilon() * 100;
   const std::array<double, 3> lower_bound{{2., 0., 0.}};
   CHECK(sphere_transition(lower_bound) == approx(1.));

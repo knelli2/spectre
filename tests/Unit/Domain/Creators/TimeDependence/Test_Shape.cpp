@@ -19,7 +19,7 @@
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
 #include "Domain/CoordinateMaps/Identity.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 #include "Domain/Creators/TimeDependence/Shape.hpp"
 #include "Domain/Creators/TimeDependence/TimeDependence.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
@@ -50,8 +50,7 @@ using ConcreteMapSimple = domain::CoordinateMap<
 using ConcreteMapCombined =
     domain::CoordinateMap<Frame::Grid, Frame::Inertial, ShapeMap>;
 
-using Transition =
-    domain::CoordinateMaps::ShapeMapTransitionFunctions::SphereTransition;
+using Transition = domain::CoordinateMaps::ShapeMapTransitionFunctions::Sphere;
 
 template <typename SourceFrame, typename TargetFrame>
 ConcreteMapSimple<SourceFrame, TargetFrame> create_coord_map(

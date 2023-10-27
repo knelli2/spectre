@@ -18,10 +18,10 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  * coefficients \f$a\f$ and \f$b\f$ are chosen so that the map falls off
  * linearly from 1 at `r_min` to 0 at `r_max`.
  */
-class SphereTransition final : public ShapeMapTransitionFunction {
+class Sphere final : public ShapeMapTransitionFunction {
  public:
-  explicit SphereTransition() = default;
-  SphereTransition(double r_min, double r_max);
+  explicit Sphere() = default;
+  Sphere(double r_min, double r_max);
 
   double operator()(const std::array<double, 3>& source_coords) const override;
   DataVector operator()(
@@ -41,12 +41,12 @@ class SphereTransition final : public ShapeMapTransitionFunction {
   std::array<DataVector, 3> gradient(
       const std::array<DataVector, 3>& source_coords) const override;
 
-  WRAPPED_PUPable_decl_template(SphereTransition);
-  explicit SphereTransition(CkMigrateMessage* const msg);
+  WRAPPED_PUPable_decl_template(Sphere);
+  explicit Sphere(CkMigrateMessage* const msg);
   void pup(PUP::er& p) override;
 
   std::unique_ptr<ShapeMapTransitionFunction> get_clone() const override {
-    return std::make_unique<SphereTransition>(*this);
+    return std::make_unique<Sphere>(*this);
   }
 
   bool operator==(const ShapeMapTransitionFunction& other) const override;

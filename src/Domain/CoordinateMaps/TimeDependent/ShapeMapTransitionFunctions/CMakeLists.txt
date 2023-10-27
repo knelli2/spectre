@@ -5,7 +5,7 @@ spectre_target_sources(
   ${LIBRARY}
   PRIVATE
   RegisterDerivedWithCharm.cpp
-  SphereTransition.cpp
+  Sphere.cpp
 )
 
 spectre_target_headers(
@@ -14,5 +14,5 @@ spectre_target_headers(
   HEADERS
   RegisterDerivedWithCharm.hpp
   ShapeMapTransitionFunction.hpp
-  SphereTransition.hpp
+  Sphere.hpp
 )

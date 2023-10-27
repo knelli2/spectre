@@ -3,11 +3,9 @@
 
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/RegisterDerivedWithCharm.hpp"
 
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Sphere.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
-void register_derived_with_charm() {
-  register_classes_with_charm<SphereTransition>();
-}
+void register_derived_with_charm() { register_classes_with_charm<Sphere>(); }
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions
