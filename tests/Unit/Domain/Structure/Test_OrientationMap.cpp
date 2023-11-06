@@ -48,6 +48,10 @@ void test_1d() {
                                              block2_directions);
   std::array<SegmentId, 1> segment_ids{{SegmentId(2, 1)}};
   std::array<SegmentId, 1> expected_antiparallel_segment_ids{{SegmentId(2, 2)}};
+  CHECK(parallel_orientation.mapped_directions() ==
+        std::array{Direction<1>::upper_xi()});
+  CHECK(antiparallel_orientation.mapped_directions() ==
+        std::array{Direction<1>::lower_xi()});
   CHECK(parallel_orientation(segment_ids) == segment_ids);
   CHECK(antiparallel_orientation(segment_ids) ==
         expected_antiparallel_segment_ids);
@@ -87,11 +91,17 @@ void test_2d() {
   OrientationMap<2> default_orientation{};
   CHECK(default_orientation.is_aligned());
   CHECK(get_output(default_orientation) == "(+0, +1)");
+  CHECK(default_orientation.mapped_directions() ==
+        std::array{Direction<2>::upper_xi(), Direction<2>::upper_eta()});
   OrientationMap<2> custom1(std::array<Direction<2>, 2>{
       {Direction<2>::upper_xi(), Direction<2>::upper_eta()}});
+  CHECK(custom1.mapped_directions() ==
+        std::array{Direction<2>::upper_xi(), Direction<2>::upper_eta()});
   CHECK(custom1.is_aligned());
   OrientationMap<2> custom2(std::array<Direction<2>, 2>{
       {Direction<2>::lower_xi(), Direction<2>::lower_eta()}});
+  CHECK(custom2.mapped_directions() ==
+        std::array{Direction<2>::lower_xi(), Direction<2>::lower_eta()});
   CHECK_FALSE(custom2.is_aligned());
 
   // Test if OrientationMap can encode a 2D rotated.
@@ -232,15 +242,24 @@ void test_2d() {
 void test_3d() {
   // Test constructors:
   OrientationMap<3> default_orientation{};
+  CHECK(default_orientation.mapped_directions() ==
+        std::array{Direction<3>::upper_xi(), Direction<3>::upper_eta(),
+                   Direction<3>::upper_zeta()});
   CHECK(default_orientation.is_aligned());
   CHECK(get_output(default_orientation) == "(+0, +1, +2)");
   OrientationMap<3> custom1(std::array<Direction<3>, 3>{
       {Direction<3>::upper_xi(), Direction<3>::upper_eta(),
        Direction<3>::upper_zeta()}});
+  CHECK(custom1.mapped_directions() == std::array{Direction<3>::upper_xi(),
+                                                  Direction<3>::upper_eta(),
+                                                  Direction<3>::upper_zeta()});
   CHECK(custom1.is_aligned());
   OrientationMap<3> custom2(std::array<Direction<3>, 3>{
       {Direction<3>::lower_xi(), Direction<3>::lower_eta(),
        Direction<3>::lower_zeta()}});
+  CHECK(custom1.mapped_directions() == std::array{Direction<3>::lower_xi(),
+                                                  Direction<3>::lower_eta(),
+                                                  Direction<3>::lower_zeta()});
   CHECK_FALSE(custom2.is_aligned());
 
   // Test if OrientationMap can encode a 3D Flipped.
@@ -317,7 +336,6 @@ void test_3d() {
   CHECK(std::array<int, 3>{{12, 4, -8}} ==
         custom4.permute_from_neighbor(std::array<int, 3>{{4, -8, 12}}));
 }
-
 
 void test_errors() {
 #ifdef SPECTRE_DEBUG
