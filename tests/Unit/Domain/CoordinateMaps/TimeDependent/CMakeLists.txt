@@ -13,6 +13,8 @@ set(LIBRARY_SOURCES
   Test_Translation.cpp
   )
 
+add_subdirectory(ShapeMapTransitionFunctions)
+
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")
 
 target_link_libraries(
