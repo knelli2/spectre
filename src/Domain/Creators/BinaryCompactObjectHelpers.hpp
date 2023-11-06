@@ -15,6 +15,7 @@
 #include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
 #include "Options/Auto.hpp"
@@ -87,10 +88,19 @@ struct ShapeMapOptions {
         "Initial value and two derivatives of the size map."};
   };
 
-  using options = tmpl::list<LMax, SizeInitialValues>;
+  struct TransitionEndsAtCube {
+    using type = bool;
+    static constexpr Options::String help = {
+        "If 'true', the shape map transition function will be 0 at the cubical "
+        "boundary around the objects. If 'false' the transition function will "
+        "be 0 at the outer radius of the inner sphere around the object"};
+  };
+
+  using options = tmpl::list<LMax, SizeInitialValues, TransitionEndsAtCube>;
 
   size_t l_max{};
   std::array<double, 3> initial_size_values{};
+  bool transition_ends_at_cube{};
 };
 
 namespace detail {
@@ -302,10 +312,8 @@ struct TimeDependentMapOptions {
    * instead.
    */
   void build_maps(const std::array<std::array<double, 3>, 2>& centers,
-                  const std::optional<std::pair<double, double>>&
-                      object_A_inner_outer_radii,
-                  const std::optional<std::pair<double, double>>&
-                      object_B_inner_outer_radii,
+                  const std::optional<std::array<double, 3>>& object_A_radii,
+                  const std::optional<std::array<double, 3>>& object_B_radii,
                   double domain_outer_radius);
 
   /*!
@@ -335,7 +343,8 @@ struct TimeDependentMapOptions {
    */
   template <domain::ObjectLabel Object>
   MapType<Frame::Grid, Frame::Distorted> grid_to_distorted_map(
-      bool include_distorted_map) const;
+      const std::optional<size_t>& relative_block_number_for_distorted_frame)
+      const;
 
   /*!
    * \brief This will construct the entire map from the `Frame::Grid` to the
@@ -348,7 +357,8 @@ struct TimeDependentMapOptions {
    */
   template <domain::ObjectLabel Object>
   MapType<Frame::Grid, Frame::Inertial> grid_to_inertial_map(
-      bool include_distorted_map) const;
+      const std::optional<size_t>& relative_block_number_for_distorted_frame)
+      const;
 
   // Names are public because they need to be used when constructing maps in the
   // BCO domain creators themselves
@@ -372,7 +382,7 @@ struct TimeDependentMapOptions {
   // Maps
   std::optional<Expansion> expansion_map_{};
   std::optional<Rotation> rotation_map_{};
-  std::array<std::optional<Shape>, 2> shape_maps_{};
+  std::array<std::array<std::optional<Shape>, 12>, 2> shape_maps_{};
 };
 
 }  // namespace domain::creators::bco

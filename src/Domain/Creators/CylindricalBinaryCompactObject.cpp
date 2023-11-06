@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -420,11 +421,14 @@ CylindricalBinaryCompactObject::CylindricalBinaryCompactObject(
   }
 
   if (time_dependent_options_.has_value()) {
+    ERROR_NO_TRACE(
+        "Don't use CylindricalBCO domain right now. Ask Kyle about why.");
+
     time_dependent_options_->build_maps(
         std::array{rotate_from_z_to_x_axis(center_A_),
                    rotate_from_z_to_x_axis(center_B_)},
-        std::make_pair(radius_A_, outer_radius_A_),
-        std::make_pair(radius_B_, outer_radius_B_), outer_radius_);
+        std::array{radius_A_, outer_radius_A_, 0.0},
+        std::array{radius_B_, outer_radius_B_, 0.0}, outer_radius_);
   }
 }
 
@@ -894,6 +898,9 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
                    block_names_, block_groups_};
 
   if (time_dependent_options_.has_value()) {
+    ERROR(
+        "Kyle says don't use this domain right now. But what does he know? "
+        "He's just the guy who wrote all of this.");
     ASSERT(include_inner_sphere_A_ and include_inner_sphere_B_,
            "When using time dependent maps for the CylindricalBBH domain, you "
            "must include both inner spheres.");
@@ -913,7 +920,7 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // map from the grid to inertial frame. No maps to the distorted frame
     grid_to_inertial_block_maps[0] =
         time_dependent_options_
-            ->grid_to_inertial_map<domain::ObjectLabel::None>(false);
+            ->grid_to_inertial_map<domain::ObjectLabel::None>(std::nullopt);
 
     // Inside the excision sphere we add the grid to inertial map from the outer
     // shell. This allows the center of the excisions/horizons to be mapped
@@ -931,19 +938,19 @@ Domain<3> CylindricalBinaryCompactObject::create_domain() const {
     // distorted frame.
     grid_to_inertial_block_maps[46] =
         time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::A>(
-            true);
+            std::nullopt);
     grid_to_distorted_block_maps[46] =
         time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::A>(
-            true);
+            std::nullopt);
     distorted_to_inertial_block_maps[46] =
         time_dependent_options_->distorted_to_inertial_map(true);
 
     grid_to_inertial_block_maps[60] =
         time_dependent_options_->grid_to_inertial_map<domain::ObjectLabel::B>(
-            true);
+            std::nullopt);
     grid_to_distorted_block_maps[60] =
         time_dependent_options_->grid_to_distorted_map<domain::ObjectLabel::B>(
-            true);
+            std::nullopt);
     distorted_to_inertial_block_maps[60] =
         time_dependent_options_->distorted_to_inertial_map(true);
 
