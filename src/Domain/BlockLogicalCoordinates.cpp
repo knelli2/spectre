@@ -16,6 +16,8 @@
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace {
 // Define this alias so we don't need to keep typing this monster.
 template <size_t Dim>
@@ -67,16 +69,35 @@ block_logical_coordinates_single_point(
         //    because only those Blocks have distortion maps. Thus,
         //    the Blocks that are skipped here are those that are far
         //    from horizons).
+        // Parallel::printf(
+        //     "BLC: block doesn't have a distorted frame\n"
+        //     " Block: %d\n"
+        //     " Point: %s\n",
+        //     block.id(), input_point);
         return std::nullopt;  // Not in this block
       }
       const auto moving_inv = block.moving_mesh_grid_to_distorted_map().inverse(
           input_point, time, functions_of_time);
       if (not moving_inv.has_value()) {
+        // Parallel::printf(
+        //     "BLC: Point not in this block\n"
+        //     " Block: %d\n"
+        //     " Point: %s\n",
+        //     block.id(), input_point);
         return std::nullopt;  // Not in this block
       }
       // logical to grid map is time-independent.
       logical_point =
           block.moving_mesh_logical_to_grid_map().inverse(moving_inv.value());
+
+      // using ::operator<<;
+      // Parallel::printf(
+      //     "BLC: Point is in this block!\n"
+      //     " Block: %d\n"
+      //     " Point: %s\n"
+      //     " Grid point: %s\n"
+      //     " Logical point: %s\n",
+      //     block.id(), input_point, moving_inv.value(), logical_point);
     } else {
       // frame is different than ::Frame::Inertial or ::Frame::Distorted.
       // Currently 'time' is unused in this branch.
