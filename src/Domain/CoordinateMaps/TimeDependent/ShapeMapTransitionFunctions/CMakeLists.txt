@@ -4,6 +4,7 @@
 spectre_target_sources(
   ${LIBRARY}
   PRIVATE
+  Falloff.cpp
   RegisterDerivedWithCharm.cpp
   SphereTransition.cpp
   Wedge.cpp
@@ -13,6 +14,7 @@ spectre_target_headers(
   ${LIBRARY}
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
+  Falloff.hpp
   RegisterDerivedWithCharm.hpp
   ShapeMapTransitionFunction.hpp
   SphereTransition.hpp
