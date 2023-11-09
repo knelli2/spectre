@@ -65,9 +65,13 @@ DomainCreator:
       ShapeMapA:
         LMax: 8
         SizeInitialValues: [0.0, 0.0, 0.0]
+        TransitionEndsAtCube: true
+        Falloff: Linear
       ShapeMapB:
         LMax: 8
         SizeInitialValues: [0.0, 0.0, 0.0]
+        TransitionEndsAtCube: true
+        Falloff: Linear
 
 SpatialDiscretization:
   ActiveGrid: Dg
