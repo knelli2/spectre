@@ -11,8 +11,7 @@
 
 #include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/Structure/Direction.hpp"
-#include "Domain/Structure/OrientationMap.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Falloff.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
@@ -182,11 +181,10 @@ class Wedge final : public ShapeMapTransitionFunction {
    * \param outer_radius Outermost radius of outermost wedge
    * \param inner_sphericity Sphericity of innermost surface of innermost wedge
    * \param outer_sphericity Sphericity of outermost surface of outermost wedge
-   * \param orientation_map The same orientation map that was passed into the
-   * corresponding `domain::CoordinateMaps::Wedge` block.
+   * \param falloff How the transition function falls off to zero
    */
   Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-        double outer_sphericity, OrientationMap<3> orientation_map);
+        double outer_sphericity, Falloff falloff);
 
   double operator()(const std::array<double, 3>& source_coords) const override;
   DataVector operator()(
@@ -232,8 +230,7 @@ class Wedge final : public ShapeMapTransitionFunction {
 
   Surface inner_surface_{};
   Surface outer_surface_{};
-  OrientationMap<3> orientation_map_{};
-  Direction<3> direction_{};
+  Falloff falloff_{};
   static constexpr double eps_ = std::numeric_limits<double>::epsilon() * 100;
 };
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions

@@ -3,11 +3,14 @@
 
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Wedge.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
 #include <pup.h>
+#include <pup_stl.h>
 
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Falloff.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Domain/Structure/Direction.hpp"
 #include "NumericalAlgorithms/RootFinding/QuadraticEquation.hpp"
@@ -31,15 +34,16 @@ T Wedge::Surface::distance(const std::array<T, 3>& coords) const {
     return make_with_value<T>(coords[0], radius);
   }
 
-  ASSERT(coords[2] != 0.0,
-         "For wedge transition, rotated coords cannot have z component equal "
-         "to zero.");
+  T non_spherical_distance =
+      make_with_value<T>(coords[0], (1.0 - sphericity) / sqrt(3.0));
+  non_spherical_distance *= magnitude(coords);
+  for (size_t i = 0; i < get_size(coords[0]); i++) {
+    get_element(non_spherical_distance, i) /= std::max(
+        {abs(get_element(coords[0], i)), abs(get_element(coords[1], i)),
+         abs(get_element(coords[2], i))});
+  }
 
-  // D = R * [ (1 - s) / (sqrt(3) * cos(theta)) + s]
-  // cos(theta) = z / r
-  return radius *
-         ((1.0 - sphericity) / (coords[2] * sqrt(3.0)) * magnitude(coords) +
-          sphericity);
+  return radius * (non_spherical_distance + sphericity);
 }
 
 void Wedge::Surface::pup(PUP::er& p) {
@@ -56,11 +60,10 @@ bool Wedge::Surface::operator!=(const Wedge::Surface& other) const {
 }
 
 Wedge::Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-             double outer_sphericity, OrientationMap<3> orientation_map)
+             double outer_sphericity, Falloff falloff)
     : inner_surface_(Surface{inner_radius, inner_sphericity}),
       outer_surface_(Surface{outer_radius, outer_sphericity}),
-      orientation_map_(std::move(orientation_map)),
-      direction_(orientation_map_.inverse_map()(Direction<3>::upper_zeta())) {}
+      falloff_(falloff) {}
 
 double Wedge::operator()(const std::array<double, 3>& source_coords) const {
   return call_impl<double>(source_coords);
@@ -76,8 +79,6 @@ std::optional<double> Wedge::original_radius_over_radius(
   CAPTURE_FOR_ERROR(target_coords);
   CAPTURE_FOR_ERROR(distorted_radius);
   CAPTURE_FOR_ERROR(radius);
-  CAPTURE_FOR_ERROR(orientation_map_);
-  CAPTURE_FOR_ERROR(direction_);
 
   // Couple protections that would make a point completely outside of the domain
   // of validity for any wedge
@@ -94,28 +95,14 @@ std::optional<double> Wedge::original_radius_over_radius(
     return std::nullopt;
   }
 
-  // Rotate the coordinates so they are aligned with +z. This makes checking if
-  // the target_coord is in the proper wedge very simple since we only have to
-  // check if the target coord is in the direction of the +z wedge
-  const std::array<double, 3> rotated_coords =
-      discrete_rotation(orientation_map_.inverse_map(), target_coords);
-  CAPTURE_FOR_ERROR(rotated_coords);
-
-  // This comparison only works because the opening angle of the wedge is pi/2
-  // in both x and y
-  if (rotated_coords[2] <
-      std::max(abs(rotated_coords[0]), abs(rotated_coords[1]))) {
-    return std::nullopt;
-  }
-
   // If distorted radius is 0, this means the map is the identity so the radius
   // and the original radius are equal. Also we don't want to divide by 0 below
   if (equal_within_roundoff(distorted_radius, 0.0)) {
     return std::optional{1.0};
   }
 
-  const double outer_distance = outer_surface_.distance(rotated_coords);
-  const double inner_distance = inner_surface_.distance(rotated_coords);
+  const double outer_distance = outer_surface_.distance(target_coords);
+  const double inner_distance = inner_surface_.distance(target_coords);
   const double distance_difference = outer_distance - inner_distance;
 
   // If we are at the overall outer distance, then the transition function is 0
@@ -126,26 +113,47 @@ std::optional<double> Wedge::original_radius_over_radius(
     return std::optional{1.0};
   }
 
-  // Solving equation of the form rtil*x^2 + ((D_o - D_i)/SumYlm - D_o)*x - (D_o
-  // - D_i)/SumYlm = 0
-  const double a = radius;
-  const double c = -distance_difference / distorted_radius;
-  const double b = -c - outer_distance;
+  if (falloff_ == Falloff::Linear) {
+    // Solving equation of the form rtil*x^2 + ((D_o - D_i)/SumYlm - D_o)*x -
+    // (D_o
+    // - D_i)/SumYlm = 0
+    const double a = radius;
+    const double c = -distance_difference / distorted_radius;
+    const double b = -c - outer_distance;
 
-  std::optional<std::array<double, 2>> roots = real_roots(a, b, c);
+    std::optional<std::array<double, 2>> roots = real_roots(a, b, c);
 
-  if (roots.has_value()) {
-    for (const double root : roots.value()) {
-      // Check if the root is positive and within the inner and outer distance
-      // (divided by the mapped radius)
-      if (root > 0.0 and root + eps_ >= inner_distance / radius and
-          root - eps_ <= outer_distance / radius) {
-        return std::optional{root};
+    if (roots.has_value()) {
+      for (const double root : roots.value()) {
+        // Check if the root is positive and within the inner and outer distance
+        // (divided by the mapped radius)
+        if (root > 0.0 and root + eps_ >= inner_distance / radius and
+            root - eps_ <= outer_distance / radius) {
+          return std::optional{root};
+        }
       }
+      return std::nullopt;
+    } else {
+      return std::nullopt;
     }
-    return std::nullopt;
   } else {
-    return std::nullopt;
+    const double a = -inner_distance / distance_difference;
+    const double b = -a * outer_distance;
+
+    const double denom = 1.0 - distorted_radius * a;
+
+    if (equal_within_roundoff(denom, 0.0)) {
+      return std::nullopt;
+    }
+
+    const double original_radius = (radius + distorted_radius * b) / denom;
+
+    if (original_radius + eps_ >= inner_distance and
+        original_radius - eps_ <= outer_distance) {
+      return std::optional{original_radius / radius};
+    } else {
+      return std::nullopt;
+    }
   }
 }
 
@@ -169,25 +177,38 @@ std::array<DataVector, 3> Wedge::gradient(
 
 template <typename T>
 T Wedge::call_impl(const std::array<T, 3>& source_coords) const {
-  const std::array<T, 3> rotated_coords =
-      discrete_rotation(orientation_map_.inverse_map(), source_coords);
-  check_distances(rotated_coords);
-  T outer_distance = outer_surface_.distance(rotated_coords);
+  check_distances(source_coords);
+  const T radius = magnitude(source_coords);
+  const T outer_distance = outer_surface_.distance(source_coords);
+  const T inner_distance = inner_surface_.distance(source_coords);
+  const T one_over_denom = 1.0 / (outer_distance - inner_distance);
 
-  return (outer_distance - magnitude(rotated_coords)) /
-         (outer_distance - inner_surface_.distance(rotated_coords));
+  if (falloff_ == Falloff::Linear) {
+    return (outer_distance - radius) * one_over_denom;
+  } else {
+    const T a = -inner_distance * one_over_denom;
+    const T b = -a * outer_distance;
+
+    return a + b / radius;
+  }
 }
 
 template <typename T>
 T Wedge::map_over_radius_impl(const std::array<T, 3>& source_coords) const {
-  const std::array<T, 3> rotated_coords =
-      discrete_rotation(orientation_map_.inverse_map(), source_coords);
-  check_distances(rotated_coords);
-  const T radius = magnitude(rotated_coords);
-  const T outer_distance = outer_surface_.distance(rotated_coords);
+  check_distances(source_coords);
+  const T radius = magnitude(source_coords);
+  const T outer_distance = outer_surface_.distance(source_coords);
+  const T inner_distance = inner_surface_.distance(source_coords);
+  const T one_over_denom = 1.0 / (outer_distance - inner_distance);
 
-  return (outer_distance - radius) /
-         ((outer_distance - inner_surface_.distance(rotated_coords)) * radius);
+  if (falloff_ == Falloff::Linear) {
+    return (outer_distance - radius) * one_over_denom / radius;
+  } else {
+    const T a = -inner_distance * one_over_denom;
+    const T b = -a * outer_distance;
+
+    return (a + b / radius) / radius;
+  }
 }
 
 template <typename T>
@@ -196,87 +217,99 @@ std::array<T, 3> Wedge::gradient_impl(
   // If both surfaces are spherical then we short circuit because the distances
   // are constant and we only need to take a derivative of r.
   // (grad f)_i = -(x_i/r)/(D_out - D_in)
-  const std::array<T, 3> rotated_coords =
-      discrete_rotation(orientation_map_.inverse_map(), source_coords);
-  check_distances(rotated_coords);
-  if (inner_surface_.sphericity == 1.0 and outer_surface_.sphericity == 1.0) {
-    const T one_over_denom = 1.0 / (magnitude(rotated_coords) *
-                                    (outer_surface_.distance(rotated_coords) -
-                                     inner_surface_.distance(rotated_coords)));
+  check_distances(source_coords);
 
-    return discrete_rotation(orientation_map_,
-                             -rotated_coords * one_over_denom);
-  }
-
-  const T radius = magnitude(rotated_coords);
-
+  const T radius = magnitude(source_coords);
   const T one_over_radius = 1.0 / radius;
-  T outer_distance = outer_surface_.distance(rotated_coords);
-  const T one_over_denom =
-      1.0 / (outer_distance - inner_surface_.distance(rotated_coords));
-  T& outer_distance_minus_radius_over_denom = outer_distance;
-  outer_distance_minus_radius_over_denom -= radius;
-  outer_distance_minus_radius_over_denom *= one_over_denom;
 
-  // Avoid small negative numbers if we are at outer boundary
-  for (size_t i = 0; i < get_size(radius); i++) {
-    if (equal_within_roundoff(
-            get_element(outer_distance_minus_radius_over_denom, i), 0.0)) {
-      get_element(outer_distance_minus_radius_over_denom, i) = 0.0;
+  const T outer_distance = outer_surface_.distance(source_coords);
+  const T inner_distance = inner_surface_.distance(source_coords);
+  const T one_over_distance_difference =
+      1.0 / (outer_distance - inner_distance);
+
+  CAPTURE_FOR_ERROR(source_coords);
+  CAPTURE_FOR_ERROR(radius);
+  CAPTURE_FOR_ERROR(outer_distance);
+  CAPTURE_FOR_ERROR(inner_distance);
+
+  const auto surface_gradient = [&](const Surface& surface) {
+    if (surface.sphericity == 1.0) {
+      return make_array<3, T>(make_with_value<T>(source_coords[0], 0.0));
     }
-  }
 
-  // Regardless of the sphericities below, we always need this factor in the
-  // first term so we calculate it now.
-  std::array<T, 3> result = -1.0 * rotated_coords * one_over_radius;
+    const double factor =
+        surface.radius * (1.0 - surface.sphericity) / sqrt(3.0);
 
-  const auto make_factor = [&one_over_radius](const Surface& surface) -> T {
-    return (1.0 - surface.sphericity) * surface.radius * cube(one_over_radius) /
-           sqrt(3.0);
+    std::array<T, 3> grad =
+        make_array<3, T>(make_with_value<T>(source_coords[0], factor));
+
+    for (size_t i = 0; i < get_size(source_coords[0]); i++) {
+      std::array<double, 3> temp_coords{};
+      for (size_t j = 0; j < 3; j++) {
+        gsl::at(temp_coords, j) =
+            abs(get_element(gsl::at(source_coords, j), i));
+      }
+      auto max_element =
+          std::max_element(temp_coords.begin(), temp_coords.end());
+      const size_t index =
+          static_cast<size_t>(std::distance(temp_coords.begin(), max_element));
+      const size_t index_plus_one = (index + 1) % 3;
+      const size_t index_plus_two = (index + 2) % 3;
+
+      const double index_coord = get_element(gsl::at(source_coords, index), i);
+
+      if (index_coord == 0.0) {
+        ERROR("Index " << index << " coord is zero");
+      }
+
+      get_element(gsl::at(grad, index), i) =
+          -(square(get_element(radius, i)) -
+            square(get_element(gsl::at(source_coords, index), i))) *
+          get_element(one_over_radius, i) / square(index_coord);
+      get_element(gsl::at(grad, index_plus_one), i) =
+          get_element(gsl::at(source_coords, index_plus_one), i) *
+          get_element(one_over_radius, i) / index_coord;
+      get_element(gsl::at(grad, index_plus_two), i) =
+          get_element(gsl::at(source_coords, index_plus_two), i) *
+          get_element(one_over_radius, i) / index_coord;
+    }
+
+    return grad;
   };
 
-  // We can make some simplifications if either of the surfaces are spherical
-  // because then the derivative of the distance is zero since it's constant. In
-  // the first two branches, it's safe to assume the other sphericity isn't 1
-  // because of the above check.
-  if (outer_surface_.sphericity == 1.0) {
-    T total_factor = make_factor(inner_surface_);
-    total_factor *= outer_distance_minus_radius_over_denom;
-
-    for (size_t i = 0; i < 2; i++) {
-      gsl::at(result, i) -=
-          total_factor * rotated_coords[2] * gsl::at(rotated_coords, i);
+  // Special case for both spherical boundaries
+  if (inner_surface_.sphericity == 1.0 and outer_surface_.sphericity == 1.0) {
+    if (falloff_ == Falloff::Linear) {
+      return -1.0 * source_coords * one_over_radius *
+             one_over_distance_difference;
+    } else {
+      const T b =
+          outer_distance * inner_distance * one_over_distance_difference;
+      return -1.0 * b * source_coords * cube(one_over_radius);
     }
-
-    result[2] += total_factor * (square(radius) - square(rotated_coords[2]));
-  } else if (inner_surface_.sphericity == 1.0) {
-    T total_factor = make_factor(outer_surface_);
-    total_factor *= (1.0 - outer_distance_minus_radius_over_denom);
-
-    for (size_t i = 0; i < 2; i++) {
-      gsl::at(result, i) -=
-          total_factor * rotated_coords[2] * gsl::at(rotated_coords, i);
-    }
-
-    result[2] += total_factor * (square(radius) - square(rotated_coords[2]));
-  } else {
-    T inner_total_factor = make_factor(inner_surface_);
-    inner_total_factor *= outer_distance_minus_radius_over_denom;
-    T outer_total_factor = make_factor(outer_surface_);
-    outer_total_factor *= (1.0 - outer_distance_minus_radius_over_denom);
-
-    for (size_t i = 0; i < 2; i++) {
-      gsl::at(result, i) -= (inner_total_factor + outer_total_factor) *
-                            rotated_coords[2] * gsl::at(rotated_coords, i);
-    }
-
-    result[2] += (outer_total_factor + inner_total_factor) *
-                 (square(radius) - square(rotated_coords[2]));
   }
 
-  // Finally, need one more factor of D_out - D_in in the denominator and to
-  // rotate it back to the proper orientation
-  return discrete_rotation(orientation_map_, result * one_over_denom);
+  const std::array<T, 3> outer_gradient = surface_gradient(outer_surface_);
+  const std::array<T, 3> inner_gradient = surface_gradient(inner_surface_);
+
+  if (falloff_ == Falloff::Linear) {
+    return (outer_gradient - source_coords * one_over_radius -
+            (outer_distance - radius) * (outer_gradient - inner_gradient) *
+                one_over_distance_difference) *
+           one_over_distance_difference;
+  } else {
+    const T a = -inner_distance * one_over_distance_difference;
+    const T b = -a * outer_distance;
+
+    const std::array<T, 3> a_gradient =
+        (inner_distance * outer_gradient - outer_distance * inner_gradient) *
+        square(one_over_distance_difference);
+
+    return a_gradient -
+           one_over_radius *
+               (outer_gradient * a + outer_distance * a_gradient) -
+           b * source_coords * cube(one_over_radius);
+  }
 }
 
 bool Wedge::operator==(const ShapeMapTransitionFunction& other) const {
@@ -286,7 +319,7 @@ bool Wedge::operator==(const ShapeMapTransitionFunction& other) const {
   const Wedge& other_ref = *dynamic_cast<const Wedge*>(&other);
   return inner_surface_ == other_ref.inner_surface_ and
          outer_surface_ == other_ref.outer_surface_ and
-         orientation_map_ == other_ref.orientation_map_;
+         falloff_ == other_ref.falloff_;
 }
 
 bool Wedge::operator!=(const ShapeMapTransitionFunction& other) const {
@@ -329,8 +362,7 @@ void Wedge::pup(PUP::er& p) {
   if (version >= 0) {
     p | inner_surface_;
     p | outer_surface_;
-    p | orientation_map_;
-    p | direction_;
+    p | falloff_;
   }
 }
 
