@@ -3,7 +3,9 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
+#include <type_traits>
 #include <vector>
 
 #include "ControlSystem/Actions/InitializeMeasurements.hpp"
@@ -18,8 +20,11 @@
 #include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Falloff.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Wedge.hpp"
 #include "Domain/Creators/BinaryCompactObject.hpp"
 #include "Domain/Creators/CylindricalBinaryCompactObject.hpp"
+#include "Domain/DomainHelpers.hpp"
 #include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/OutputTimeBounds.hpp"
 #include "Domain/FunctionsOfTime/Tags.hpp"
@@ -162,6 +167,7 @@
 #include "Utilities/NoSuchType.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
+#include "Utilities/TypeTraits/IsA.hpp"
 
 // Check if SpEC is linked and therefore we can load SpEC initial data
 #ifdef HAS_SPEC_EXPORTER
@@ -207,6 +213,157 @@ struct AhObservationTimeCompute : AhObservationTime<Index>, db::ComputeTag {
   }
 };
 }  // namespace Tags
+
+template <typename Tag>
+struct Linear : db::SimpleTag, db::PrefixTag {
+  using tag = Tag;
+  using type = typename Tag::type;
+};
+
+template <typename Tag>
+struct Inverse : db::SimpleTag, db::PrefixTag {
+  using tag = Tag;
+  using type = typename Tag::type;
+};
+
+using Wedge = domain::CoordinateMaps::ShapeMapTransitionFunctions::Wedge;
+using Falloff = domain::CoordinateMaps::ShapeMapTransitionFunctions::Falloff;
+
+template <typename Tag>
+std::optional<std::pair<Wedge, std::array<DataVector, 3>>> make_wedge(
+    const tnsr::I<DataVector, 3, Frame::Grid> coords, const Domain<3>& domain,
+    const Element<3>& element) {
+  const size_t block_id = element.id().block_id();
+
+  if (not domain.blocks()[block_id].has_distorted_frame()) {
+    return std::nullopt;
+  }
+
+  const bool positive_x = get<0>(coords)[0] >= 0.0;
+
+  const auto& excision_spheres = domain.excision_spheres();
+  const auto& excision_sphere = positive_x
+                                    ? excision_spheres.at("ExcisionSphereA")
+                                    : excision_spheres.at("ExcisionSphereB");
+  const double inner_radius = excision_sphere.radius();
+  const auto& center = excision_sphere.center();
+
+  std::array<DataVector, 3> centered_coords{get<0>(coords), get<1>(coords),
+                                            get<2>(coords)};
+  for (size_t i = 0; i < 3; i++) {
+    gsl::at(centered_coords, i) -= center.get(i);
+  }
+
+  const size_t last_cube_block_id = positive_x ? 11 : 23;
+  const auto& last_cube_block = domain.blocks()[last_cube_block_id];
+
+  const double outer_sphericity =
+      last_cube_block.has_distorted_frame() ? 0.0 : 1.0;
+  const double outer_radius =
+      last_cube_block.has_distorted_frame() ? sqrt(3.0) * abs(center[0]) : 6.0;
+
+  const Falloff falloff =
+      tt::is_a_v<Linear, Tag> ? Falloff::Linear : Falloff::Inverse;
+
+  const std::array<size_t, 6> axes{2, 2, 1, 1, 0, 0};
+
+  const size_t relative_block_id = (block_id % 12) % 6;
+
+  return std::make_pair(Wedge{inner_radius, outer_radius, 1.0, outer_sphericity,
+                              falloff, gsl::at(axes, relative_block_id)},
+                        std::move(centered_coords));
+}
+
+struct TransitionFunction : db::SimpleTag {
+  using type = Scalar<DataVector>;
+};
+
+template <template <typename> typename Prefix>
+struct TransitionFunctionCompute : TransitionFunction, db::ComputeTag {
+  using argument_tags =
+      tmpl::list<::Events::Tags::ObserverCoordinates<3, Frame::Grid>,
+                 domain::Tags::Domain<3>, domain::Tags::Element<3>>;
+  using base = Prefix<TransitionFunction>;
+  using return_type = typename base::type;
+
+  static void function(const gsl::not_null<Scalar<DataVector>*> transition,
+                       const tnsr::I<DataVector, 3, Frame::Grid> coords,
+                       const Domain<3>& domain, const Element<3>& element) {
+    const auto wedge_and_coords = make_wedge<base>(coords, domain, element);
+
+    if (not wedge_and_coords.has_value()) {
+      get(*transition) = make_with_value<DataVector>(get<0>(coords), 0.0);
+      return;
+    }
+
+    get(*transition) =
+        wedge_and_coords->first.operator()(wedge_and_coords->second);
+  }
+};
+
+struct TransitionFunctionOverRadius : db::SimpleTag {
+  using type = Scalar<DataVector>;
+};
+
+template <template <typename> typename Prefix>
+struct TransitionFunctionOverRadiusCompute : TransitionFunctionOverRadius,
+                                             db::ComputeTag {
+  using argument_tags =
+      tmpl::list<::Events::Tags::ObserverCoordinates<3, Frame::Grid>,
+                 domain::Tags::Domain<3>, domain::Tags::Element<3>>;
+  using base = Prefix<TransitionFunctionOverRadius>;
+  using return_type = typename base::type;
+
+  static void function(
+      const gsl::not_null<Scalar<DataVector>*> transition_over_radius,
+      const tnsr::I<DataVector, 3, Frame::Grid> coords, const Domain<3>& domain,
+      const Element<3>& element) {
+    const auto wedge_and_coords = make_wedge<base>(coords, domain, element);
+
+    if (not wedge_and_coords.has_value()) {
+      get(*transition_over_radius) =
+          make_with_value<DataVector>(get<0>(coords), 0.0);
+      return;
+    }
+
+    get(*transition_over_radius) =
+        wedge_and_coords->first.map_over_radius(wedge_and_coords->second);
+  }
+};
+
+struct TransitionGradient : db::SimpleTag {
+  using type = tnsr::I<DataVector, 3, Frame::Grid>;
+};
+
+template <template <typename> typename Prefix>
+struct TransitionGradientCompute : TransitionGradient, db::ComputeTag {
+  using argument_tags =
+      tmpl::list<::Events::Tags::ObserverCoordinates<3, Frame::Grid>,
+                 domain::Tags::Domain<3>, domain::Tags::Element<3>>;
+  using base = Prefix<TransitionGradient>;
+  using return_type = typename base::type;
+
+  static void function(
+      const gsl::not_null<tnsr::I<DataVector, 3, Frame::Grid>*> gradient,
+      const tnsr::I<DataVector, 3, Frame::Grid> coords, const Domain<3>& domain,
+      const Element<3>& element) {
+    const auto wedge_and_coords = make_wedge<base>(coords, domain, element);
+
+    if (not wedge_and_coords.has_value()) {
+      for (size_t i = 0; i < 3; i++) {
+        (*gradient).get(i) = make_with_value<DataVector>(get<0>(coords), 0.0);
+      }
+      return;
+    }
+
+    std::array<DataVector, 3> grad =
+        wedge_and_coords->first.gradient(wedge_and_coords->second);
+
+    for (size_t i = 0; i < 3; i++) {
+      (*gradient).get(i) = std::move(gsl::at(grad, i));
+    }
+  }
+};
 /// \endcond
 
 // Note: this executable does not use GeneralizedHarmonicBase.hpp, because
@@ -403,11 +560,18 @@ struct EvolutionMetavars {
                                                   Frame::Inertial>,
               gr::Tags::WeylTypeD1Compute<DataVector, 3, Frame::Inertial>,
               gr::Tags::WeylTypeD1ScalarCompute<DataVector, 3, Frame::Inertial>,
+              TransitionFunctionCompute<Linear>,
+              TransitionFunctionOverRadiusCompute<Linear>,
+              TransitionGradientCompute<Linear>,
+              TransitionFunctionCompute<Inverse>,
+              TransitionFunctionOverRadiusCompute<Inverse>,
+              TransitionGradientCompute<Inverse>,
               gr::Tags::Psi4RealCompute<Frame::Inertial>>,
           tmpl::list<>>>;
   using non_tensor_compute_tags = tmpl::list<
       ::Events::Tags::ObserverMeshCompute<volume_dim>,
       ::Events::Tags::ObserverCoordinatesCompute<volume_dim, Frame::Inertial>,
+      ::Events::Tags::ObserverCoordinatesCompute<volume_dim, Frame::Grid>,
       ::Events::Tags::ObserverInverseJacobianCompute<
           volume_dim, Frame::ElementLogical, Frame::Inertial>,
       ::Events::Tags::ObserverJacobianCompute<volume_dim, Frame::ElementLogical,
