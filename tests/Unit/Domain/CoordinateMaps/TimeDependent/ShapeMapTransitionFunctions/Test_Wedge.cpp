@@ -11,6 +11,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "Domain/CoordinateMaps/TimeDependent/Shape.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
@@ -21,6 +22,7 @@
 #include "Domain/Structure/OrientationMap.hpp"
 #include "Framework/TestHelpers.hpp"
 #include "Helpers/DataStructures/MakeWithRandomValues.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "Utilities/CartesianProduct.hpp"
 #include "Utilities/StdArrayHelpers.hpp"
 
@@ -32,186 +34,306 @@ std::array<double, 3> sph_to_cart(const double radius, const double theta,
                     radius * sin(theta) * sin(phi), radius * cos(theta)};
 }
 
-// Since this is hard to test for general points without just reimplementing the
-// function, we test for specific points where it's easier to calculate
-void test_gradient() {
-  INFO("Test gradient");
-  const double inner_radius = 0.5;
-  const double outer_radius = 10.0;
-  const OrientationMap<3> orientation_map{};
+struct Expected {
+  double inner_radius{};
+  double outer_radius{};
+  double inner_sphericity{};
+  double outer_sphericity{};
+  Falloff falloff{};
+  std::vector<std::array<double, 3>> points_to_check{};
+  std::vector<double> distortion{};
+  std::vector<double> expected_transition{};
+  std::vector<std::array<double, 3>> expected_mapped_points{};
+  std::vector<std::array<double, 3>> expected_gradient{};
 
-  const auto make_wedge = [&](const double inner_sphericity,
-                              const double outer_sphericity) {
-    return Wedge{inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-                 orientation_map};
-  };
-
-  // The extra grad factors should be 0 or 1 for spherical or flat boundaries
-  // (this is opposite of their sphericity)
-  const auto compute_gradient =
-      [&](const double radius, const std::array<double, 3>& point,
-          const double inner_distance, const double outer_distance,
-          const double extra_inner_grad_factor,
-          const double extra_outer_grad_factor) {
-        const double distance_difference = outer_distance - inner_distance;
-        const std::array<double, 3> grad_base =
-            1.0 / (sqrt(3.0) * cube(radius)) *
-            std::array{-point[0] * point[2], -point[1] * point[2],
-                       square(radius) - square(point[2])};
-        const std::array<double, 3> inner_grad =
-            extra_inner_grad_factor * inner_radius * grad_base;
-        const std::array<double, 3> outer_grad =
-            extra_outer_grad_factor * outer_radius * grad_base;
-        return (outer_grad - point / radius) / distance_difference -
-               (outer_distance - radius) * (outer_grad - inner_grad) /
-                   square(distance_difference);
-      };
-
-  const auto test_z_axis = [&](const double inner_sphericity,
-                               const double outer_sphericity) {
-    INFO("Test z-axis");
-    const Wedge wedge = make_wedge(inner_sphericity, outer_sphericity);
-    double inner_distance = inner_radius;
-    double outer_distance = outer_radius;
-    if (inner_sphericity == 0.0) {
-      inner_distance /= sqrt(3.0);
-    }
-    if (outer_sphericity == 0.0) {
-      outer_distance /= sqrt(3.0);
-    }
-
-    for (const double radius : {inner_distance, outer_distance,
-                                0.5 * (inner_distance + outer_distance)}) {
-      CAPTURE(radius);
-      const std::array point{0.0, 0.0, radius};
-      CAPTURE(point);
-
-      CHECK_ITERABLE_APPROX(
-          wedge.gradient(point),
-          (compute_gradient(radius, point, inner_distance, outer_distance,
-                            1.0 - inner_sphericity, 1.0 - outer_sphericity)));
-    }
-  };
-
-  const auto test_corners = [&](const double inner_sphericity,
-                                const double outer_sphericity) {
-    INFO("Test corners");
-    const Wedge wedge = make_wedge(inner_sphericity, outer_sphericity);
-    // Corners will always be at sphere radius
-    for (const double radius :
-         {inner_radius, outer_radius, 0.5 * (outer_radius + outer_radius)}) {
-      for (const double phi :
-           {M_PI_4, 3.0 * M_PI_4, 5.0 * M_PI_4, 7.0 * M_PI_4}) {
-        CAPTURE(radius);
-        CAPTURE(phi * 180.0 / M_PI);
-        const std::array point =
-            sph_to_cart(radius, acos(1.0 / sqrt(3.0)), phi);
-        CAPTURE(point);
-
-        CHECK_ITERABLE_APPROX(
-            wedge.gradient(point),
-            (compute_gradient(radius, point, inner_radius, outer_radius,
-                              1.0 - inner_sphericity, 1.0 - outer_sphericity)));
-      }
-    }
-  };
-
-  {
-    INFO("Both boundaries spherical");
-    test_z_axis(1.0, 1.0);
-    test_corners(1.0, 1.0);
+  void clear() {
+    inner_sphericity = std::numeric_limits<double>::signaling_NaN();
+    outer_sphericity = std::numeric_limits<double>::signaling_NaN();
+    points_to_check.clear();
+    distortion.clear();
+    expected_transition.clear();
+    expected_mapped_points.clear();
+    expected_gradient.clear();
   }
-  {
-    INFO("Inner boundary spherical, outer boundary flat");
-    test_z_axis(1.0, 0.0);
-    test_corners(1.0, 0.0);
-  }
-  {
-    INFO("Inner boundary flat, outer boundary spherical");
-    test_z_axis(0.0, 1.0);
-    test_corners(0.0, 1.0);
-  }
-  {
-    INFO("Both boundaries flat");
-    test_z_axis(0.0, 0.0);
-    test_corners(0.0, 0.0);
-  }
+};
+
+template <typename T>
+std::array<T, 2> cartesian_to_spherical(const std::array<T, 3>& cartesian) {
+  const auto& [x, y, z] = cartesian;
+  return {atan2(hypot(x, y), z), atan2(y, x)};
 }
 
-void test_only_transition() {
-  const double inner_radius = 0.5;
-  const double outer_radius = 10.0;
-  const double inner_sphericity = 1.0;
-  const double outer_sphericity = 0.0;
-  const OrientationMap<3> orientation_map{};
+double compute_distortion(const gsl::not_null<ylm::Spherepack*> ylm,
+                          const std::array<double, 3> coords,
+                          const DataVector& coefs) {
+  auto theta_phis = cartesian_to_spherical(coords);
+  ylm->set_up_interpolation_info(theta_phis);
 
-  const Wedge wedge{inner_radius, outer_radius, inner_sphericity,
-                    outer_sphericity, orientation_map};
-
-  const double inner_distance = 0.5;
-  const double outer_distance = outer_radius / sqrt(3.0);
-  const double distance_difference = outer_distance - inner_distance;
-
-  std::array<double, 3> point{0.0, 0.0, 4.0};
-  const double function_value = (outer_distance - 4.0) / distance_difference;
-
-  CHECK(wedge(point) == approx(function_value));
-  CHECK(wedge.map_over_radius(point) == approx(function_value / 4.0));
-  CHECK_ITERABLE_APPROX(wedge.gradient(point),
-                        (std::array{0.0, 0.0, -1.0 / distance_difference}));
-
-  std::optional<double> orig_rad_over_rad{};
-  const auto set_orig_rad_over_rad =
-      [&](const std::array<double, 3>& mapped_point,
-          const double distorted_radii) {
-        orig_rad_over_rad =
-            wedge.original_radius_over_radius(mapped_point, distorted_radii);
-      };
-
-  // Test actual values
-  set_orig_rad_over_rad(point, 0.0);
-  CHECK(orig_rad_over_rad.has_value());
-  CHECK(orig_rad_over_rad.value() == approx(1.0));
-  set_orig_rad_over_rad(point * (1.0 - function_value * 0.5), 0.5);
-  CHECK(orig_rad_over_rad.has_value());
-  CHECK(orig_rad_over_rad.value() ==
-        approx(4.0 / magnitude(point * (1.0 - function_value * 0.5))));
-  set_orig_rad_over_rad(point * (1.0 + function_value * 0.5), -0.5);
-  CHECK(orig_rad_over_rad.has_value());
-  CHECK(orig_rad_over_rad.value() ==
-        approx(4.0 / magnitude(point * (1.0 + function_value * 0.5))));
-  // Hit some internal checks
-  set_orig_rad_over_rad(point * 0.0, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(point, 1.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(point, 15.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(point * 15.0, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  // Wedge is in +z direction. Check other directions
-  set_orig_rad_over_rad(std::array{0.0, 0.0, -4.0}, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(std::array{4.0, 0.0, 0.0}, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(std::array{-4.0, 0.0, 0.0}, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(std::array{0.0, 4.0, 0.0}, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  set_orig_rad_over_rad(std::array{0.0, -4.0, 0.0}, 0.0);
-  CHECK_FALSE(orig_rad_over_rad.has_value());
-  // At overall inner boundary.
-  set_orig_rad_over_rad(std::array{0.0, 0.0, 0.5 * inner_radius}, 0.5);
-  CHECK(orig_rad_over_rad.has_value());
-  CHECK(orig_rad_over_rad.value() == 2.0);
-
-  test_gradient();
+  return ylm->interpolate_from_coefs(coefs, theta_phis);
 }
 
-void test_in_shape_map() {
-  INFO("Test using shape map");
-  MAKE_GENERATOR(generator, 3360591650);
+template <typename Generator>
+void check_specific_points(const gsl::not_null<Generator*> generator) {
+  INFO("Test specific points using shape map");
   std::uniform_real_distribution<double> coef_dist{-0.01, 0.01};
+
+  const double initial_time = 1.0;
+  const size_t l_max = 4;
+  const size_t num_coefs = 2 * square(l_max + 1);
+  ylm::Spherepack ylm{l_max, l_max};
+  const std::array center{0.0, 0.0, 0.0};
+  const std::string fot_name{"TheBean"};
+
+  std::unordered_map<std::string,
+                     std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
+      functions_of_time{};
+  auto coefs = make_with_random_values<DataVector>(
+      generator, make_not_null(&coef_dist), DataVector{num_coefs});
+  functions_of_time[fot_name] =
+      std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<0>>(
+          initial_time, std::array{coefs},
+          std::numeric_limits<double>::infinity());
+
+  const auto test_points =
+      [&](const Expected& local_expected, const double time,
+          const std::unordered_map<
+              std::string,
+              std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
+              functions_of_time) {
+        std::unique_ptr<ShapeMapTransitionFunction> wedge =
+            std::make_unique<Wedge>(
+                local_expected.inner_radius, local_expected.outer_radius,
+                local_expected.inner_sphericity,
+                local_expected.outer_sphericity, local_expected.falloff);
+
+        TimeDependent::Shape shape{center, l_max, l_max, wedge->get_clone(),
+                                   fot_name};
+
+        const size_t size = local_expected.points_to_check.size();
+        REQUIRE(local_expected.distortion.size() == size);
+        REQUIRE(local_expected.expected_transition.size() == size);
+        REQUIRE(local_expected.expected_mapped_points.size() == size);
+        REQUIRE(local_expected.expected_gradient.size() == size);
+
+        for (size_t i = 0; i < local_expected.points_to_check.size(); i++) {
+          const auto& point = local_expected.points_to_check[i];
+          CAPTURE(i);
+          CAPTURE(point);
+          // Wedge functions
+          CHECK(wedge->operator()(point) ==
+                approx(local_expected.expected_transition[i]));
+          const auto r_over_rtil_opt = wedge->original_radius_over_radius(
+              local_expected.expected_mapped_points[i],
+              local_expected.distortion[i]);
+          CHECK(r_over_rtil_opt.has_value());
+          const double r_over_rtil = r_over_rtil_opt.value();
+          CHECK(magnitude(point) /
+                    magnitude(local_expected.expected_mapped_points[i]) ==
+                approx(r_over_rtil));
+          const std::array gradient = wedge->gradient(point);
+          CHECK_ITERABLE_APPROX(local_expected.expected_gradient[i], gradient);
+
+          // Shape map. Not calculating jacobian
+          const std::array mapped_point = shape(point, time, functions_of_time);
+          CHECK_ITERABLE_APPROX(local_expected.expected_mapped_points[i],
+                                mapped_point);
+          const auto inverse_point =
+              shape.inverse(mapped_point, time, functions_of_time);
+          CHECK(inverse_point.has_value());
+          CHECK_ITERABLE_APPROX(point, inverse_point.value());
+        }
+      };
+
+  // We'll keep the radii the same since they don't really matter
+  const double inner_radius = 0.5;
+  const double outer_radius = 10.0;
+  const double one_over_distance_difference =
+      1.0 / (outer_radius - inner_radius);
+  Expected expected{inner_radius, outer_radius};
+
+  const auto compute_transition =
+      [](const double inner_distance, const double outer_distance,
+         const double radius, const Falloff falloff) {
+        const double one_over_denom = 1.0 / (outer_distance - inner_distance);
+        return falloff == Falloff::Linear
+                   ? (outer_distance - radius) * one_over_denom
+                   : -inner_distance * one_over_denom *
+                         (1.0 - outer_distance / radius);
+      };
+
+  // We manually go through case by case since we know these points
+  {
+    INFO("Both spheres.");
+    // Gradient is simple here
+    const auto compute_gradient = [&](const std::array<double, 3>& point,
+                                      const Falloff falloff) {
+      const double radius = magnitude(point);
+      const double extra_factor =
+          falloff == Falloff::Linear
+              ? 1.0
+              : inner_radius * outer_radius / square(radius);
+      return -extra_factor * point * one_over_distance_difference / radius;
+    };
+
+    for (auto falloff : {Falloff::Inverse, Falloff::Linear}) {
+      expected.clear();
+      expected.inner_sphericity = 1.0;
+      expected.outer_sphericity = 1.0;
+      expected.falloff = falloff;
+      for (auto radius :
+           {inner_radius, outer_radius, 0.5 * (inner_radius + outer_radius)}) {
+        // Corners
+        for (const double phi :
+             {M_PI_4, 3.0 * M_PI_4, 5.0 * M_PI_4, 7.0 * M_PI_4}) {
+          const std::array point =
+              sph_to_cart(radius, acos(1.0 / sqrt(3.0)), phi);
+          const double distortion =
+              compute_distortion(make_not_null(&ylm), point, coefs);
+
+          expected.points_to_check.emplace_back(point);
+          const double transition =
+              compute_transition(inner_radius, outer_radius, radius, falloff);
+          expected.expected_transition.emplace_back(transition);
+          expected.distortion.emplace_back(distortion);
+          expected.expected_mapped_points.emplace_back(
+              point * (1.0 - transition * distortion));
+          expected.expected_gradient.emplace_back(
+              compute_gradient(point, falloff));
+        }
+
+        // Along axes
+        for (size_t i = 0; i < 3; i++) {
+          for (double sign : {-1.0, 1.0}) {
+            std::array<double, 3> point{0.0, 0.0, 0.0};
+            gsl::at(point, i) = sign * radius;
+            const double distortion =
+                compute_distortion(make_not_null(&ylm), point, coefs);
+
+            expected.points_to_check.emplace_back(point);
+            const double transition =
+                compute_transition(inner_radius, outer_radius, radius, falloff);
+            expected.expected_transition.emplace_back(transition);
+            expected.distortion.emplace_back(distortion);
+            expected.expected_mapped_points.emplace_back(
+                point * (1.0 - transition * distortion));
+            expected.expected_gradient.emplace_back(
+                compute_gradient(point, falloff));
+          }
+        }
+      }
+
+      test_points(expected, initial_time, functions_of_time);
+    }
+  }
+  {
+    // These are the corners of the cube
+    INFO("Both cubes");
+    // Gradient is less simple here
+    const auto compute_gradient = [&](const std::array<double, 3>& point,
+                                      const double inner_distance,
+                                      const double outer_distance,
+                                      const Falloff falloff) {
+      const double radius = magnitude(point);
+      const double one_over_denom = 1.0 / (outer_distance - inner_distance);
+      size_t j = 0;
+      double max = abs(point[0]);
+      for (size_t i = 1; i < 3; i++) {
+        if (abs(gsl::at(point, i)) > max) {
+          j = i;
+          max = abs(gsl::at(point, i));
+        }
+      }
+      const size_t j_plus_1 = (j + 1) % 3;
+      const size_t j_plus_2 = (j + 2) % 3;
+
+      std::array<double, 3> grad_base =
+          make_array<3, double>(1.0 / (sqrt(3.0) * radius * gsl::at(point, j)));
+      gsl::at(grad_base, j) *=
+          -(square(radius) - square(gsl::at(point, j))) / gsl::at(point, j);
+      gsl::at(grad_base, j_plus_1) *= gsl::at(point, j_plus_1);
+      gsl::at(grad_base, j_plus_2) *= gsl::at(point, j_plus_2);
+      const std::array<double, 3> inner_grad = inner_radius * grad_base;
+      const std::array<double, 3> outer_grad = outer_radius * grad_base;
+      if (falloff == Falloff::Linear) {
+        return (outer_grad - point / radius) * one_over_denom -
+               (outer_distance - radius) * (outer_grad - inner_grad) *
+                   square(one_over_denom);
+      } else {
+        const double a = -inner_distance * one_over_denom;
+        const double b = -a * outer_distance;
+        const std::array<double, 3> grad_a =
+            (inner_distance * outer_grad - outer_distance * inner_grad) *
+            square(one_over_denom);
+        return grad_a - (a * outer_grad + outer_distance * grad_a) / radius -
+               b * point / cube(radius);
+      }
+    };
+
+    for (const auto falloff : {Falloff::Inverse, Falloff::Linear}) {
+      CAPTURE(falloff);
+      expected.clear();
+      expected.inner_sphericity = 0.0;
+      expected.outer_sphericity = 0.0;
+      expected.falloff = falloff;
+
+      // Corners
+      for (const double radius :
+           {inner_radius, outer_radius, 0.5 * (inner_radius + outer_radius)}) {
+        for (const double phi :
+             {M_PI_4, 3.0 * M_PI_4, 5.0 * M_PI_4, 7.0 * M_PI_4}) {
+          const std::array point =
+              sph_to_cart(radius, acos(1.0 / sqrt(3.0)), phi);
+          const double distortion =
+              compute_distortion(make_not_null(&ylm), point, coefs);
+
+          expected.points_to_check.emplace_back(point);
+          const double transition =
+              compute_transition(inner_radius, outer_radius, radius, falloff);
+          expected.expected_transition.emplace_back(transition);
+          expected.distortion.emplace_back(distortion);
+          expected.expected_mapped_points.emplace_back(
+              point * (1.0 - transition * distortion));
+          expected.expected_gradient.emplace_back(
+              compute_gradient(point, inner_radius, outer_radius, falloff));
+        }
+      }
+
+      // Along axes
+      const double inner_distance = inner_radius / sqrt(3.0);
+      const double outer_distance = outer_radius / sqrt(3.0);
+      for (const double radius : {inner_distance, outer_distance,
+                                  0.5 * (inner_distance + outer_distance)}) {
+        for (size_t i = 0; i < 3; i++) {
+          for (double sign : {-1.0, 1.0}) {
+            std::array<double, 3> point{0.0, 0.0, 0.0};
+            gsl::at(point, i) = sign * radius;
+            const double distortion =
+                compute_distortion(make_not_null(&ylm), point, coefs);
+
+            expected.points_to_check.emplace_back(point);
+            const double transition = compute_transition(
+                inner_distance, outer_distance, radius, falloff);
+            expected.expected_transition.emplace_back(transition);
+            expected.distortion.emplace_back(distortion);
+            expected.expected_mapped_points.emplace_back(
+                point * (1.0 - transition * distortion));
+            expected.expected_gradient.emplace_back(compute_gradient(
+                point, inner_distance, outer_distance, falloff));
+          }
+        }
+      }
+
+      test_points(expected, initial_time, functions_of_time);
+    }
+  }
+}
+
+template <typename Generator>
+void test_random_points(const gsl::not_null<Generator*> generator) {
+  INFO("Test random points using shape map");
+  std::uniform_real_distribution<double> coef_dist{-0.01, 0.01};
+  std::uniform_int_distribution<size_t> num_dist{10_st, 20_st};
+  const size_t num_points = num_dist(*generator);
 
   const double initial_time = 1.0;
   const size_t l_max = 4;
@@ -222,9 +344,8 @@ void test_in_shape_map() {
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
       functions_of_time{};
-  auto coefs = make_with_random_values<DataVector>(make_not_null(&generator),
-                                                   make_not_null(&coef_dist),
-                                                   DataVector{num_coefs});
+  auto coefs = make_with_random_values<DataVector>(
+      generator, make_not_null(&coef_dist), DataVector{num_coefs});
   functions_of_time[fot_name] =
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<0>>(
           initial_time, std::array{std::move(coefs)},
@@ -234,43 +355,36 @@ void test_in_shape_map() {
   const double inner_radius = 0.5;
   const double outer_radius = 10.0;
 
-  std::uniform_real_distribution<double> theta_dist{0.0, M_PI_4};
-  std::uniform_real_distribution<double> phi_dist{0.0, 2.0 * M_PI};
+  std::uniform_real_distribution<double> angle_dist{0.0, 2.0 * M_PI};
 
-  for (const auto& [inner_sphericity, outer_sphericity, orientation] :
+  for (const auto& [inner_sphericity, outer_sphericity, falloff] :
        cartesian_product(std::array{1.0, 0.0}, std::array{1.0, 0.0},
-                         orientations_for_sphere_wrappings())) {
+                         std::array{Falloff::Inverse, Falloff::Linear})) {
     CAPTURE(inner_sphericity);
     CAPTURE(outer_sphericity);
-    CAPTURE(orientation);
+    CAPTURE(falloff);
     // This guarantees the radius of the point is within the wedge
     std::uniform_real_distribution<double> radial_dist{
         inner_radius, outer_radius / sqrt(3.0)};
 
     std::unique_ptr<ShapeMapTransitionFunction> wedge =
         std::make_unique<Wedge>(inner_radius, outer_radius, inner_sphericity,
-                                outer_sphericity, orientation);
+                                outer_sphericity, falloff);
 
     TimeDependent::Shape shape{center, l_max, l_max, std::move(wedge),
                                fot_name};
 
-    // Test 10 points for each sphericity and orientation
-    for (size_t i = 0; i < 10; i++) {
-      const double radius = radial_dist(generator);
-      const double theta = theta_dist(generator);
-      const double phi = phi_dist(generator);
+    for (size_t i = 0; i < num_points; i++) {
+      const double radius = radial_dist(*generator);
+      const double theta = 0.5 * angle_dist(*generator);
+      const double phi = angle_dist(*generator);
 
       CAPTURE(radius);
       CAPTURE(theta);
       CAPTURE(phi);
 
-      const std::array<double, 3> centered_z_aligned_point =
-          sph_to_cart(radius, theta, phi);
-      const std::array<double, 3> centered_point =
-          discrete_rotation(orientation, centered_z_aligned_point);
-      const std::array<double, 3> point = centered_point + center;
-      CAPTURE(centered_z_aligned_point);
-      CAPTURE(centered_point);
+      const std::array<double, 3> point =
+          sph_to_cart(radius, theta, phi) + center;
       CAPTURE(point);
 
       const std::array<double, 3> mapped_point =
@@ -283,39 +397,14 @@ void test_in_shape_map() {
 
       CHECK(inverse_mapped_point.has_value());
       CHECK_ITERABLE_APPROX(point, inverse_mapped_point.value());
-
-      const auto check_bad_point = [&](const std::string& info,
-                                       const double inner_bound,
-                                       const double outer_bound) {
-        INFO(info);
-        std::uniform_real_distribution<double> bad_radial_dist{inner_bound,
-                                                               outer_bound};
-        // Want theta to be from 0 to pi, so just use phi and divide by 2
-        const double random_theta = phi_dist(generator) / 2.0;
-        const double random_phi = phi_dist(generator);
-        const double bad_radius = bad_radial_dist(generator);
-
-        CAPTURE(bad_radius);
-
-        const std::array<double, 3> bad_point =
-            sph_to_cart(bad_radius, random_theta, random_phi) + center;
-
-        CAPTURE(bad_point);
-        CHECK_FALSE(shape.inverse(bad_point, initial_time, functions_of_time)
-                        .has_value());
-      };
-
-      // The 0.9 factor guarantees that we are inside the mapped inner radius
-      check_bad_point("Too small radius", 0.01, 0.9 * inner_radius / sqrt(3.0));
-      check_bad_point("Too big radius", outer_radius * 10.0,
-                      outer_radius * 50.0);
     }
   }
 }
 
 SPECTRE_TEST_CASE("Unit.Domain.CoordinateMaps.Shape.Wedge", "[Domain][Unit]") {
-  test_only_transition();
-  test_in_shape_map();
+  MAKE_GENERATOR(generator);
+  check_specific_points(make_not_null(&generator));
+  test_random_points(make_not_null(&generator));
 }
 }  // namespace
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions

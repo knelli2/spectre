@@ -3,13 +3,13 @@
 
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Wedge.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
 #include <pup.h>
 #include <pup_stl.h>
 
+#include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Falloff.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Domain/Structure/Direction.hpp"
@@ -27,23 +27,38 @@
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 template <typename T>
-T Wedge::Surface::distance(const std::array<T, 3>& coords) const {
+T Wedge::Surface::distance(const std::array<T, 3>& coords,
+                           const std::optional<size_t>& axis) const {
   // Short circuit if it's a sphere. Then the distance is trivially the radius
   // of this surface
   if (sphericity == 1.0) {
     return make_with_value<T>(coords[0], radius);
   }
 
-  T non_spherical_distance =
-      make_with_value<T>(coords[0], (1.0 - sphericity) / sqrt(3.0));
-  non_spherical_distance *= magnitude(coords);
-  for (size_t i = 0; i < get_size(coords[0]); i++) {
-    get_element(non_spherical_distance, i) /= std::max(
-        {abs(get_element(coords[0], i)), abs(get_element(coords[1], i)),
-         abs(get_element(coords[2], i))});
+  T non_spherical_contribution{};
+
+  if (axis.has_value()) {
+#ifdef SPECTRE_DEBUG
+    for (size_t i = 0; i < get_size(coords[0]); i++) {
+      if (get_element(gsl::at(coords, axis.value()), i) == 0.0) {
+        ERROR(
+            "The Wedge transition map was called with coordinates outside of "
+            "its wedge. The "
+            << (axis.value() == 0_st ? "x" : (axis.value() == 1_st ? "y" : "z"))
+            << "-coordinate shouldn't be 0 but it is.");
+      }
+    }
+#endif
+    non_spherical_contribution = (1.0 - sphericity) / sqrt(3.0) *
+                                 magnitude(coords) /
+                                 abs(gsl::at(coords, axis.value()));
+  } else {
+    non_spherical_contribution =
+        (1.0 - sphericity) / sqrt(3.0) * magnitude(coords) /
+        blaze::max(abs(coords[0]), abs(coords[1]), abs(coords[2]));
   }
 
-  return radius * (non_spherical_distance + sphericity);
+  return radius * (non_spherical_contribution + sphericity);
 }
 
 void Wedge::Surface::pup(PUP::er& p) {
@@ -59,11 +74,20 @@ bool Wedge::Surface::operator!=(const Wedge::Surface& other) const {
   return not(*this == other);
 }
 
-Wedge::Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-             double outer_sphericity, Falloff falloff)
+Wedge::Wedge(const double inner_radius, const double outer_radius,
+             const double inner_sphericity, const double outer_sphericity,
+             const Falloff falloff, const size_t axis)
     : inner_surface_(Surface{inner_radius, inner_sphericity}),
       outer_surface_(Surface{outer_radius, outer_sphericity}),
-      falloff_(falloff) {}
+      falloff_(falloff),
+      axis_(axis) {
+  if (axis_ > 2) {
+    ERROR_NO_TRACE(
+        "The wedge transition function can only be constructed with an axis of "
+        "0, 1, or 2. Not "
+        << axis_);
+  }
+}
 
 double Wedge::operator()(const std::array<double, 3>& source_coords) const {
   return call_impl<double>(source_coords);
@@ -179,8 +203,8 @@ template <typename T>
 T Wedge::call_impl(const std::array<T, 3>& source_coords) const {
   check_distances(source_coords);
   const T radius = magnitude(source_coords);
-  const T outer_distance = outer_surface_.distance(source_coords);
-  const T inner_distance = inner_surface_.distance(source_coords);
+  const T outer_distance = outer_surface_.distance(source_coords, axis_);
+  const T inner_distance = inner_surface_.distance(source_coords, axis_);
   const T one_over_denom = 1.0 / (outer_distance - inner_distance);
 
   if (falloff_ == Falloff::Linear) {
@@ -197,17 +221,17 @@ template <typename T>
 T Wedge::map_over_radius_impl(const std::array<T, 3>& source_coords) const {
   check_distances(source_coords);
   const T radius = magnitude(source_coords);
-  const T outer_distance = outer_surface_.distance(source_coords);
-  const T inner_distance = inner_surface_.distance(source_coords);
+  const T outer_distance = outer_surface_.distance(source_coords, axis_);
+  const T inner_distance = inner_surface_.distance(source_coords, axis_);
   const T one_over_denom = 1.0 / (outer_distance - inner_distance);
 
   if (falloff_ == Falloff::Linear) {
     return (outer_distance - radius) * one_over_denom / radius;
   } else {
-    const T a = -inner_distance * one_over_denom;
-    const T b = -a * outer_distance;
+    const T a_over_r = -inner_distance * one_over_denom / radius;
+    const T b_over_r = -a_over_r * outer_distance;
 
-    return (a + b / radius) / radius;
+    return a_over_r + b_over_r / radius;
   }
 }
 
@@ -222,8 +246,8 @@ std::array<T, 3> Wedge::gradient_impl(
   const T radius = magnitude(source_coords);
   const T one_over_radius = 1.0 / radius;
 
-  const T outer_distance = outer_surface_.distance(source_coords);
-  const T inner_distance = inner_surface_.distance(source_coords);
+  const T outer_distance = outer_surface_.distance(source_coords, axis_);
+  const T inner_distance = inner_surface_.distance(source_coords, axis_);
   const T one_over_distance_difference =
       1.0 / (outer_distance - inner_distance);
 
@@ -231,51 +255,6 @@ std::array<T, 3> Wedge::gradient_impl(
   CAPTURE_FOR_ERROR(radius);
   CAPTURE_FOR_ERROR(outer_distance);
   CAPTURE_FOR_ERROR(inner_distance);
-
-  const auto surface_gradient = [&](const Surface& surface) {
-    if (surface.sphericity == 1.0) {
-      return make_array<3, T>(make_with_value<T>(source_coords[0], 0.0));
-    }
-
-    const double factor =
-        surface.radius * (1.0 - surface.sphericity) / sqrt(3.0);
-
-    std::array<T, 3> grad =
-        make_array<3, T>(make_with_value<T>(source_coords[0], factor));
-
-    for (size_t i = 0; i < get_size(source_coords[0]); i++) {
-      std::array<double, 3> temp_coords{};
-      for (size_t j = 0; j < 3; j++) {
-        gsl::at(temp_coords, j) =
-            abs(get_element(gsl::at(source_coords, j), i));
-      }
-      auto max_element =
-          std::max_element(temp_coords.begin(), temp_coords.end());
-      const size_t index =
-          static_cast<size_t>(std::distance(temp_coords.begin(), max_element));
-      const size_t index_plus_one = (index + 1) % 3;
-      const size_t index_plus_two = (index + 2) % 3;
-
-      const double index_coord = get_element(gsl::at(source_coords, index), i);
-
-      if (index_coord == 0.0) {
-        ERROR("Index " << index << " coord is zero");
-      }
-
-      get_element(gsl::at(grad, index), i) =
-          -(square(get_element(radius, i)) -
-            square(get_element(gsl::at(source_coords, index), i))) *
-          get_element(one_over_radius, i) / square(index_coord);
-      get_element(gsl::at(grad, index_plus_one), i) =
-          get_element(gsl::at(source_coords, index_plus_one), i) *
-          get_element(one_over_radius, i) / index_coord;
-      get_element(gsl::at(grad, index_plus_two), i) =
-          get_element(gsl::at(source_coords, index_plus_two), i) *
-          get_element(one_over_radius, i) / index_coord;
-    }
-
-    return grad;
-  };
 
   // Special case for both spherical boundaries
   if (inner_surface_.sphericity == 1.0 and outer_surface_.sphericity == 1.0) {
@@ -289,8 +268,35 @@ std::array<T, 3> Wedge::gradient_impl(
     }
   }
 
+  const auto surface_gradient = [&](const Surface& surface) {
+    if (surface.sphericity == 1.0) {
+      return make_array<3, T>(make_with_value<T>(source_coords[0], 0.0));
+    }
+
+    const size_t axis_plus_one = (axis_ + 1) % 3;
+    const size_t axis_plus_two = (axis_ + 2) % 3;
+
+    const T& axis_coord = gsl::at(source_coords, axis_);
+
+    const double factor =
+        surface.radius * (1.0 - surface.sphericity) / sqrt(3.0);
+
+    std::array<T, 3> grad =
+        make_array<3, T>(factor * one_over_radius / abs(axis_coord));
+
+    // Dividing by axis_coord here takes care of the sgn(axis_coord) that would
+    // have been necessary
+    gsl::at(grad, axis_) *= -(square(radius) - square(axis_coord)) / axis_coord;
+    gsl::at(grad, axis_plus_one) *= gsl::at(source_coords, axis_plus_one);
+    gsl::at(grad, axis_plus_two) *= gsl::at(source_coords, axis_plus_two);
+
+    return grad;
+  };
+
   const std::array<T, 3> outer_gradient = surface_gradient(outer_surface_);
   const std::array<T, 3> inner_gradient = surface_gradient(inner_surface_);
+
+  return outer_gradient;
 
   if (falloff_ == Falloff::Linear) {
     return (outer_gradient - source_coords * one_over_radius -
@@ -332,8 +338,8 @@ void Wedge::check_distances([
     [maybe_unused]] const std::array<T, 3>& coords) const {
 #ifdef SPECTRE_DEBUG
   const T mag = magnitude(coords);
-  const T inner_distance = inner_surface_.distance(coords);
-  const T outer_distance = outer_surface_.distance(coords);
+  const T inner_distance = inner_surface_.distance(coords, axis_);
+  const T outer_distance = outer_surface_.distance(coords, axis_);
   for (size_t i = 0; i < get_size(mag); ++i) {
     if (get_element(mag, i) + eps_ < get_element(inner_distance, i) or
         get_element(mag, i) - eps_ > get_element(outer_distance, i)) {
@@ -363,6 +369,7 @@ void Wedge::pup(PUP::er& p) {
     p | inner_surface_;
     p | outer_surface_;
     p | falloff_;
+    p | axis_;
   }
 }
 

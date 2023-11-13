@@ -10,31 +10,59 @@
 #include <pup.h>
 
 #include "DataStructures/DataVector.hpp"
-#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/Falloff.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
+#include "Domain/Structure/Direction.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
 /*!
- * \brief A transition function that falls off linearly from an inner surface of
- * a wedge to an outer surface of a wedge. Meant to be used in
+ * \brief A transition function that falls off from 1 at an inner surface of
+ * a wedge to 0 at an outer surface of a wedge. Meant to be used in
  * `domain::CoordinateMaps::Wedge` blocks.
  *
- * \details The functional form of this transition is
+ * \details There are two functional forms that this transition can take
+ * depending on the \p falloff parameter passed to the constructor. If the
+ * falloff is
+ * `domain::CoordinateMaps::ShapeMapTransitionFunctions::Falloff::Linear` then
+ * the functional form of this transition is
  *
  * \begin{equation}
  * f(r, \theta, \phi) = \frac{D_{\text{out}}(r, \theta, \phi) -
- * r}{D_{\text{out}}(r, \theta, \phi) - D_{\text{in}}(r, \theta, \phi)},
- * \label{eq:transition_func}
+ * r}{D_{\text{out}}(r, \theta, \phi) - D_{\text{in}}(r, \theta, \phi)}.
+ * \label{eq:linear_transition}
+ * \end{equation}
+ *
+ * If the falloff is
+ * `domain::CoordinateMaps::ShapeMapTransitionFunctions::Falloff::Inverse`, then
+ * the functional form is
+ *
+ * \begin{equation}
+ * f(r, \theta, \phi) = a + \frac{b}{r},
+ * \label{eq:inverse_transition}
  * \end{equation}
  *
  * where
  *
+ * \f{align}{
+ * a &= \frac{-D_{\text{in}}(r, \theta, \phi)}{D_{\text{out}}(r, \theta, \phi) -
+ * D_{\text{in}}(r, \theta, \phi)} \\
+ * b &= \frac{D_{\text{out}}(r, \theta, \phi)D_{\text{in}}(r, \theta,
+ * \phi)}{D_{\text{out}}(r, \theta, \phi) -
+ * D_{\text{in}}(r, \theta, \phi)} = -aD_{\text{out}}(r, \theta, \phi).
+ * \label{eq:inverse_a_and_b}
+ * \f}
+ *
+ * For both of these falloffs, we have that
+ *
  * \begin{equation}
- * D(r, \theta, \phi) = R\left(\frac{1 - s}{\sqrt{3}\cos{\theta}} + s\right),
+ * D(r, \theta, \phi) = R\left(\frac{1 -
+ * s}{\sqrt{3}\max(|\sin{\theta}\cos{\phi}|,|\sin{\theta}\sin{\phi}|,
+ * |\cos{\theta}|)} + s\right),
+ * \label{eq:distance}
  * \end{equation}
  *
- * and $s$ is the sphericity of the surface which goes from 0 (flat) to 1
+ * where $s$ is the sphericity of the surface which goes from 0 (flat) to 1
  * (spherical), $R$ is the radius of the spherical surface, $\text{out}$ is the
  * outer surface, and $\text{in}$ is the inner surface. If the sphericity is 1,
  * then the surface is a sphere so $D = R$. If the sphericity is 0, then the
@@ -53,15 +81,14 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  * - The coordinates $r, \theta, \phi$ are assumed to be from the center of the
  *   wedge, not the center of the computational domain.
  * - The wedges are concentric. (see the constructor)
- * - Eq. $\ref{eq:transition_func}$ assumes it is in a wedge that is aligned
- *   with the +z direction. Therefore, $\cos{\theta} = \hat{r} \cdot \hat{z} =
- *   \frac{\vec{r}}{r} \cdot \hat{z} = \frac{z}{r}$. For the wedges aligned with
- *   the other axes, the coordinates are first rotated so they align with +z,
- *   then the computation is done.
+ * - The $\max$ in the denominator of $\ref{eq:distance}$ can be simplified a
+ *   bit to $\max(|x|, |y|, |z|)/r$. It was written the other way in
+ *   $\ref{eq:distance}$ to emphasize that $D$ has no radial dependence.
  *
  * ## Gradient
  *
- * The cartesian gradient of the transition function is
+ * The cartesian gradient of the linear transition function (Eq.
+ * $\ref{eq:linear_transition}$) is
  *
  * \begin{equation}
  * \frac{\partial f}{\partial x_i} = \frac{\frac{\partial
@@ -69,24 +96,43 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  * D_{\text{in}}} - \frac{\left(D_{\text{out}} - r\right)\left(\frac{\partial
  * D_{\text{out}}}{\partial x_i} - \frac{\partial
  * D_{\text{in}}}{\partial x_i} \right)}{\left(D_{\text{out}} -
- * D_{\text{in}}\right)^2}
+ * D_{\text{in}}\right)^2}.
+ * \end{equation}
+ *
+ * The cartesian gradient of the inverse transition function (Eq.
+ * $\ref{eq:inverse_transition}$) is
+ *
+ * \begin{equation}
+ * \frac{\partial f}{\partial x_i} = \frac{\partial a}{\partial x_i} +
+ * \frac{1}{r}\frac{\partial b}{\partial x_i} - \frac{bx_i}{r^3}
  * \end{equation}
  *
  * where
  *
  * \f{align}{
- * \frac{\partial D}{\partial z} &= \frac{R\left(1-s\right)}{\sqrt{3}}
- * \frac{\partial}{\partial z} \left(\frac{z}{r} \right) =
- * \frac{R\left(1-s\right)}{\sqrt{3}} \left(\frac{r^2 - z^2}{r^3} \right), \\
- * \frac{\partial D}{\partial x} &= \frac{R\left(1-s\right)}{\sqrt{3}}
- * \frac{\partial}{\partial x} \left(\frac{z}{r} \right) =
- * -\frac{R\left(1-s\right)}{\sqrt{3}} \left(\frac{xz}{r^3} \right), \\
- * \frac{\partial D}{\partial y} &= \frac{\partial D}{\partial x} \left(x
- * \rightarrow y \right),
+ * \frac{\partial a}{\partial x_i} &= \frac{D_{\text{in}}\frac{\partial
+ * D_{\text{out}}}{\partial x_i} -D_{\text{out}}\frac{\partial
+ * D_{\text{in}}}{\partial x_i} }{(D_{\text{out}} - D_{\text{in}})^2} \\
+ * \frac{\partial b}{\partial x_i} &= -a\frac{\partial D_{\text{out}}}{\partial
+ * x_i} - D_{\text{out}}\frac{\partial a}{\partial x_i}.
  * \f}
  *
- * making use of the fact that this wedge is aligned with the +z axis so that
- * $\cos{\theta} = \frac{z}{r}$.
+ * The computation of the gradient of $D$ depends on the result of the $\max$ in
+ * the denominator of $\ref{eq:distance}$. To simplify the expression, let $j
+ * \in \{0,1,2\}$ correspond to the $\max(|x|, |y|, |z|)$ such that $j=0$ if
+ * $|x|$ is the $\max$, and so on. Then we can write the gradient of $D$ as
+ *
+ * \f{align}{
+ * \frac{\partial D}{\partial x_j} &= -\text{sgn}(x_j)\frac{R(1-s)\left(r^2 -
+ * x_j^2\right)}{r x_j^2 \sqrt{3}} \\
+ * \frac{\partial D}{\partial x_{j+1}} &= \frac{R(1-s)x_{j+1}}{r |x_j| \sqrt{3}}
+ * \\
+ * \frac{\partial D}{\partial x_{j+2}} &= \frac{R(1-s)x_{j+2}}{r |x_j| \sqrt{3}}
+ * \f}
+ *
+ * where $j+1$ and $j+2$ are understood to be $\mod 3$. Also since we don't
+ * allow points at the origin of these wedges, we can be assured that for
+ * whichever $j$ is max, that $x_j$ won't be zero.
  *
  * ## Original radius divided by mapped radius
  *
@@ -95,61 +141,42 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  * the ratio of the original radius $r$ to the mapped $\tilde{r}$ by solving
  *
  * \begin{equation}
- * \frac{r}{\tilde{r}} = \frac{1}{1-f(r,\theta,\phi)\Sigma(\theta,\phi)}
+ * \frac{r}{\tilde{r}} = \frac{1}{1-f(r,\theta,\phi)\Sigma(\theta,\phi)}.
  * \end{equation}
  *
- * Because this is a linear transition, this will result in is having to solve a
- * quadratic equation of the form
+ * For the linear transition, this will result in us having to solve a quadratic
+ * equation of the form
  *
  * \begin{equation}
  * \tilde{r} x^2 + \left(\frac{D_{\text{out}} -
  * D_{\text{in}}}{\Sigma(\theta,\phi)} - D_{\text{out}}\right) x -
  * \frac{D_{\text{out}} - D_{\text{in}}}{\Sigma(\theta,\phi)} = 0
- * \label{eq:r_over_rtil}
+ * \label{eq:linear_r_over_rtil}
  * \end{equation}
  *
  * where $x = \frac{r}{\tilde{r}}$.
  *
+ * For the inverse transition, we get an analytic expression for the original
+ * radius over the mapped radius of the form
+ *
+ * \begin{equation}
+ * \frac{r}{\tilde{r}} = \frac{1 + \frac{b\Sigma(\theta,\phi)}{\tilde{r}}}{1 -
+ * a\Sigma(\theta,\phi)}.
+ * \label{eq:inverse_r_over_rtil}
+ * \end{equation}
+ *
  * \note Since $D$ is not a function of the radius, we can treat it as a
- * constant in Eq. $\ref{eq:r_over_rtil}$ and compute the angles using
- * $\tilde{r}$.
+ * constant in Eqs. $\ref{eq:linear_r_over_rtil}$ and
+ * $\ref{eq:inverse_r_over_rtil}$ and compute the angles using $\tilde{r}$.
  *
  * ## Special cases
  *
  * The equations above become simpler if the inner boundary, outer boundary, or
  * both are spherical ($s = 1$). If a boundary is spherical, then $D = R$ and
- * $\frac{\partial D}{\partial x_i} = 0$. Since $D$ can be held constant when
- * solving $\ref{eq:r_over_rtil}$, the quadratic equation itself doesn't
- * simplify, only the computation of $D$.
- *
- * If the inner boundary is spherical (but not the outer boundary), then the
- * gradient of $f$ becomes
- *
- * \begin{equation}
- * \frac{\partial f}{\partial x_i} = \frac{\frac{\partial
- * D_{\text{out}}}{\partial x_i} - \frac{x_i}{r}}{D_{\text{out}} -
- * D_{\text{in}}} - \frac{\left(D_{\text{out}} - r\right) - \left(\frac{\partial
- * D_{\text{out}}}{\partial x_i} \right)}{\left(D_{\text{out}} -
- * D_{\text{in}}\right)^2}.
- * \end{equation}
- *
- * If the outer boundary is spherical (but not the inner boundary), then the
- * gradient of $f$ becomes
- *
- * \begin{equation}
- * \frac{\partial f}{\partial x_i} = \frac{-\frac{x_i}{r}}{D_{\text{out}} -
- * D_{\text{in}}} - \frac{\left(D_{\text{out}} - r\right) + \left(\frac{\partial
- * D_{\text{in}}}{\partial x_i} \right)}{\left(D_{\text{out}} -
- * D_{\text{in}}\right)^2}
- * \end{equation}
- *
- * If the both boundaries are spherical, then the gradient of $f$ simplifies
- * greatly to
- *
- * \begin{equation}
- * \frac{\partial f}{\partial x_i} = \frac{-\frac{x_i}{r}}{D_{\text{out}} -
- * D_{\text{in}}}
- * \end{equation}
+ * $\frac{\partial D}{\partial x_i} = 0$. This simplifies the expanded form of
+ * the gradient of both falloffs significantly. Also, for computing
+ * $\frac{r}{\tilde{r}$, since $D$ doesn't depend on angles we can use
+ * $\tilde{r}$ to compute $D$ instead of $r$.
  */
 class Wedge final : public ShapeMapTransitionFunction {
   struct Surface {
@@ -157,9 +184,11 @@ class Wedge final : public ShapeMapTransitionFunction {
     double sphericity{};
 
     // This is the distance from the center (assumed to be 0,0,0) to this
-    // surface in the same direction as coords.
+    // surface in the same direction as coords. The calculation is cheaper if
+    // you know the axis ahead of time
     template <typename T>
-    T distance(const std::array<T, 3>& coords) const;
+    T distance(const std::array<T, 3>& coords,
+               const std::optional<size_t>& axis = std::nullopt) const;
 
     void pup(PUP::er& p);
 
@@ -182,9 +211,11 @@ class Wedge final : public ShapeMapTransitionFunction {
    * \param inner_sphericity Sphericity of innermost surface of innermost wedge
    * \param outer_sphericity Sphericity of outermost surface of outermost wedge
    * \param falloff How the transition function falls off to zero
+   * \param axis The direction that this wedge is in. Both the positive and
+   * negative direction get the same axis.
    */
   Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-        double outer_sphericity, Falloff falloff);
+        double outer_sphericity, Falloff falloff, size_t axis);
 
   double operator()(const std::array<double, 3>& source_coords) const override;
   DataVector operator()(
@@ -231,6 +262,7 @@ class Wedge final : public ShapeMapTransitionFunction {
   Surface inner_surface_{};
   Surface outer_surface_{};
   Falloff falloff_{};
+  size_t axis_{};
   static constexpr double eps_ = std::numeric_limits<double>::epsilon() * 100;
 };
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions
