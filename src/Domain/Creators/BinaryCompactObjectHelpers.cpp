@@ -28,6 +28,8 @@
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 
+#include "Parallel/Printf.hpp"
+
 namespace domain::creators::bco {
 std::unordered_map<std::string, tnsr::I<double, 3, Frame::Grid>>
 create_grid_anchors(const std::array<double, 3>& center_a,
@@ -222,7 +224,16 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
             std::make_unique<domain::CoordinateMaps::
                                  ShapeMapTransitionFunctions::SphereTransition>(
                 radii[0], radii[1]);
+
+        gsl::at(shape_maps_, i) =
+            Shape{gsl::at(centers, i),     initial_l_max,
+                  initial_l_max,           std::move(transition_func),
+                  gsl::at(shape_names, i), gsl::at(size_names, i)};
       } else {
+        // These must match the order of orientations_for_sphere_wrappings() in
+        // DomainHelpers.hpp
+        const std::array<size_t, 6> axes{2, 2, 1, 1, 0, 0};
+
         const bool transition_ends_at_cube =
             i == 0 ? shape_options_A_->transition_ends_at_cube
                    : shape_options_B_->transition_ends_at_cube;
@@ -239,16 +250,22 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
         const double outer_radius =
             transition_ends_at_cube ? radii[2] : radii[1];
 
-        transition_func = std::make_unique<
-            domain::CoordinateMaps::ShapeMapTransitionFunctions::Wedge>(
-            inner_radius, outer_radius, inner_sphericity, outer_sphericity,
-            falloff);
+        for (size_t j = 0; j < axes.size(); j++) {
+          Parallel::printf(
+              "Object %s. Axis %d. Inner radius %.16f. Outer radius %.16f\n",
+              i == 0 ? "A" : "B", gsl::at(axes, j), inner_radius, outer_radius);
+          transition_func = std::make_unique<
+              domain::CoordinateMaps::ShapeMapTransitionFunctions::Wedge>(
+              inner_radius, outer_radius, inner_sphericity, outer_sphericity,
+              falloff, gsl::at(axes, j));
+
+          gsl::at(gsl::at(shape_maps_, i), j) =
+              Shape{gsl::at(centers, i),     initial_l_max,
+                    initial_l_max,           std::move(transition_func),
+                    gsl::at(shape_names, i), gsl::at(size_names, i)};
+        }
       }
 
-      gsl::at(shape_maps_, i) =
-          Shape{gsl::at(centers, i),     initial_l_max,
-                initial_l_max,           std::move(transition_func),
-                gsl::at(shape_names, i), gsl::at(size_names, i)};
     } else if (i == 0 ? shape_options_A_.has_value()
                       : shape_options_B_.has_value()) {
       ERROR_NO_TRACE(
@@ -328,13 +345,25 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_distorted_map(
 
   if (block_has_shape_map) {
     const size_t index = get_index(Object);
-    const std::optional<Shape>& shape = gsl::at(shape_maps_, index);
-    if (not shape.has_value()) {
+    const std::optional<Shape>* shape{};
+    if constexpr (IsCylindrical) {
+      shape = &gsl::at(shape_maps_, index);
+    } else {
+      if (include_distorted_map.value() >= 12) {
+        ERROR(
+            "Invalid 'include_distorted_map' argument. Max value allowed is "
+            "11, but it is "
+            << include_distorted_map.value());
+      }
+      shape = &gsl::at(gsl::at(shape_maps_, index),
+                       include_distorted_map.value() % 6);
+    }
+    if (not shape->has_value()) {
       ERROR(
           "Requesting grid to distorted map with distorted frame but shape map "
           "options were not specified.");
     }
-    return std::make_unique<detail::gd_map<Shape>>(shape.value());
+    return std::make_unique<detail::gd_map<Shape>>(shape->value());
   } else {
     return nullptr;
   }
@@ -362,23 +391,35 @@ TimeDependentMapOptions<IsCylindrical>::grid_to_inertial_map(
 
   if (block_has_shape_map) {
     const size_t index = get_index(Object);
-    const std::optional<Shape>& shape = gsl::at(shape_maps_, index);
-    if (not shape.has_value()) {
+    const std::optional<Shape>* shape{};
+    if constexpr (IsCylindrical) {
+      shape = &gsl::at(shape_maps_, index);
+    } else {
+      if (include_distorted_map.value() >= 12) {
+        ERROR(
+            "Invalid 'include_distorted_map' argument. Max value allowed is "
+            "11, but it is "
+            << include_distorted_map.value());
+      }
+      shape = &gsl::at(gsl::at(shape_maps_, index),
+                       include_distorted_map.value() % 6);
+    }
+    if (not shape->has_value()) {
       ERROR(
           "Requesting grid to inertial map with distorted frame but shape map "
           "options were not specified.");
     }
     if (expansion_map_.has_value() and rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Expansion, Rotation>>(
-          shape.value(), expansion_map_.value(), rotation_map_.value());
+          shape->value(), expansion_map_.value(), rotation_map_.value());
     } else if (expansion_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Expansion>>(
-          shape.value(), expansion_map_.value());
+          shape->value(), expansion_map_.value());
     } else if (rotation_map_.has_value()) {
       return std::make_unique<detail::gi_map<Shape, Rotation>>(
-          shape.value(), rotation_map_.value());
+          shape->value(), rotation_map_.value());
     } else {
-      return std::make_unique<detail::gi_map<Shape>>(shape.value());
+      return std::make_unique<detail::gi_map<Shape>>(shape->value());
     }
   } else {
     if (expansion_map_.has_value() and rotation_map_.has_value()) {

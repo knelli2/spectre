@@ -426,6 +426,9 @@ struct TimeDependentMapOptions {
   // Maps
   std::optional<Expansion> expansion_map_{};
   std::optional<Rotation> rotation_map_{};
-  std::array<std::optional<Shape>, 2> shape_maps_{};
+  using ShapeMapType =
+      tmpl::conditional_t<IsCylindrical, std::array<std::optional<Shape>, 2>,
+                          std::array<std::array<std::optional<Shape>, 6>, 2>>;
+  ShapeMapType shape_maps_{};
 };
 }  // namespace domain::creators::bco
