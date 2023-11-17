@@ -161,7 +161,7 @@ std::optional<double> Wedge::original_radius_over_radius(
       return std::nullopt;
     }
   } else {
-    const double a = -inner_distance / distance_difference;
+    const double a = -1.0 / distance_difference;
     const double b = -a * outer_distance;
 
     const double denom = 1.0 - distorted_radius * a;
@@ -210,7 +210,7 @@ T Wedge::call_impl(const std::array<T, 3>& source_coords) const {
   if (falloff_ == Falloff::Linear) {
     return (outer_distance - radius) * one_over_denom;
   } else {
-    const T a = -inner_distance * one_over_denom;
+    const T a = -1.0 * one_over_denom;
     const T b = -a * outer_distance;
 
     return a + b / radius;
@@ -228,7 +228,7 @@ T Wedge::map_over_radius_impl(const std::array<T, 3>& source_coords) const {
   if (falloff_ == Falloff::Linear) {
     return (outer_distance - radius) * one_over_denom / radius;
   } else {
-    const T a_over_r = -inner_distance * one_over_denom / radius;
+    const T a_over_r = -1.0 * one_over_denom / radius;
     const T b_over_r = -a_over_r * outer_distance;
 
     return a_over_r + b_over_r / radius;
@@ -262,8 +262,7 @@ std::array<T, 3> Wedge::gradient_impl(
       return -1.0 * source_coords * one_over_radius *
              one_over_distance_difference;
     } else {
-      const T b =
-          outer_distance * inner_distance * one_over_distance_difference;
+      const T b = outer_distance * one_over_distance_difference;
       return -1.0 * b * source_coords * cube(one_over_radius);
     }
   }
@@ -304,7 +303,7 @@ std::array<T, 3> Wedge::gradient_impl(
                 one_over_distance_difference) *
            one_over_distance_difference;
   } else {
-    const T a = -inner_distance * one_over_distance_difference;
+    const T a = -1.0 * one_over_distance_difference;
     const T b = -a * outer_distance;
 
     const std::array<T, 3> a_gradient =
