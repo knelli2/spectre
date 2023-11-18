@@ -7,6 +7,7 @@
 #include <optional>
 #include <pup.h>
 
+#include "DataStructures/Blaze/IntegerPow.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Utilities/ConstantExpressions.hpp"
 #include "Utilities/ContainerHelpers.hpp"
@@ -56,44 +57,49 @@ std::optional<double> SphereTransition::original_radius_over_radius(
 }
 
 double SphereTransition::map_over_radius(
-    const std::array<double, 3>& source_coords) const {
-  return map_over_radius_impl<double>(source_coords);
+    const std::array<double, 3>& source_coords, const size_t power) const {
+  return map_over_radius_impl<double>(source_coords, power);
 }
 DataVector SphereTransition::map_over_radius(
-    const std::array<DataVector, 3>& source_coords) const {
-  return map_over_radius_impl<DataVector>(source_coords);
+    const std::array<DataVector, 3>& source_coords, const size_t power) const {
+  return map_over_radius_impl<DataVector>(source_coords, power);
 }
 
-std::array<double, 3> SphereTransition::gradient(
+std::array<double, 3> SphereTransition::gradient_over_radius(
     const std::array<double, 3>& source_coords) const {
-  return gradient_impl<double>(source_coords);
+  return gradient_over_radius_impl<double>(source_coords);
 }
-std::array<DataVector, 3> SphereTransition::gradient(
+std::array<DataVector, 3> SphereTransition::gradient_over_radius(
     const std::array<DataVector, 3>& source_coords) const {
-  return gradient_impl<DataVector>(source_coords);
+  return gradient_over_radius_impl<DataVector>(source_coords);
 }
 
 template <typename T>
 T SphereTransition::call_impl(const std::array<T, 3>& source_coords) const {
   const T mag = magnitude(source_coords);
   check_magnitudes(mag);
-  return a_ + b_ / mag;
+  return a_ * mag + b_;
 }
 
 template <typename T>
-T SphereTransition::map_over_radius_impl(
-    const std::array<T, 3>& source_coords) const {
+T SphereTransition::map_over_radius_impl(const std::array<T, 3>& source_coords,
+                                         const size_t power) const {
+  ASSERT(power > 0, "Power must be greater than 0");
   const T mag = magnitude(source_coords);
   check_magnitudes(mag);
-  return a_ / mag + b_ / square(mag);
+  if (power == 1) {
+    return a_ + b_ / mag;
+  } else {
+    return (a_ * mag + b_) / integer_pow(mag, static_cast<int>(power));
+  }
 }
 
 template <typename T>
-std::array<T, 3> SphereTransition::gradient_impl(
+std::array<T, 3> SphereTransition::gradient_over_radius_impl(
     const std::array<T, 3>& source_coords) const {
-  const T mag = magnitude(source_coords);
+  T mag = magnitude(source_coords);
   check_magnitudes(mag);
-  return -b_ * source_coords / cube(mag);
+  return a_ * source_coords / square(mag);
 }
 
 bool SphereTransition::operator==(

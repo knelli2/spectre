@@ -41,14 +41,14 @@ class SphereTransition final : public ShapeMapTransitionFunction {
       const std::array<double, 3>& target_coords,
       double distorted_radius) const override;
 
-  double map_over_radius(
-      const std::array<double, 3>& source_coords) const override;
-  DataVector map_over_radius(
-      const std::array<DataVector, 3>& source_coords) const override;
+  double map_over_radius(const std::array<double, 3>& source_coords,
+                         size_t power = 1) const override;
+  DataVector map_over_radius(const std::array<DataVector, 3>& source_coords,
+                             size_t power = 1) const override;
 
-  std::array<double, 3> gradient(
+  std::array<double, 3> gradient_over_radius(
       const std::array<double, 3>& source_coords) const override;
-  std::array<DataVector, 3> gradient(
+  std::array<DataVector, 3> gradient_over_radius(
       const std::array<DataVector, 3>& source_coords) const override;
 
   WRAPPED_PUPable_decl_template(SphereTransition);
@@ -67,10 +67,12 @@ class SphereTransition final : public ShapeMapTransitionFunction {
   T call_impl(const std::array<T, 3>& source_coords) const;
 
   template <typename T>
-  T map_over_radius_impl(const std::array<T, 3>& source_coords) const;
+  T map_over_radius_impl(const std::array<T, 3>& source_coords,
+                         size_t power) const;
 
   template <typename T>
-  std::array<T, 3> gradient_impl(const std::array<T, 3>& source_coords) const;
+  std::array<T, 3> gradient_over_radius_impl(
+      const std::array<T, 3>& source_coords) const;
 
   // checks that the magnitudes are all between `r_min_` and `r_max_`
   template <typename T>

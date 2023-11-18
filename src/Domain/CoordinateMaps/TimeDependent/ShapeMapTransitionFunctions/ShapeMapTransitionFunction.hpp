@@ -89,15 +89,17 @@ class ShapeMapTransitionFunction : public PUP::able {
       double distorted_radius) const = 0;
   /*!
    * Evaluate the transition function at the Cartesian coordinates divided by
-   * the radius. All divisions over the radius which could potentially be zero
-   * divisions are left to the transition function which uses its knowledge
-   * of the domain to do this safely or throw an appropriate error.
+   * the radius to a power. All divisions over the radius which could
+   * potentially be zero divisions are left to the transition function which
+   * uses its knowledge of the domain to do this safely or throw an appropriate
+   * error.
    */
   /// @{
-  virtual double map_over_radius(
-      const std::array<double, 3>& source_coords) const = 0;
+  virtual double map_over_radius(const std::array<double, 3>& source_coords,
+                                 size_t power = 1) const = 0;
   virtual DataVector map_over_radius(
-      const std::array<DataVector, 3>& source_coords) const = 0;
+      const std::array<DataVector, 3>& source_coords,
+      size_t power = 1) const = 0;
   /// @}
 
   /*!
@@ -106,9 +108,9 @@ class ShapeMapTransitionFunction : public PUP::able {
    * `source_coords`.
    */
   /// @{
-  virtual std::array<double, 3> gradient(
+  virtual std::array<double, 3> gradient_over_radius(
       const std::array<double, 3>& source_coords) const = 0;
-  virtual std::array<DataVector, 3> gradient(
+  virtual std::array<DataVector, 3> gradient_over_radius(
       const std::array<DataVector, 3>& source_coords) const = 0;
 
   virtual std::unique_ptr<ShapeMapTransitionFunction> get_clone() const = 0;

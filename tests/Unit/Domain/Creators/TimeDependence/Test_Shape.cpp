@@ -121,8 +121,7 @@ void test_r_theta_phi(const tnsr::I<double, 3, SourceFrame>& input,
           .get();
   const double transition_factor =
       std::make_unique<Transition>(Transition{inner_radius, outer_radius})
-          ->
-          operator()({{magnitude(input_centered).get(), 0.0, 0.0}});
+          ->map_over_radius({{magnitude(input_centered).get(), 0.0, 0.0}});
   const double expected_output_centered_spherical =
       input_centered_spherical[0] *
       (1.0 + transition_factor * (kerr_schild_radius - inner_radius));

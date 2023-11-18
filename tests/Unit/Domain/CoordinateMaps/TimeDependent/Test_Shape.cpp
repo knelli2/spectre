@@ -340,7 +340,7 @@ std::array<DataVector, 3> calculate_analytical_map(
         identity, gsl::at(target_thetas, i), gsl::at(target_phis, i), coefs,
         lambda_00_coef, l_max, m_max);
   }
-  const auto spatial_part = transition_func(centered_coords);
+  const auto spatial_part = transition_func.map_over_radius(centered_coords);
   return target_points - centered_coords * angular_part * spatial_part;
 }
 
@@ -421,17 +421,21 @@ tnsr::Ij<DataVector, 3, Frame::NoFrame> calculate_analytical_jacobian(
   cartesian_gradient[2] = -theta_gradient;
 
   // this part essentially duplicates the code from the map
-  const auto spatial_part = transition_func(centered_coords);
-  const auto spatial_gradient = transition_func.gradient(centered_coords);
-  const auto spatial_part_over_radius =
-      transition_func.map_over_radius(centered_coords);
+  const auto spatial_part = transition_func.map_over_radius(centered_coords);
+  const auto spatial_part_over_cube_radius =
+      transition_func.map_over_radius(centered_coords, 3);
+  const auto spatial_gradient =
+      transition_func.gradient_over_radius(centered_coords) -
+      centered_coords * spatial_part_over_cube_radius;
+  const auto spatial_part_over_square_radius =
+      transition_func.map_over_radius(centered_coords, 2);
   tnsr::Ij<DataVector, 3, Frame::NoFrame> result(num_points);
   for (size_t i = 0; i < 3; ++i) {
     for (size_t j = 0; j < 3; ++j) {
       result.get(i, j) =
           -gsl::at(centered_coords, i) *
           (angular_part * gsl::at(spatial_gradient, j) +
-           gsl::at(cartesian_gradient, j) * spatial_part_over_radius);
+           gsl::at(cartesian_gradient, j) * spatial_part_over_square_radius);
     }
     result.get(i, i) += 1. - angular_part * spatial_part;
   }
