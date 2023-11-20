@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -11,8 +12,6 @@
 
 #include "DataStructures/DataVector.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
-#include "Domain/Structure/Direction.hpp"
-#include "Domain/Structure/OrientationMap.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
@@ -158,9 +157,11 @@ class Wedge final : public ShapeMapTransitionFunction {
     double sphericity{};
 
     // This is the distance from the center (assumed to be 0,0,0) to this
-    // surface in the same direction as coords.
+    // surface in the same direction as coords. The calculation is cheaper if
+    // you know the axis ahead of time
     template <typename T>
-    T distance(const std::array<T, 3>& coords) const;
+    T distance(const std::array<T, 3>& coords,
+               const std::optional<size_t>& axis = std::nullopt) const;
 
     void pup(PUP::er& p);
 
@@ -182,11 +183,11 @@ class Wedge final : public ShapeMapTransitionFunction {
    * \param outer_radius Outermost radius of outermost wedge
    * \param inner_sphericity Sphericity of innermost surface of innermost wedge
    * \param outer_sphericity Sphericity of outermost surface of outermost wedge
-   * \param orientation_map The same orientation map that was passed into the
-   * corresponding `domain::CoordinateMaps::Wedge` block.
+   * \param axis The direction that this wedge is in. Both the positive and
+   * negative direction get the same axis.
    */
   Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-        double outer_sphericity, OrientationMap<3> orientation_map);
+        double outer_sphericity, size_t axis);
 
   double operator()(const std::array<double, 3>& source_coords) const override;
   DataVector operator()(
@@ -234,8 +235,7 @@ class Wedge final : public ShapeMapTransitionFunction {
 
   Surface inner_surface_{};
   Surface outer_surface_{};
-  OrientationMap<3> orientation_map_{};
-  Direction<3> direction_{};
+  size_t axis_{};
   static constexpr double eps_ = std::numeric_limits<double>::epsilon() * 100;
 };
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions
