@@ -190,6 +190,13 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
         "TimescaleTuner for smoothing horizon measurements."};
   };
 
+  struct NumberOfSmoothMeasurements {
+    using type = size_t;
+    static constexpr Options::String help{
+        "Number of horizon measurements used for smoothing the horizon "
+        "measurements."};
+  };
+
   struct DeltaRDriftOutwardOptions {
     using type =
         Options::Auto<DeltaRDriftOutwardOptions, Options::AutoLabel::None>;
@@ -227,9 +234,10 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
     double outward_drift_timescale{};
   };
 
-  using options = tmpl::list<MaxNumTimesForZeroCrossingPredictor,
-                             SmoothAvgTimescaleFraction, SmootherTuner,
-                             DeltaRDriftOutwardOptions>;
+  using options =
+      tmpl::list<MaxNumTimesForZeroCrossingPredictor,
+                 SmoothAvgTimescaleFraction, SmootherTuner,
+                 NumberOfSmoothMeasurements, DeltaRDriftOutwardOptions>;
   static constexpr Options::String help{
       "Computes the control error for size control. Will also write a "
       "diagnostics file if the control systems are allowed to write data to "
@@ -251,6 +259,7 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
    */
   Size(const int max_times, const double smooth_avg_timescale_frac,
        TimescaleTuner<true> smoother_tuner,
+       size_t number_of_smooth_measurements,
        std::optional<DeltaRDriftOutwardOptions> delta_r_drift_outward_options);
 
   /// Returns the internal `control_system::size::Info::suggested_time_scale`. A
@@ -342,6 +351,7 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
             excision_quantities);
 
     const double Y00 = 0.25 * M_2_SQRTPI;
+    ++current_measurement_;
 
     horizon_coef_averager_.update(time, {apparent_horizon.coefficients()[0]},
                                   smoother_tuner_.current_timescale());
@@ -385,13 +395,17 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
       // The "control error" for the averaged horizon coefficients is just the
       // averaged coefs minus the actual coef and time derivative from
       // apparent_horizon and time_deriv_apparent_horizon
-      smoother_tuner_.update_timescale(
-          std::array{
-              DataVector{averaged_horizon_coef_at_average_time.value()[0][0]},
-              DataVector{averaged_horizon_coef_at_average_time.value()[1][0]}} -
-          std::array{
-              DataVector{apparent_horizon.coefficients()[0]},
-              DataVector{time_deriv_apparent_horizon.coefficients()[0]}});
+      if (current_measurement_ == number_of_smooth_measurements_) {
+        current_measurement_ = 0;
+        smoother_tuner_.update_timescale(
+            std::array{
+                DataVector{averaged_horizon_coef_at_average_time.value()[0][0]},
+                DataVector{
+                    averaged_horizon_coef_at_average_time.value()[1][0]}} -
+            std::array{
+                DataVector{apparent_horizon.coefficients()[0]},
+                DataVector{time_deriv_apparent_horizon.coefficients()[0]}});
+      }
     }
 
     // This is needed for every state
@@ -481,6 +495,8 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
   std::vector<std::string> legend_{};
   std::string subfile_name_{};
   std::optional<DeltaRDriftOutwardOptions> delta_r_drift_outward_options_{};
+  size_t number_of_smooth_measurements_{};
+  size_t current_measurement_{};
 };
 }  // namespace ControlErrors
 }  // namespace control_system

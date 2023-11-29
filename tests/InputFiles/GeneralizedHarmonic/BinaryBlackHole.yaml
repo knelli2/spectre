@@ -305,7 +305,7 @@ Cce:
 
 ControlSystems:
   WriteDataToDisk: true
-  MeasurementsPerUpdate: 4
+  MeasurementsPerUpdate: &Measurements 4
   Verbosity: Silent
   Expansion:
     IsActive: true
@@ -373,6 +373,7 @@ ControlSystems:
       MaxNumTimesForZeroCrossingPredictor: 4
       SmoothAvgTimescaleFraction: 0.25
       DeltaRDriftOutwardOptions: None
+      NumberOfSmoothMeasurements: *Measurements
       SmootherTuner:
         InitialTimescales: [0.2]
         MinTimescale: 1.0e-4

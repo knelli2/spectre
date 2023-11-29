@@ -36,10 +36,12 @@ namespace ControlErrors {
 template <size_t DerivOrder, ::domain::ObjectLabel Horizon>
 Size<DerivOrder, Horizon>::Size(
     const int max_times, const double smooth_avg_timescale_frac,
-    TimescaleTuner<true> smoother_tuner,
+    TimescaleTuner<true> smoother_tuner, size_t number_of_smooth_measurements,
     std::optional<DeltaRDriftOutwardOptions> delta_r_drift_outward_options)
     : smoother_tuner_(std::move(smoother_tuner)),
-      delta_r_drift_outward_options_(delta_r_drift_outward_options) {
+      delta_r_drift_outward_options_(delta_r_drift_outward_options),
+      number_of_smooth_measurements_(number_of_smooth_measurements),
+      current_measurement_(0) {
   if (not smoother_tuner_.timescales_have_been_set()) {
     smoother_tuner_.resize_timescales(1);
   }
@@ -116,6 +118,8 @@ void Size<DerivOrder, Horizon>::pup(PUP::er& p) {
   p | legend_;
   p | subfile_name_;
   p | delta_r_drift_outward_options_;
+  p | number_of_smooth_measurements_;
+  p | current_measurement_;
 }
 
 #define DERIV_ORDER(data) BOOST_PP_TUPLE_ELEM(0, data)
