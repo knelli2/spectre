@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "DataStructures/DataBox/Access.hpp"
+#include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/Variables.hpp"
@@ -199,5 +201,35 @@ struct NumberOfElements : db::SimpleTag {
   using type = size_t;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Tags needed for runtime targets
+/*!
+ * \brief Map between the string of the InterpolationTarget component element
+ * and the db::Access corresponding to that element.
+ *
+ * \note This is the expected way to retrieve and mutate tags on the target
+ * array element.
+ */
+struct DbAccesses : db::SimpleTag {
+  using type = std::unordered_map<std::string, db::Access* const>;
+};
+
+template <typename Target>
+using target_db_tags = tmpl::list<>;
+
+/*!
+ * \brief Tag that actually stores the box type for each target created at
+ * runtime.
+ *
+ * \warning Do not use this tag to retrieve or mutate any tags on the target
+ * array element. This is considered undefined behavior. Use the
+ * `intrp::Tags::DbAccesses` tag instead
+ */
+template <typename Target>
+struct TargetBoxStorage : db::SimpleTag {
+  using type =
+      std::unordered_map<std::string,
+                         db::compte_databox_type<target_db_tags<Target>>>;
+};
 }  // namespace Tags
 }  // namespace intrp

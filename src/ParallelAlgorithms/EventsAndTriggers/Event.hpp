@@ -26,6 +26,7 @@ namespace Events {}
 /// may be observed. For example, in the scalar wave system the 1- and 2-index
 /// constraints would be added as compute tags, as well as anything they depend
 /// on that's not already in the `DataBox`.
+/// TODO: Add virtual name() function
 class Event : public PUP::able {
  protected:
   /// \cond
@@ -46,6 +47,10 @@ class Event : public PUP::able {
     std::string name{};
     double value = std::numeric_limits<double>::signaling_NaN();
   };
+
+  virtual bool is_interpolation() { return false; }
+
+  virtual std::string name() = 0;
 
   template <typename ComputeTagsList, typename DataBoxType,
             typename Metavariables, typename ArrayIndex,

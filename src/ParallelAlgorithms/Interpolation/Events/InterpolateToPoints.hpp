@@ -47,6 +47,8 @@ template <size_t Dim, typename VolumeTensorTags, typename TargetTensorTags>
 class InterpolateToPoints;
 /// \endcond
 
+struct MarkAsInterpolation {};
+
 /*!
  * \brief Does an interpolation onto an InterpolationTargetTag by calling
  * Actions on the InterpolationTarget component.
@@ -60,7 +62,8 @@ class InterpolateToPoints;
 template <size_t Dim, typename... VolumeTensorTags,
           typename... TargetTensorTags>
 class InterpolateToPoints<Dim, tmpl::list<VolumeTensorTags...>,
-                          tmpl::list<TargetTensorTags...>> : public Event {
+                          tmpl::list<TargetTensorTags...>>
+    : public Event, MarkAsInterpolation {
   using available_volume_tensors = tmpl::list<VolumeTensorTags...>;
   using available_target_tensors = tmpl::list<TargetTensorTags...>;
   using available_tags_to_observe =
@@ -219,7 +222,6 @@ operator()(const ObservationBox<DbTags, ComputeTagList>& box, const double time,
   intrp::Irregular<Dim> interpolator(
       mesh, element_coord_holder.element_logical_coords);
 
-    
   // NOTE: Outer vector is number of components of all tensors. Inner vector is
   // number of grid points in this element. This will also need some kind of
   // global offsets which can be retrieved from the element_coord_holders.
