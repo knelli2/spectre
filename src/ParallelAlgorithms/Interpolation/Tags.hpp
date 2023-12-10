@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include "DataStructures/DataBox/Access.hpp"
+#include "DataStructures/Tensor/TypeAliases.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
@@ -212,6 +213,29 @@ struct NumberOfElements : db::SimpleTag {
  */
 struct DbAccesses : db::SimpleTag {
   using type = std::unordered_map<std::string, db::Access* const>;
+};
+
+/*!
+ * \brief `std::unordered_set` of `db::tag_name`s of quantities to observe
+ */
+struct VarsToObserve : db::SimpleTag {
+  using type = std::unordered_set<std::string>;
+};
+
+/*!
+ * \brief Points of the target surface in the frame specified from the input
+ * file.
+ */
+template <size_t Dim>
+struct Points : db::SimpleTag {
+  using type = tnsr::I<DataVector, Dim, Frame::NoFrame>;
+};
+
+/*!
+ * \brief Frame of target points in `intrp::Tags::Points`.
+ */
+struct Frame : db::SimpleTag {
+  using type = std::string;
 };
 
 template <typename Target>

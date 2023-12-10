@@ -1,14 +1,17 @@
 # Distributed under the MIT License.
 # See LICENSE.txt for details.
 
+spectre_target_sources(
+  ${LIBRARY}
+  PRIVATE
+  ObserveSurfaceData.cpp
+  )
+
 spectre_target_headers(
   ${LIBRARY}
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
-  Callbacks.hpp
-  ObserveLineSegment.hpp
+  Callback.hpp
   ObserveSurfaceData.hpp
   ObserveTimeSeriesOnSurface.hpp
   )
-
-add_subdirectory(Runtime)
