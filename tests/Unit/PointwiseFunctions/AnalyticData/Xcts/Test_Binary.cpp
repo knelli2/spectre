@@ -35,7 +35,7 @@ using test_tags = tmpl::list<
     Tags::ShiftBackground<DataVector, 3, Frame::Inertial>,
     Tags::LongitudinalShiftBackgroundMinusDtConformalMetric<DataVector, 3,
                                                             Frame::Inertial>,
-    Tags::ConformalFactor<DataVector>,
+    Tags::ConformalFactorMinusOne<DataVector>,
     gr::Tags::Conformal<gr::Tags::EnergyDensity<DataVector>, 0>,
     gr::Tags::Conformal<gr::Tags::StressTrace<DataVector>, 0>,
     gr::Tags::Conformal<gr::Tags::MomentumDensity<DataVector, 3>, 0>>;

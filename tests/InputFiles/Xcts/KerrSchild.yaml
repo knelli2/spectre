@@ -43,8 +43,8 @@ DomainCreator:
       ExciseWithBoundaryCondition:
         AnalyticSolution:
           Solution: *solution
-          ConformalFactor: Dirichlet
-          LapseTimesConformalFactor: Dirichlet
+          ConformalFactorMinusOne: Dirichlet
+          LapseTimesConformalFactorMinusOne: Dirichlet
           ShiftExcess: Dirichlet
     InitialRefinement: 0
     InitialGridPoints: 4
@@ -63,8 +63,8 @@ DomainCreator:
     OuterBoundaryCondition:
       AnalyticSolution:
         Solution: *solution
-        ConformalFactor: Dirichlet
-        LapseTimesConformalFactor: Dirichlet
+        ConformalFactorMinusOne: Dirichlet
+        LapseTimesConformalFactorMinusOne: Dirichlet
         ShiftExcess: Dirichlet
 
 Discretization:
@@ -137,10 +137,10 @@ EventsAndTriggers:
       - ObserveNorms:
           SubfileName: ErrorNorms
           TensorsToObserve:
-            - Name: Error(ConformalFactor)
+            - Name: Error(ConformalFactorMinusOne)
               NormType: L2Norm
               Components: Sum
-            - Name: Error(LapseTimesConformalFactor)
+            - Name: Error(LapseTimesConformalFactorMinusOne)
               NormType: L2Norm
               Components: Sum
             - Name: Error(ShiftExcess)
