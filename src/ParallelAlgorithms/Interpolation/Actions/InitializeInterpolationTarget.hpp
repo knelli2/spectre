@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -49,12 +50,10 @@ struct InitializeInterpolationTarget2 {
   using all_events = tmpl::at<factory_classes, ::Event>;
   using interpolation_events = tmpl::filter<
       all_events,
-      std::is_base_of<intrp::Events::MarkAsInterpolation, tmpl::_1>>;
-  using storage_tags =
-      db::wrap_tags_in<intrp::Tags::TargetBoxStorage, interpolation_events>;
+      std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>, tmpl::_1>>;
 
  public:
-  using simple_tags = tmpl::push_back<storage_tags, intrp::Tags::DbAccesses>;
+  using simple_tags = tmpl::list<intrp::Tags::DbAccesses>;
   using compute_tags = tmpl::list<>;
 
   template <typename DbTagsList, typename... InboxTags, typename ArrayIndex,
@@ -78,25 +77,25 @@ struct InitializeInterpolationTarget2 {
       // But we need the compile-time type of the event to initialize things
       // properly, so we have to loop over all the compile-time events and down
       // cast to check the event type
-      tmpl::for_each<interpolation_events>([&event,
-                                            &box](auto for_each_event_v) {
+      tmpl::for_each<interpolation_events>([&event, &box, &array_index](
+                                               auto for_each_event_v) {
         using EventType = tmpl::type_from<decltype(for_each_event_v)>;
 
         const EventType* const derived = dynamic_cast<const EventType*>(&event);
         if (derived != nullptr) {
           db::mutate<intrp::Tags::DbAccesses>(
               [](const gsl::not_null<
-                     std::unordered_map<std::string, db::Access* const>*>
-                     accesses,
-                 const std::unordered_map<
-                     std::string, db::compte_databox_type<
-                                      intrp::Tags::target_db_tags<EventType>>>&
-                     storage_boxes) {
+                  std::unordered_map<std::string, std::unique_ptr<db::Access>>*>
+                     accesses) {
+                const intrp::Events::MarkAsInterpolation* const
+                    event_for_initialization =
+                        dynamic_cast<const intrp::Events::MarkAsInterpolation*>(
+                            &event);
+
                 (*accesses)[array_index] =
-                    &db::as_access(storage_boxes.at(array_index));
+                    event_for_initialization->initialize_target_element_box();
               },
-              make_not_null(&box),
-              db::get<intrp::Tags::TargetBoxStorage<EventType>>(box));
+              make_not_null(&box));
         }
       });
     };
@@ -105,6 +104,10 @@ struct InitializeInterpolationTarget2 {
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
+
+  // TODO: Will need another simple action that does basically the exact same
+  // thing, except the simple action will need to also take the events that will
+  // be created at runtime.
 };
 
 // The purpose of the metafunctions in this namespace is to allow

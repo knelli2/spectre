@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/ObservationBox.hpp"
 #include "DataStructures/DataVector.hpp"
@@ -47,7 +48,11 @@ struct Sphere;
 /// \endcond
 
 namespace intrp::Events {
-struct MarkAsInterpolation {};
+struct MarkAsInterpolation {
+  // This will be used to initialize the Accesses that correspond to the
+  // individual targets
+  virtual std::unique_ptr<db::Access> initialize_target_element_box() const = 0;
+};
 
 struct ExampleOfTarget {
   static std::string name() { return "ExampleOfTarget"; }
@@ -64,7 +69,17 @@ struct ExampleOfTarget {
   using possible_runtime_callbacks = tmpl::list<>;
   // List of callbacks that are *always* called when the interpolation happens
   using compile_time_callbacks = tmpl::list<>;
-}
+};
+
+template <typename TagsExclusivelyOnTarget, typename TagsFromVolume>
+struct ExampleCallback {
+  // Both these lists have simple and compute tags
+  using tags_to_observe_exclusively_on_target = tmpl::list<>;
+  using tags_to_observe_from_volume = tmpl::list<>;
+
+  // Do we need this?
+  using non_observation_tags_on_target = tmpl::list<>;
+};
 
 /*!
  * \brief Does an interpolation onto an InterpolationTargetTag by calling
@@ -78,6 +93,8 @@ struct ExampleOfTarget {
  */
 template <typename Target, size_t Dim>
 class InterpolateToPoints : public Event, MarkAsInterpolation {
+  using PointsType = typename Target::points;
+  using points_tags = typename PointsType::tags_on_target;
   using runtime_callbacks = typename Target::possible_runtime_callbacks;
   using compile_time_callbacks = typename Target::compile_time_callbacks;
   using all_callbacks = tmpl::append<runtime_callbacks, compile_time_callbacks>;
@@ -88,16 +105,32 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
       tmpl::size<runtime_callbacks>::value > 0;
 
   template <typename LocalCallback>
-  struct get_tensors {
-    using type = typename LocalCallback::available_tags_to_observe;
+  struct get_target_tensors {
+    using type = typename LocalCallback::tags_to_observe_exclusively_on_target;
   };
 
-  using all_available_tensors_to_observe = tmpl::remove_duplicates<
-      tmpl::flatten<tmpl::transform<all_callbacks, get_tensors<tmpl::_1>>>>;
+  template <typename LocalCallback>
+  struct get_volume_tensors {
+    using type = typename LocalCallback::tags_to_observe_from_volume;
+  };
+
+  using all_target_tensors = tmpl::remove_duplicates<tmpl::flatten<
+      tmpl::transform<all_callbacks, get_target_tensors<tmpl::_1>>>>;
+  using all_volume_tensors = tmpl::remove_duplicates<tmpl::flatten<
+      tmpl::transform<all_callbacks, get_volume_tensors<tmpl::_1>>>>;
+  using all_tensors = tmpl::remove_duplicates<
+      tmpl::append<all_target_tensors, all_volume_tensors>>;
+
+  using common_tags_on_target =
+      tmpl::list<intrp::Tags::Frame, intrp::Tags::Points<Dim>,
+                 intrp::Tags::VarsToObserve>;
+
+  using all_tags_on_target = tmpl::remove_duplicates<
+      tmpl::append<all_tensors, points_tags, common_tags_on_target>>;
 
   // TODO: Get from Nils and Larry
-  using volume_obs_box_tensors = tmpl::list<>;
-  using target_tensors = tmpl::list<>;
+  // using volume_obs_box_tensors = tmpl::list<>;
+  // using target_tensors = tmpl::list<>;
 
  public:
   /// \cond
@@ -115,7 +148,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   };
 
   struct Points {
-    using type = std::unique_ptr<intrp::Targets::Target<Dim>>;
+    using type = PointsType;
     static constexpr Options::String help = {
         "Set of points to interpolate to."};
   };
@@ -141,7 +174,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   // Constructor for a compile-time frame. The frame won't be `NoSuchType` here
   // so it's ok to use `pretty_type::name` to get the string name of the frame.
   InterpolateToPoints(
-      std::unique_ptr<intrp::Targets::Target<Dim>> target,
+      PointsType target,
       std::vector<std::unique_ptr<intrp::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp::callbacks::Callback<Target>>>{},
@@ -151,7 +184,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 
   // Constructor for a runtime frame
   InterpolateToPoints(
-      std::unique_ptr<intrp::Targets::Target<Dim>> target, std::string frame,
+      PointsType target, std::string frame,
       std::vector<std::unique_ptr<intrp::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp::callbacks::Callback<Target>>>{},
@@ -165,9 +198,15 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
           callback->observables();
       tensors_to_observe_.insert(observables.begin(), observables.end());
     }
+
+    // TODO: Need logic that will take strings from the callbacks and get all
+    // tag strings that depend on them.
   }
 
-  using compute_tags_for_observation_box = volume_obs_box_tensors;
+  // TODO: Probably need to allow the targets to specify compute tags as well
+  // just in case they need some (like the Sphere needs a compute tag for the
+  // coordinates of an element in all frames)
+  using compute_tags_for_observation_box = all_tensors;
 
   using argument_tags = tmpl::list<::Tags::ObservationBox, Tags::Time,
                                    ::Events::Tags::ObserverMesh<Dim>>;
@@ -191,6 +230,10 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
     return true;
   }
 
+  // This will be used to initialize the Accesses that correspond to the
+  // individual targets
+  std::unique_ptr<db::Access> initialize_target_element_box() const override;
+
   // NOLINTNEXTLINE
   void pup(PUP::er& p);
 
@@ -198,7 +241,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 
  private:
   std::string frame_{};
-  std::unique_ptr<intrp::Targets::Target<Dim>> target_{};
+  PointsType target_{};
   std::vector<std::unique_ptr<intrp::callbacks::Callback<Target>>> callbacks_{};
   // QUESTION: Volume tensors or all tensors? Probably volume tensors since
   // that's what we need here.
@@ -239,7 +282,7 @@ void InterpolateToPoints<Target, Dim>::operator()(
   // that's not a big deal and calculating the correct size is nontrivial.
   interpolated_vars.reserve(alg::accumulate(
       std::initializer_list<size_t>{mesh.number_of_grid_points() *
-                                    tmpl::size<volume_obs_box_tensors>::value},
+                                    tmpl::size<all_tensors>::value},
       0_st));
 
   // There are points in this element, so interpolate to them and
@@ -270,6 +313,28 @@ void InterpolateToPoints<Target, Dim>::operator()(
   //     block_logical_coords,
   //     std::vector<std::vector<size_t>>({element_coord_holder.offsets}),
   //     time);
+}
+
+template <typename Target, size_t Dim>
+std::unique_ptr<db::Access>
+InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
+  using BoxType = db::compute_databox_type<all_tags_on_target>;
+
+  BoxType typed_box{};
+
+  db::mutate_apply<common_tags_on_target, tmpl::list<>>(
+      [this](
+          const gsl::not_null<std::string*> frame,
+          const gsl::not_null<tnsr::I<DataVector, Dim, Frame::NoFrame>*> points,
+          const gsl::not_null<std::unordered_set<std::string>*>
+              vars_to_observe) {
+        *frame = frame_;
+        *points = target_->target_points_no_frame();
+        *vars_to_observe = tensors_to_observe_;
+      },
+      make_not_null(&typed_box));
+
+  return std::make_unique<BoxType>(std::move(typed_box));
 }
 
 template <typename Target, size_t Dim>

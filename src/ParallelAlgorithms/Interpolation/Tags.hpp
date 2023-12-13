@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <deque>
+#include <memory>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -12,10 +13,10 @@
 #include <unordered_set>
 
 #include "DataStructures/DataBox/Access.hpp"
-#include "DataStructures/Tensor/TypeAliases.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
+#include "DataStructures/Tensor/TypeAliases.hpp"
 #include "DataStructures/Variables.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Options/String.hpp"
@@ -212,7 +213,7 @@ struct NumberOfElements : db::SimpleTag {
  * array element.
  */
 struct DbAccesses : db::SimpleTag {
-  using type = std::unordered_map<std::string, db::Access* const>;
+  using type = std::unordered_map<std::string, std::unique_ptr<db::Access>>;
 };
 
 /*!
@@ -249,6 +250,7 @@ using target_db_tags = tmpl::list<>;
  * array element. This is considered undefined behavior. Use the
  * `intrp::Tags::DbAccesses` tag instead
  */
+// TODO: Remove!
 template <typename Target>
 struct TargetBoxStorage : db::SimpleTag {
   using type =

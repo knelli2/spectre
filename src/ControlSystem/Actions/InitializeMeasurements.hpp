@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "ControlSystem/CombinedName.hpp"
@@ -43,6 +44,13 @@ namespace tuples {
 template <typename... Tags>
 class TaggedTuple;
 }  // namespace tuples
+namespace intrp {
+template <class Metavariables, bool IncludeDenseTriggers>
+struct InterpolationTarget2;
+namespace Events {
+struct MarkAsInterpolation;
+}  // namespace Events
+}  // namespace intrp
 /// \endcond
 
 namespace control_system::Actions {
@@ -76,7 +84,7 @@ struct InitializeMeasurements {
   static Parallel::iterable_action_return_t apply(
       db::DataBox<DbTagsList>& box,
       const tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
-      const Parallel::GlobalCache<Metavariables>& cache,
+      Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& /*array_index*/, ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     const double initial_time = db::get<::Tags::Time>(box);
@@ -102,29 +110,48 @@ struct InitializeMeasurements {
     });
 
     db::mutate<::Tags::EventsAndDenseTriggers>(
-        [](const gsl::not_null<EventsAndDenseTriggers*>
-               events_and_dense_triggers) {
-          tmpl::for_each<metafunctions::measurements_t<ControlSystems>>(
-              [&events_and_dense_triggers](auto measurement_v) {
-                using measurement = tmpl::type_from<decltype(measurement_v)>;
-                using control_system_group =
-                    metafunctions::control_systems_with_measurement_t<
-                        ControlSystems, measurement>;
-                using events = tmpl::transform<
-                    typename measurement::submeasurements,
-                    metafunctions::event_from_submeasurement<
-                        tmpl::pin<control_system_group>, tmpl::_1>>;
-                std::vector<std::unique_ptr<::Event>> vector_of_events =
-                    tmpl::as_pack<events>([](auto... events_v) {
-                      return make_vector<std::unique_ptr<::Event>>(
-                          std::make_unique<
-                              tmpl::type_from<decltype(events_v)>>()...);
-                    });
-                events_and_dense_triggers->add_trigger_and_events(
-                    std::make_unique<
-                        control_system::Trigger<control_system_group>>(),
-                    std::move(vector_of_events));
-              });
+        [&](const gsl::not_null<::EventsAndDenseTriggers*>
+                events_and_dense_triggers) {
+          tmpl::for_each<metafunctions::measurements_t<
+              ControlSystems>>([&events_and_dense_triggers](
+                                   auto measurement_v) {
+            using measurement = tmpl::type_from<decltype(measurement_v)>;
+            using control_system_group =
+                metafunctions::control_systems_with_measurement_t<
+                    ControlSystems, measurement>;
+            using events =
+                tmpl::transform<typename measurement::submeasurements,
+                                metafunctions::event_from_submeasurement<
+                                    tmpl::pin<control_system_group>, tmpl::_1>>;
+            std::vector<std::unique_ptr<::Event>> vector_of_events =
+                tmpl::as_pack<events>([](auto... events_v) {
+                  return make_vector<std::unique_ptr<::Event>>(
+                      std::make_unique<
+                          tmpl::type_from<decltype(events_v)>>()...);
+                });
+            events_and_dense_triggers->add_trigger_and_events(
+                std::make_unique<
+                    control_system::Trigger<control_system_group>>(),
+                std::move(vector_of_events));
+
+            using interpolation_events = tmpl::filter<
+                events,
+                std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>,
+                                tmpl::_1>>;
+
+            tmpl::for_each<interpolation_events>(
+                [&](auto interpolation_event_v) {
+                  using interpolation_event =
+                      tmpl::type_from<decltype(interpolation_event_v)>;
+                  auto& interpolation_proxy = Parallel::get_parallel_component<
+                      intrp::InterpolationTarget2<Metavariables, true>>(cache);
+                  const std::string& event_name = interpolation_event::name();
+
+                  // TODO; Keep working
+                  interpolation_proxy[event_name].insert(
+                      cache.get_this_proxy(), )
+                });
+          });
         },
         make_not_null(&box));
 
@@ -160,6 +187,8 @@ struct InitializeMeasurements {
           make_not_null(&box));
     }
 
+    // TODO: Maybe need to create the new target elements from here since this
+    // is the only place outside of the input file where events are created
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };
