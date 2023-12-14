@@ -8,6 +8,10 @@
 #include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
+#include "Evolution/Systems/Cce/BoundaryData.hpp"
+#include "Evolution/Systems/Cce/Initialize/RegisterInitializeJWithCharm.hpp"
+#include "Evolution/Systems/Cce/Tags.hpp"
+#include "Evolution/Systems/Cce/WorldtubeDataManager.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/BoundaryCorrections/RegisterDerived.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/ConstraintDamping/RegisterDerivedWithCharm.hpp"
 #include "NumericalAlgorithms/Interpolation/BarycentricRationalSpanInterpolator.hpp"
@@ -29,7 +33,9 @@ extern "C" void CkRegisterMainModule() {
        &gh::ConstraintDamping::register_derived_with_charm,
        &Cce::register_initialize_j_with_charm<
            metavariables::evolve_ccm, metavariables::cce_boundary_component>,
-       &register_derived_classes_with_charm<Cce::WorldtubeDataManager>,
+       &register_derived_classes_with_charm<Cce::WorldtubeDataManager<
+           Cce::Tags::characteristic_worldtube_boundary_tags<
+               Cce::Tags::BoundaryValue>>>,
        &register_derived_classes_with_charm<intrp::SpanInterpolator>,
        &register_factory_classes_with_charm<metavariables>},
       {});
