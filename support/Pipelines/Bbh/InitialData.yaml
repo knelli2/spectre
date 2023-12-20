@@ -2,6 +2,9 @@
 # See LICENSE.txt for details.
 
 Executable: SolveXcts
+ExpectedOutput:
+  - BbhVolume0.h5
+  - BbhReductions.h5
 
 ---
 
@@ -58,7 +61,7 @@ DomainCreator:
       Radius: &outer_shell_inner_radius 60.
       RadialDistribution: Projective
     OuterShell:
-      Radius: &outer_radius 1e4
+      Radius: &outer_radius 1e9
       RadialDistribution: &outer_shell_distribution Inverse
       OpeningAngle: 120.0
       BoundaryCondition: Flatness
@@ -95,7 +98,7 @@ NonlinearSolver:
   NewtonRaphson:
     ConvergenceCriteria:
       MaxIterations: 20
-      RelativeResidual: 1.e-10
+      RelativeResidual: 0.
       AbsoluteResidual: 1.e-10
     SufficientDecrease: 1.e-4
     MaxGlobalizationSteps: 40
@@ -106,7 +109,7 @@ LinearSolver:
   Gmres:
     ConvergenceCriteria:
       MaxIterations: 100
-      RelativeResidual: 1.e-11
+      RelativeResidual: 1.e-3
       AbsoluteResidual: 1.e-11
     Verbosity: Quiet
 
