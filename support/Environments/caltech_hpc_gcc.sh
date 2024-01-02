@@ -13,59 +13,51 @@ spectre_setup_modules() {
 
 spectre_load_modules() {
     # System-installed
-    module load gcc/9.2.0
-    module load oneapi/mpi/2021.5.1
-    module load mkl/18.1
-    module load hdf5/1.12.1
-    module load cmake/3.18.0
+    module use /central/groups/sxs/knelli/modules/
     module load git/2.37.2
-    module load clang/12.0.1  # for clang-format
-    module load fftw/3.3.8
-    # Installed in SXS group
-    module load blaze/3.8
-    module load boost/1.82.0
-    module load brigand/master
-    module load catch/3.4.0
-    module load ccache/4.8.2
-    module load gsl/2.4
-    module load libsharp/1.0.0
-    module load libxsmm/1.16.1
-    module load yaml-cpp/0.6.2
-    module load charm/7.0.0
-    module load libbacktrace/1.0
-    module load spec-exporter/2023-07
-    module load fuka/2023-08
-    module load paraview/5.11.1-osmesa
-    # Load after ParaView to give priority to the packages in the environment
-    module load envs/spectre-python
+    module load compilers/binutils/2.41
+    module load compilers/gcc/11.4.0
+    module load tools/cmake/3.28.1
+    module load libraries/blaze/3.8
+    module load libraries/boost/1.82.0
+    module load libraries/brigand/master
+    module load libraries/catch/3.4.0
+    module load oneapi/mpi-2021.11
+    module load libraries/charm/7.0.0
+    module load libraries/gsl/2.7
+    module load libraries/hdf5/1.12.3
+    module load libraries/jemalloc/5.3.0
+    module load libraries/libsharp/1.0.0
+    module load libraries/libxsmm/1.16.1-avx2
+    module load libraries/openblas/0.3.25-avx2
+    # module load libraries/libxsmm/1.16.1-avx512
+    # module load libraries/openblas/0.3.25-avx512
+    module load libraries/yaml-cpp/0.8.0
+    module load languages/python/spectre-python
 }
 
 spectre_unload_modules() {
-    # System-installed
-    module unload gcc/9.2.0
-    module unload oneapi/mpi/2021.5.1
-    module unload mkl/18.1
-    module unload hdf5/1.12.1
-    module unload cmake/3.18.0
+    module use /central/groups/sxs/knelli/modules/
     module unload git/2.37.2
-    module unload clang/12.0.1
-    module unload fftw/3.3.8
-    # Installed in SXS group
-    module unload blaze/3.8
-    module unload boost/1.82.0
-    module unload brigand/master
-    module unload catch/3.4.0
-    module unload ccache/4.8.2
-    module unload gsl/2.4
-    module unload libsharp/1.0.0
-    module unload libxsmm/1.16.1
-    module unload yaml-cpp/0.6.2
-    module unload charm/7.0.0
-    module unload libbacktrace/1.0
-    module unload spec-exporter/2023-07
-    module unload fuka/2023-08
-    module unload paraview/5.11.1-osmesa
-    module unload envs/spectre-python
+    module unload compilers/binutils/2.41
+    module unload compilers/gcc/11.4.0
+    module unload tools/cmake/3.28.1
+    module unload libraries/blaze/3.8
+    module unload libraries/boost/1.82.0
+    module unload libraries/brigand/master
+    module unload libraries/catch/3.4.0
+    module unload oneapi/mpi-2021.11
+    module unload libraries/charm/7.0.0
+    module unload libraries/gsl/2.7
+    module unload libraries/hdf5/1.12.3
+    module unload libraries/jemalloc/5.3.0
+    module unload libraries/libsharp/1.0.0
+    module unload libraries/libxsmm/1.16.1-avx2
+    module unload libraries/openblas/0.3.25-avx2
+    # module unload libraries/libxsmm/1.16.1-avx512
+    # module unload libraries/openblas/0.3.25-avx512
+    module unload libraries/yaml-cpp/0.8.0
+    module unload languages/python/spectre-python
 }
 
 spectre_run_cmake() {
@@ -79,10 +71,11 @@ spectre_run_cmake() {
           -D CMAKE_Fortran_COMPILER=gfortran \
           -D CHARM_ROOT=$CHARM_ROOT \
           -D CMAKE_BUILD_TYPE=Release \
-          -D MEMORY_ALLOCATOR=SYSTEM \
+          -D MEMORY_ALLOCATOR=JEMALLOC \
           -D BUILD_PYTHON_BINDINGS=ON \
           -D MACHINE=CaltechHpc \
-          -D OVERRIDE_ARCH=skylake-avx512 \
+          -D OVERRIDE_ARCH=skylake \
+          -D YAMLCPP_ROOT=/central/groups/sxs/knelli/libraries/yaml-cpp/0.8.0 \
           "$@" \
           $SPECTRE_HOME
 }
