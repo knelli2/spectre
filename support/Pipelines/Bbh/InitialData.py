@@ -19,6 +19,7 @@ def id_parameters(
     mass_ratio: float,
     separation: float,
     orbital_angular_velocity: float,
+    radial_expansion: float,
     refinement_level: int,
     polynomial_order: int,
 ):
@@ -30,6 +31,7 @@ def id_parameters(
       mass_ratio: Defined as q = M_A / M_B >= 1.
       separation: Coordinate separation D of the black holes.
       orbital_angular_velocity: Omega_0.
+      radial_expansion: adot_0.
       refinement_level: h-refinement level.
       polynomial_order: p-refinement level.
     """
@@ -50,6 +52,7 @@ def id_parameters(
         "ExcisionRadiusRight": 0.89 * 2.0 * M_A,
         "ExcisionRadiusLeft": 0.89 * 2.0 * M_B,
         "OrbitalAngularVelocity": orbital_angular_velocity,
+        "RadialExpansion": radial_expansion,
         # Resolution
         "L": refinement_level,
         "P": polynomial_order,
@@ -60,6 +63,7 @@ def generate_id(
     mass_ratio: float,
     separation: float,
     orbital_angular_velocity: float,
+    radial_expansion: float,
     refinement_level: int,
     polynomial_order: int,
     id_input_file_template: Union[str, Path] = ID_INPUT_FILE_TEMPLATE,
@@ -81,6 +85,7 @@ def generate_id(
         mass_ratio=mass_ratio,
         separation=separation,
         orbital_angular_velocity=orbital_angular_velocity,
+        radial_expansion=radial_expansion,
         refinement_level=refinement_level,
         polynomial_order=polynomial_order,
     )
@@ -110,6 +115,15 @@ def generate_id(
     "-w",
     type=float,
     help="Orbital angular velocity Omega_0.",
+    required=True,
+)
+@click.option(
+    "--radial-expansion",
+    "-a",
+    type=float,
+    help=(
+        "Radial expansion velocity adot0 which is radial velocity over radius."
+    ),
     required=True,
 )
 @click.option(
