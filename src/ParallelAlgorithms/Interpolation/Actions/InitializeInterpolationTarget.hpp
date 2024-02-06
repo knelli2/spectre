@@ -42,22 +42,13 @@ struct MarkAsInterpolation;
 /// Holds Actions for Interpolator and InterpolationTarget.
 namespace intrp::Actions {
 
-template <typename Metavariables>
 struct InitializeInterpolationTarget2 {
- private:
-  using factory_classes =
-      typename std::decay_t<Metavariables>::factory_creation::factory_classes;
-  using all_events = tmpl::at<factory_classes, ::Event>;
-  using interpolation_events = tmpl::filter<
-      all_events,
-      std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>, tmpl::_1>>;
-
- public:
   using simple_tags = tmpl::list<intrp::Tags::DbAccesses>;
   using compute_tags = tmpl::list<>;
 
-  template <typename DbTagsList, typename... InboxTags, typename ArrayIndex,
-            typename ActionList, typename ParallelComponent>
+  template <typename DbTagsList, typename... InboxTags, typename Metavariables,
+            typename ArrayIndex, typename ActionList,
+            typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
       db::DataBox<DbTagsList>& box,
       const tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
@@ -66,6 +57,14 @@ struct InitializeInterpolationTarget2 {
       const ParallelComponent* const /*meta*/) {
     const EventsAndTriggers& events_and_triggers =
         Parallel::get<::Tags::EventsAndTriggers>(cache);
+
+    using factory_classes =
+        typename std::decay_t<Metavariables>::factory_creation::factory_classes;
+    using all_events = tmpl::at<factory_classes, ::Event>;
+    using interpolation_events = tmpl::filter<
+        all_events,
+        std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>,
+                        tmpl::_1>>;
 
     const auto do_something = [&box](const ::Event& event) {
       // The array component element that we are on is for a specific event, so
@@ -104,10 +103,52 @@ struct InitializeInterpolationTarget2 {
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
+};
 
-  // TODO: Will need another simple action that does basically the exact same
-  // thing, except the simple action will need to also take the events that will
-  // be created at runtime.
+// TODO: Will need another simple action that does basically the exact same
+// thing, except the simple action will need to also take the events that will
+// be created at runtime.
+struct InitializeInterpolationTarget2Callback {
+  template <typename ParallelComponent, typename DbTagList,
+            typename Metavariables>
+  static void apply(db::DataBox<DbTagList>& box,
+                    Parallel::GlobalCache<Metavariables>& /*cache*/,
+                    const std::string& array_index,
+                    const std::unique_ptr<::Event>& event) {
+    using factory_classes =
+        typename std::decay_t<Metavariables>::factory_creation::factory_classes;
+    using all_events = tmpl::at<factory_classes, ::Event>;
+    using interpolation_events = tmpl::filter<
+        all_events,
+        std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>,
+                        tmpl::_1>>;
+
+    // We need the compile-time type of the event to initialize things
+    // properly, so we have to loop over all the compile-time events and down
+    // cast to check the event type
+    tmpl::for_each<interpolation_events>([&event, &box,
+                                          &array_index](auto for_each_event_v) {
+      using EventType = tmpl::type_from<decltype(for_each_event_v)>;
+
+      const EventType* const derived =
+          dynamic_cast<const EventType*>(event.get());
+      if (derived != nullptr) {
+        db::mutate<intrp::Tags::DbAccesses>(
+            [](const gsl::not_null<
+                std::unordered_map<std::string, std::unique_ptr<db::Access>>*>
+                   accesses) {
+              const intrp::Events::MarkAsInterpolation* const
+                  event_for_initialization =
+                      dynamic_cast<const intrp::Events::MarkAsInterpolation*>(
+                          event.get());
+
+              (*accesses)[array_index] =
+                  event_for_initialization->initialize_target_element_box();
+            },
+            make_not_null(&box));
+      }
+    });
+  }
 };
 
 // The purpose of the metafunctions in this namespace is to allow
@@ -115,7 +156,6 @@ struct InitializeInterpolationTarget2 {
 // function and a compute_tags and simple_tags type alias if it
 // doesn't add anything to the DataBox.
 namespace initialize_interpolation_target_detail {
-
 CREATE_GET_TYPE_ALIAS_OR_DEFAULT(compute_tags)
 CREATE_GET_TYPE_ALIAS_OR_DEFAULT(simple_tags)
 CREATE_IS_CALLABLE(initialize)

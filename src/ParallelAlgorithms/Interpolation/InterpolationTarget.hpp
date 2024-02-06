@@ -58,8 +58,7 @@ struct InterpolationTarget2 {
   using const_global_cache_tags = tmpl::list<>;
   using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
       Parallel::Phase::Initialization,
-      tmpl::list<intrp::Actions::InitializeInterpolationTarget2<
-          metavariables, IncludeDenseTriggers>>>>;
+      tmpl::list<intrp::Actions::InitializeInterpolationTarget2>>>;
 
   using simple_tags_from_options = Parallel::get_simple_tags_from_options<
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;

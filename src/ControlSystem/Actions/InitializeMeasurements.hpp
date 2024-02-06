@@ -10,6 +10,7 @@
 #include <optional>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 
 #include "ControlSystem/CombinedName.hpp"
@@ -20,8 +21,11 @@
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "Domain/Structure/ElementId.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
+#include "Parallel/Callback.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Phase.hpp"
 #include "ParallelAlgorithms/EventsAndDenseTriggers/DenseTrigger.hpp"
 #include "ParallelAlgorithms/EventsAndDenseTriggers/EventsAndDenseTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
@@ -50,6 +54,9 @@ struct InterpolationTarget2;
 namespace Events {
 struct MarkAsInterpolation;
 }  // namespace Events
+namespace Actions {
+struct InitializeInterpolationTarget2Callback;
+}  // namespace Actions
 }  // namespace intrp
 /// \endcond
 
@@ -85,7 +92,7 @@ struct InitializeMeasurements {
       db::DataBox<DbTagsList>& box,
       const tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
       Parallel::GlobalCache<Metavariables>& cache,
-      const ArrayIndex& /*array_index*/, ActionList /*meta*/,
+      const ArrayIndex& array_index, ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     const double initial_time = db::get<::Tags::Time>(box);
     const int measurements_per_update =
@@ -139,6 +146,11 @@ struct InitializeMeasurements {
                 std::is_base_of<tmpl::pin<intrp::Events::MarkAsInterpolation>,
                                 tmpl::_1>>;
 
+            // Only insert new interpolation targets once
+            if (not ::is_zeroth_element(array_index)) {
+              return;
+            }
+
             tmpl::for_each<interpolation_events>(
                 [&](auto interpolation_event_v) {
                   using interpolation_event =
@@ -147,9 +159,15 @@ struct InitializeMeasurements {
                       intrp::InterpolationTarget2<Metavariables, true>>(cache);
                   const std::string& event_name = interpolation_event::name();
 
-                  // TODO; Keep working
-                  interpolation_proxy[event_name].insert(
-                      cache.get_this_proxy(), )
+                  interpolation_proxy(event_name)
+                      .insert(
+                          cache.get_this_proxy(),
+                          Parallel::Phase::Initialization,
+                          std::unordered_map<Parallel::Phase, size_t>{},
+                          std::make_unique<Parallel::SimpleActionCallback<
+                              InitializeInterpolationTarget2Callback>>(
+                              interpolation_proxy, std::make_unique<::Event>(
+                                                       interpolation_event{})));
                 });
           });
         },
