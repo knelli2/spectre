@@ -18,6 +18,8 @@
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/ObservationBox.hpp"
+#include "DataStructures/DataBox/TagName.hpp"
+#include "DataStructures/DataBox/TagTraits.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/IdPair.hpp"
 #include "Domain/ElementLogicalCoordinates.hpp"
@@ -74,11 +76,10 @@ struct ExampleOfTarget {
 template <typename TagsExclusivelyOnTarget, typename TagsFromVolume>
 struct ExampleCallback {
   // Both these lists have simple and compute tags
-  using tags_to_observe_exclusively_on_target = tmpl::list<>;
-  using tags_to_observe_from_volume = tmpl::list<>;
-
-  // Do we need this?
+  using tags_to_observe_on_target = tmpl::list<>;
   using non_observation_tags_on_target = tmpl::list<>;
+
+  using volume_compute_tags = tmpl::list<>;
 };
 
 /*!
@@ -106,31 +107,34 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 
   template <typename LocalCallback>
   struct get_target_tensors {
-    using type = typename LocalCallback::tags_to_observe_exclusively_on_target;
+    using type = typename LocalCallback::tags_to_observe_on_target;
   };
 
   template <typename LocalCallback>
-  struct get_volume_tensors {
-    using type = typename LocalCallback::tags_to_observe_from_volume;
+  struct get_non_observation_tags {
+    using type = typename LocalCallback::non_observation_tags_on_target;
   };
 
-  using all_target_tensors = tmpl::remove_duplicates<tmpl::flatten<
+  template <typename LocalCallback>
+  struct get_volume_compute_tags {
+    using type = typename LocalCallback::volume_compute_tags;
+  };
+
+  using all_target_tensors_to_observe = tmpl::remove_duplicates<tmpl::flatten<
       tmpl::transform<all_callbacks, get_target_tensors<tmpl::_1>>>>;
-  using all_volume_tensors = tmpl::remove_duplicates<tmpl::flatten<
-      tmpl::transform<all_callbacks, get_volume_tensors<tmpl::_1>>>>;
-  using all_tensors = tmpl::remove_duplicates<
-      tmpl::append<all_target_tensors, all_volume_tensors>>;
+
+  using all_non_observation_tags_on_targets =
+      tmpl::remove_duplicates<tmpl::flatten<
+          tmpl::transform<all_callbacks, get_non_observation_tags<tmpl::_1>>>>;
 
   using common_tags_on_target =
       tmpl::list<intrp::Tags::Frame, intrp::Tags::Points<Dim>,
                  intrp::Tags::VarsToObserve>;
 
-  using all_tags_on_target = tmpl::remove_duplicates<
-      tmpl::append<all_tensors, points_tags, common_tags_on_target>>;
-
-  // TODO: Get from Nils and Larry
-  // using volume_obs_box_tensors = tmpl::list<>;
-  // using target_tensors = tmpl::list<>;
+  using all_tags_on_target =
+      tmpl::remove_duplicates<tmpl::append<all_target_tensors_to_observe,
+                                           all_non_observation_tags_on_targets,
+                                           points_tags, common_tags_on_target>>;
 
  public:
   /// \cond
@@ -199,14 +203,12 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
       tensors_to_observe_.insert(observables.begin(), observables.end());
     }
 
-    // TODO: Need logic that will take strings from the callbacks and get all
-    // tag strings that depend on them.
+    compute_tensor_maps();
   }
 
-  // TODO: Probably need to allow the targets to specify compute tags as well
-  // just in case they need some (like the Sphere needs a compute tag for the
-  // coordinates of an element in all frames)
-  using compute_tags_for_observation_box = all_tensors;
+  using compute_tags_for_observation_box =
+      tmpl::remove_duplicates<tmpl::flatten<
+          tmpl::transform<all_callbacks, get_volume_compute_tags<tmpl::_1>>>>;
 
   using argument_tags = tmpl::list<::Tags::ObservationBox, Tags::Time,
                                    ::Events::Tags::ObserverMesh<Dim>>;
@@ -246,7 +248,130 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   // QUESTION: Volume tensors or all tensors? Probably volume tensors since
   // that's what we need here.
   std::unordered_set<std::string> tensors_to_observe_{};
+  std::unordered_set<std::string> volume_tensors_to_send_{};
+
+  template <typename ComputeTag, typename F>
+  void for_compute_tag_arguments(const F&& f);
+
+  void compute_tensor_maps();
+
+  std::unordered_set<std::string> all_points_tags_{};
+  std::unordered_map<std::string, std::vector<std::string>>
+      non_obs_tags_to_volume_tags_{};
+  std::unordered_map<std::string, std::vector<std::string>>
+      observation_tags_to_volume_tags_{};
 };
+
+template <typename Target, size_t Dim>
+template <typename ComputeTag, typename F>
+void InterpolateToPoints<Target, Dim>::for_compute_tag_arguments(const F&& f) {
+  using argument_tags = typename ComputeTag::argument_tags;
+
+  tmpl::for_each<argument_tags>([&f](auto tag_v) { f(tag_v); });
+}
+
+template <typename Target, size_t Dim>
+void InterpolateToPoints<Target, Dim>::compute_tensor_maps() {
+  // Create list of tags that are specific to the points we are using and have
+  // no relation to the volume quantities whatsoever. These tags cannot be
+  // observed.
+  tmpl::for_each<points_tags>([this](auto tag_v) {
+    using Tag = tmpl::type_from<decltype(tag_v)>;
+
+    all_points_tags_.insert(db::tag_name<Tag>());
+
+    if constexpr (db::is_compute_tag_v<Tag>) {
+      for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
+        using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
+
+        all_points_tags_.insert(db::tag_name<Tag>());
+      });
+    }
+  });
+
+  // Create map from the non-observable tags to the required volume tags
+  // necessary. This is needed in case an actual observable tag depends on one
+  // of these non-observable tags, which in turn needs volume vars. However, we
+  // only specify observable tags in the input file.
+  tmpl::for_each<all_non_observation_tags_on_targets>([this](auto tag_v) {
+    using Tag = tmpl::type_from<decltype(tag_v)>;
+
+    const std::string tag_name = db::tag_name<Tag>();
+
+    // If it's a simple tag, then we assume it's a volume tag
+    if constexpr (db::is_simple_tag_v<Tag>) {
+      non_obs_tags_to_volume_tags_[tag_name] =
+          std::vector<std::string>{tag_name};
+    } else {
+      static_assert(db::is_compute_tag_v<Tag>);
+
+      non_obs_tags_to_volume_tags_[tag_name];
+      non_obs_tags_to_volume_tags_.at(tag_name).reserve(
+          tmpl::size<typename Tag::argument_tags>::value);
+
+      // Go through all arguments of the compute tag. If an argument tag is in
+      // the points tags, then don't add it to the map.
+      for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
+        using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
+
+        std::string argument_tag_name = db::tag_name<ArgumentTag>();
+
+        if (all_points_tags_.count(argument_tag_name) == 0) {
+          non_obs_tags_to_volume_tags_.at(tag_name).emplace_back(
+              std::move(argument_tag_name));
+        }
+      });
+
+      // QUESTION: Shouldn't happen?
+      if (non_obs_tags_to_volume_tags_.at(tag_name).size() == 0) {
+        non_obs_tags_to_volume_tags_.erase(tag_name);
+      }
+    }
+  });
+
+  // Create the actual map that goes from the tags users can specify in the
+  // input file to volume variables that need to be interpolated to the target.
+  tmpl::for_each<all_target_tensors_to_observe>([this](auto tag_v) {
+    using Tag = tmpl::type_from<decltype(tag_v)>;
+
+    const std::string tag_name = db::tag_name<Tag>();
+
+    if constexpr (db::is_simple_tag_v<Tag>) {
+      observation_tags_to_volume_tags_[tag_name] =
+          std::vector<std::string>{tag_name};
+    } else {
+      static_assert(db::is_compute_tag_v<Tag>);
+
+      observation_tags_to_volume_tags_[tag_name];
+
+      // Go through all arguments of the compute tag. If an argument tag is in
+      // the points tags, then don't add it to the map.
+      for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
+        using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
+
+        std::string argument_tag_name = db::tag_name<ArgumentTag>();
+
+        // Don't add tags that are in the points tags
+        if (all_points_tags_.count(argument_tag_name) == 1) {
+          return;
+        }
+
+        // Check if this argument was from the non-observable tags. If it was,
+        // then add all of those volume tags to the map for this tag
+        if (non_obs_tags_to_volume_tags_.count(argument_tag_name) == 1) {
+          observation_tags_to_volume_tags_.at(tag_name).insert(
+              observation_tags_to_volume_tags_.at(tag_name).end(),
+              non_obs_tags_to_volume_tags_.at(argument_tag_name).begin(),
+              non_obs_tags_to_volume_tags_.at(argument_tag_name).end());
+        } else {
+          // Just a simple tag, so this is a volume tag
+          observation_tags_to_volume_tags_.at(tag_name).emplace_back(
+              std::move(argument_tag_name));
+        }
+      });
+    }
+  });
+}
 
 template <typename Target, size_t Dim>
 template <typename DbTags, typename ComputeTagList, typename ParallelComponent,
