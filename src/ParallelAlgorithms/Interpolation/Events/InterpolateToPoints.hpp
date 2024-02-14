@@ -12,6 +12,7 @@
 #include <set>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -35,6 +36,7 @@
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/Runtime/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Targets/RuntimeTargets/Target.hpp"
+#include "Time/Tags/Time.hpp"
 #include "Utilities/OptionalHelpers.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
@@ -47,6 +49,13 @@ struct ObserverMesh;
 }  // namespace Events::Tags
 // TODO: Remove
 struct Sphere;
+namespace intrp {
+template <class Metavariables, bool IncludeDenseTriggers>
+struct InterpolationTarget2;
+namespace Actions {
+struct ReceiveVolumeTensors;
+}  // namespace Actions
+}  // namespace intrp
 /// \endcond
 
 namespace intrp::Events {
@@ -94,6 +103,8 @@ struct ExampleCallback {
  */
 template <typename Target, size_t Dim>
 class InterpolateToPoints : public Event, MarkAsInterpolation {
+  using temporal_id_tag = typename Target::temporal_id_tag;
+  using TemporalId = typename temporal_id_tag::type;
   using PointsType = typename Target::points;
   using points_tags = typename PointsType::tags_on_target;
   using runtime_callbacks = typename Target::possible_runtime_callbacks;
@@ -142,6 +153,8 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   using PUP::able::register_constructor;
   WRAPPED_PUPable_decl_template(InterpolateToPoints);  // NOLINT
   /// \endcond
+
+  static std::string name() { return Target::name(); }
 
   struct InputFrame {
     using type = std::string;
@@ -203,21 +216,29 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
       tensors_to_observe_.insert(observables.begin(), observables.end());
     }
 
+    // Compute the mapping between tensors to observe and the necessary volume
+    // tensors to send
     compute_tensor_maps();
+
+    for (const std::string& tensor_to_observe : tensors_to_observe_) {
+      for (const std::string& volume_tag :
+           observation_tags_to_volume_tags_.at(tensor_to_observe)) {
+        volume_tensors_to_send_.insert(volume_tag);
+      }
+    }
   }
 
   using compute_tags_for_observation_box =
       tmpl::remove_duplicates<tmpl::flatten<
           tmpl::transform<all_callbacks, get_volume_compute_tags<tmpl::_1>>>>;
 
-  using argument_tags = tmpl::list<::Tags::ObservationBox, Tags::Time,
+  using argument_tags = tmpl::list<::Tags::ObservationBox, temporal_id_tag,
                                    ::Events::Tags::ObserverMesh<Dim>>;
 
   template <typename DbTags, typename ComputeTagList,
             typename ParallelComponent, typename Metavariables>
   void operator()(const ObservationBox<DbTags, ComputeTagList>& box,
-                  const double time, const Mesh<Dim>& mesh,
-                  const typename VolumeTensorTags::type&... source_vars_input,
+                  const TemporalId& temporal_id, const Mesh<Dim>& mesh,
                   Parallel::GlobalCache<Metavariables>& cache,
                   const ElementId<Dim>& array_index,
                   const ParallelComponent* const /*meta*/,
@@ -377,20 +398,17 @@ template <typename Target, size_t Dim>
 template <typename DbTags, typename ComputeTagList, typename ParallelComponent,
           typename Metavariables>
 void InterpolateToPoints<Target, Dim>::operator()(
-    const ObservationBox<DbTags, ComputeTagList>& box, const double time,
-    const Mesh<Dim>& mesh,
-    const typename VolumeTensorTags::type&... source_vars_input,
+    const ObservationBox<DbTags, ComputeTagList>& box,
+    const TemporalId& temporal_id, const Mesh<Dim>& mesh,
     Parallel::GlobalCache<Metavariables>& cache,
     const ElementId<Dim>& array_index, const ParallelComponent* const /*meta*/,
     const ObservationValue& /*observation_value*/) const {
-  // TODO: No don't use an optional. Just have a vector of the IdPairs. There
-  // also needs to be global offsets somehow. element coord holders has the
-  // offsets, but that's only if there is a full length vector of block logical
-  // coords. Will need to think about this.
+  // TODO: Fix the time argument here. Need something like
+  // InterpolationTarget_detail::get_temporal_id_value
   const std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>
-      block_logical_coords =
-          target_->block_logical_coordinates(box, cache, time, frame_);
+      block_logical_coords = target_->block_logical_coordinates(
+          box, cache, temporal_id.time(), frame_);
 
   const std::vector<ElementId<Dim>> element_ids{{array_index}};
   const auto element_coord_holders =
@@ -402,42 +420,56 @@ void InterpolateToPoints<Target, Dim>::operator()(
     return;
   }
 
-  std::vector<double> interpolated_vars{};
-  // This is larger than we need if we are only observing some tensors, but
-  // that's not a big deal and calculating the correct size is nontrivial.
-  interpolated_vars.reserve(alg::accumulate(
-      std::initializer_list<size_t>{mesh.number_of_grid_points() *
-                                    tmpl::size<all_tensors>::value},
-      0_st));
-
   // There are points in this element, so interpolate to them and
-  // send the interpolated data to the target.  This is done
-  // in several steps:
+  // send the interpolated data to the target.
   const auto& element_coord_holder = element_coord_holders.at(array_index);
+
+  // string is the name of the tensor, std::vector is for each component of the
+  // tensor, and the DataVector is the actual data
+  std::unordered_map<std::string, std::vector<DataVector>> interpolated_vars{};
 
   // 2. Set up interpolator
   intrp::Irregular<Dim> interpolator(
       mesh, element_coord_holder.element_logical_coords);
+  const size_t number_of_points_in_this_element =
+      element_coord_holder.element_logical_coords.get(0).size();
 
-  // NOTE: Outer vector is number of components of all tensors. Inner vector is
-  // number of grid points in this element. This will also need some kind of
-  // global offsets which can be retrieved from the element_coord_holders.
-  // TODO: Make this an unordered_map of names, then on target loop over compile
-  // time list and then components and get name.
-  std::vector<std::vector<double>> volume_tensors_to_send{};
+  using all_obs_box_tensors =
+      typename ObservationBox<DbTags, ComputeTagList>::tags_list;
+
+  // Go through and interpolate all necessary volume tensor components
+  tmpl::for_each<all_obs_box_tensors>(
+      [this, &box, &interpolated_vars, &interpolator,
+       &number_of_points_in_this_element](auto tag_v) {
+        using Tag = tmpl::type_from<decltype(tag_v)>;
+
+        const std::string& tag_name = db::tag_name<Tag>();
+
+        // If we don't need to send this tensor, then skip it
+        if (not volume_tensors_to_send_.count(tag_name) == 1) {
+          return;
+        }
+
+        const auto& tensor = db::get<Tag>(box);
+
+        const size_t num_tensor_indices = Tag::type::num_tensor_indices;
+        interpolated_vars[tag_name] = std::vector<DataVector>{
+            num_tensor_indices, DataVector{number_of_points_in_this_element}};
+
+        for (size_t i = 0; i < num_tensor_indices; i++) {
+          interpolator.interpolate(
+              make_not_null(&interpolated_vars.at(tag_name)[i]), tensor.get(i));
+        }
+      });
 
   // 3. Interpolate and send interpolated data to target
-  // auto& receiver_proxy = Parallel::get_parallel_component<
-  //     InterpolationTarget<Metavariables, InterpolationTargetTag>>(cache);
-  // Parallel::simple_action<
-  //     Actions::InterpolationTargetVarsFromElement<InterpolationTargetTag>>(
-  //     receiver_proxy,
-  //     std::vector<Variables<
-  //         typename InterpolationTargetTag::vars_to_interpolate_to_target>>(
-  //         {interpolator.interpolate(interp_vars)}),
-  //     block_logical_coords,
-  //     std::vector<std::vector<size_t>>({element_coord_holder.offsets}),
-  //     time);
+  //    TODO: Fix the 'true' here to be correct. How to get the "is using dense
+  //    triggers" param here?
+  auto& receiver_proxy = Parallel::get_parallel_component<
+      InterpolationTarget2<Metavariables, true>>(cache)[name()];
+  Parallel::simple_action<intrp::Actions::ReceiveVolumeTensors>(
+      receiver_proxy, temporal_id, std::move(interpolated_vars),
+      element_coord_holder.offsets);
 }
 
 template <typename Target, size_t Dim>
