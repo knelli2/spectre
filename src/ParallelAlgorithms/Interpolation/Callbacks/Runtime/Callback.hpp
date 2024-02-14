@@ -7,7 +7,6 @@
 
 #include "DataStructures/DataBox/Access.hpp"
 #include "Parallel/GlobalCache.hpp"
-#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/CallWithDynamicType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"

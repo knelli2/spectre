@@ -68,6 +68,15 @@ struct MarkAsInterpolation {
 struct ExampleOfTarget {
   static std::string name() { return "ExampleOfTarget"; }
 
+  // The tag of the temporal ID to use.
+  using temporal_id_tag = ::Tags::Time;
+
+  // Whether or not you're allowed to create this target from options in the
+  // EventsAnd{Dense}Triggers section.
+  // QUESTION: Do we even want this? But isn't it necessary so we don't
+  // accidentally create the control system events?
+  static constexpr bool creatable_from_options = true;
+
   // The frame of this target. If it is `NoSuchType`, then the frame is chosen
   // at runtime. Otherwise it must be one of `Grid`, `Distorted`, `Inertial`.
   using frame = NoSuchType;
@@ -169,6 +178,9 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
     static constexpr Options::String help = {
         "Set of points to interpolate to."};
   };
+
+  // TODO: Add option for filling invalid points with a preferred value (NaN or
+  // double)
 
   struct Callbacks {
     static constexpr Options::String help = {"List of callbacks to run."};

@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
@@ -20,6 +21,7 @@
 #include "DataStructures/Variables.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Options/String.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/Runtime/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolatedVars.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
@@ -239,8 +241,39 @@ struct Frame : db::SimpleTag {
   using type = std::string;
 };
 
+/*!
+ * \brief For each time of an interpolation, this is a map between tensors and
+ * the interpolated volume data
+ */
+template <typename TemporalId>
+struct InterpolatedVars2 : db::SimpleTag {
+  using type = std::unordered_map<
+      TemporalId, std::unordered_map<std::string, std::vector<DataVector>>>;
+};
+
+struct InvalidPointsFillValue : db::SimpleTag {
+  using type = double;
+};
+
+template <typename TemporalId>
+struct NumberOfFilledPoints : db::SimpleTag {
+  using type = std::unordered_map<TemporalId, size_t>;
+};
+
+template <typename TemporalId>
+struct CurrentTemporalIds : db::SimpleTag {
+  using type = std::unordered_set<TemporalId>;
+};
+
 template <typename Target>
-using target_db_tags = tmpl::list<>;
+struct Callbacks : db::SimpleTag {
+  using type = std::vector<std::unique_ptr<intrp::callbacks::Callback<Target>>>;
+};
+
+template <typename Target, size_t Dim>
+using common_target_tags = tmpl::list<
+    intrp::Tags::Frame, intrp::Tags::Points<Dim>, intrp::Tags::VarsToObserve,
+    intrp::Tags::CompletedTemporalIds2<typename Target::temporal_id_tag>>;
 
 /*!
  * \brief Tag that actually stores the box type for each target created at
