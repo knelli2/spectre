@@ -32,6 +32,8 @@
 #include "Evolution/DgSubcell/Tags/Mesh.hpp"
 #include "Evolution/DgSubcell/Tags/OnSubcellFaces.hpp"
 #include "Evolution/DgSubcell/Tags/SubcellOptions.hpp"
+#include "Evolution/DiscontinuousGalerkin/Actions/ComputeTimeDerivative.hpp"
+#include "Evolution/DiscontinuousGalerkin/Actions/ComputeTimeDerivativeHelpers.hpp"
 #include "Evolution/DiscontinuousGalerkin/Actions/NormalCovectorAndMagnitude.hpp"
 #include "Evolution/DiscontinuousGalerkin/Actions/PackageDataImpl.hpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/BoundaryCorrections/BoundaryCorrection.hpp"
@@ -260,6 +262,7 @@ struct NeighborPackagedData {
           packaged_data.initialize(num_face_pts);
           using dg_package_data_projected_tags = tmpl::append<
               evolved_vars_tags, fluxes_tags, dg_package_data_temporary_tags,
+              evolution::dg::Actions::detail::get_sarah_list<DerivedCorrection>,
               typename DerivedCorrection::dg_package_data_primitive_tags>;
           evolution::dg::Actions::detail::dg_package_data<System>(
               make_not_null(&packaged_data),

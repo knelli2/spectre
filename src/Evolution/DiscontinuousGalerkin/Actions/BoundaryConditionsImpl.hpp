@@ -206,7 +206,8 @@ void apply_boundary_condition_on_face(
                           tmpl::list<>>;
   using tags_on_interior_face = tmpl::remove_duplicates<tmpl::append<
       fluxes_tags, interior_temp_tags, interior_prim_tags,
-      interior_evolved_vars_tags, bcondition_interior_dt_evolved_vars_tags,
+      detail::get_sarah_list<BoundaryCorrection>, interior_evolved_vars_tags,
+      bcondition_interior_dt_evolved_vars_tags,
       bcondition_interior_deriv_evolved_vars_tags, inverse_spatial_metric_list,
       tmpl::list<detail::OneOverNormalVectorMagnitude,
                  detail::NormalVector<Dim>>>>;
@@ -415,6 +416,7 @@ void apply_boundary_condition_on_face(
   // boundary condition.
   using tags_on_exterior_face = tmpl::remove_duplicates<
       tmpl::append<variables_tags, fluxes_tags, correction_temp_tags,
+                   detail::get_sarah_list<BoundaryCorrection>,
                    correction_prim_tags, inverse_spatial_metric_list,
                    tmpl::list<detail::OneOverNormalVectorMagnitude,
                               detail::NormalVector<Dim>,
@@ -426,6 +428,7 @@ void apply_boundary_condition_on_face(
     using mortar_tags_list = tmpl::list<PackageFieldTags...>;
     using dg_package_data_projected_tags =
         tmpl::append<variables_tags, fluxes_tags, correction_temp_tags,
+                     detail::get_sarah_list<BoundaryCorrection>,
                      correction_prim_tags>;
 
     Variables<mortar_tags_list> internal_packaged_data{

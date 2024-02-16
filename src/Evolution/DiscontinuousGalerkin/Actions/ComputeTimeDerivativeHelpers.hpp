@@ -140,4 +140,18 @@ template <typename BoundaryCondition>
 using get_deriv_vars_from_boundary_condition =
     typename get_deriv_vars_from_boundary_condition_impl<
         BoundaryCondition>::type;
+
+template <typename BoundaryCorrection, typename = std::void_t<>>
+struct get_sarah_list_impl {
+  using type = tmpl::list<>;
+};
+
+template <typename BoundaryCorrection>
+struct get_sarah_list_impl<
+    BoundaryCorrection, std::void_t<typename BoundaryCorrection::sarah_list>> {
+  using type = typename BoundaryCorrection::sarah_list;
+};
+
+template <typename BoundaryCorrection>
+using get_sarah_list = typename get_sarah_list_impl<BoundaryCorrection>::type;
 }  // namespace evolution::dg::Actions::detail

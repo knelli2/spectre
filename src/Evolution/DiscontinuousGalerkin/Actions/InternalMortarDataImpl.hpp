@@ -92,6 +92,7 @@ void internal_mortar_data_impl(
 
   using dg_package_data_projected_tags =
       tmpl::append<variables_tags, fluxes_tags, temporary_tags_for_face,
+                   detail::get_sarah_list<BoundaryCorrection>,
                    primitive_tags_for_face>;
   using FieldsOnFace = Variables<tmpl::remove_duplicates<tmpl::push_back<
       tmpl::append<dg_package_data_projected_tags,
