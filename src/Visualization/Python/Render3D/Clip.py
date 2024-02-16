@@ -130,7 +130,7 @@ def render_clip_command(
         clip_display.Representation = "Surface With Edges"
     else:
         clip_display.Representation = "Surface"
-    pv.ColorBy(clip_display, ("POINTS", variable))
+    clip_display.ColorArrayName = ("POINTS", variable)
     clip_display.SetScalarBarVisibility(render_view, True)
 
     # Show time annotation

@@ -33,7 +33,17 @@ class TestClip(unittest.TestCase):
         runner = CliRunner()
         result = runner.invoke(
             render_clip_command,
-            [self.vol_test_data, "-y", "Psi", "-o", self.output_file],
+            [
+                self.vol_test_data,
+                "-y",
+                "Psi",
+                "--clip-origin",
+                "0",
+                "0",
+                "1",
+                "-o",
+                self.output_file,
+            ],
             catch_exceptions=False,
         )
         self.assertEqual(result.exit_code, 0, msg=result.output)
