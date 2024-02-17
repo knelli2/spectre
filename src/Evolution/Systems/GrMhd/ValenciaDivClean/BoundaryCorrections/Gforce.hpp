@@ -107,6 +107,7 @@ class Gforce final : public BoundaryCorrection {
       tmpl::list<gr::Tags::Lapse<DataVector>, gr::Tags::Shift<DataVector, 3>>;
   using dg_package_data_primitive_tags = tmpl::list<>;
   using dg_package_data_volume_tags = tmpl::list<>;
+  using sarah_list = tmpl::list<>;
 
   static double dg_package_data(
       gsl::not_null<Scalar<DataVector>*> packaged_tilde_d,
