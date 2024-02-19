@@ -62,6 +62,11 @@ double Gforce::dg_package_data(
     const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric,
     const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric,
 
+    const Scalar<DataVector>& pressure,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity,
+    const Scalar<DataVector>& lorentz_factor,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field,
+
     const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector,
     const tnsr::I<DataVector, 3, Frame::Inertial>& /*normal_vector*/,
     const std::optional<tnsr::I<DataVector, 3, Frame::Inertial>>&

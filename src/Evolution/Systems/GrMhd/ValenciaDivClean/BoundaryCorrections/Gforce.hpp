@@ -13,6 +13,7 @@
 #include "NumericalAlgorithms/DiscontinuousGalerkin/Formulation.hpp"
 #include "Options/String.hpp"
 #include "PointwiseFunctions/GeneralRelativity/Tags.hpp"
+#include "PointwiseFunctions/Hydro/Tags.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
@@ -109,7 +110,11 @@ class Gforce final : public BoundaryCorrection {
   using dg_package_data_volume_tags = tmpl::list<>;
   using sarah_list = tmpl::list<gr::Tags::SqrtDetSpatialMetric<DataVector>,
                                 gr::Tags::SpatialMetric<DataVector, 3>,
-                                gr::Tags::InverseSpatialMetric<DataVector, 3>>;
+                                gr::Tags::InverseSpatialMetric<DataVector, 3>,
+                                hydro::Tags::Pressure<DataVector>,
+                                hydro::Tags::SpatialVelocity<DataVector, 3>,
+                                hydro::Tags::LorentzFactor<DataVector>,
+                                hydro::Tags::MagneticField<DataVector, 3>>;
 
   static double dg_package_data(
       gsl::not_null<Scalar<DataVector>*> packaged_tilde_d,
@@ -146,6 +151,11 @@ class Gforce final : public BoundaryCorrection {
       const Scalar<DataVector>& sqrt_det_spatial_metric,
       const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric,
       const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric,
+
+      const Scalar<DataVector>& pressure,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity,
+      const Scalar<DataVector>& lorentz_factor,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field,
 
       const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector,
       const tnsr::I<DataVector, 3, Frame::Inertial>& normal_vector,
