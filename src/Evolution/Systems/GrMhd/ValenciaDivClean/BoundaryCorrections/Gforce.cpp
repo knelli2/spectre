@@ -42,6 +42,22 @@ double Gforce::dg_package_data(
         packaged_normal_dot_flux_tilde_b,
     const gsl::not_null<Scalar<DataVector>*> packaged_normal_dot_flux_tilde_phi,
     const gsl::not_null<Scalar<DataVector>*> packaged_abs_char_speed,
+    const gsl::not_null<Scalar<DataVector>*> packaged_lapse,
+    const gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*>
+        packaged_shift,
+    const gsl::not_null<Scalar<DataVector>*> packaged_sqrt_det_spatial_metric,
+    const gsl::not_null<tnsr::ii<DataVector, 3, Frame::Inertial>*>
+        packaged_spatial_metric,
+    const gsl::not_null<tnsr::II<DataVector, 3, Frame::Inertial>*>
+        packaged_inv_spatial_metric,
+    const gsl::not_null<Scalar<DataVector>*> packaged_pressure,
+    const gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*>
+        packaged_spatial_velocity,
+    const gsl::not_null<Scalar<DataVector>*> packaged_lorentz_factor,
+    const gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*>
+        packaged_magnetic_field,
+    const gsl::not_null<tnsr::i<DataVector, 3, Frame::Inertial>*>
+        packaged_normal_covector,
 
     const Scalar<DataVector>& tilde_d, const Scalar<DataVector>& tilde_ye,
     const Scalar<DataVector>& tilde_tau,
@@ -109,6 +125,17 @@ double Gforce::dg_package_data(
   normal_dot_flux(packaged_normal_dot_flux_tilde_phi, normal_covector,
                   flux_tilde_phi);
 
+  *packaged_lapse = lapse;
+  *packaged_shift = shift;
+  *packaged_sqrt_det_spatial_metric = sqrt_det_spatial_metric;
+  *packaged_spatial_metric = spatial_metric;
+  *packaged_inv_spatial_metric = inv_spatial_metric;
+  *packaged_pressure = pressure;
+  *packaged_spatial_velocity = spatial_velocity;
+  *packaged_lorentz_factor = lorentz_factor;
+  *packaged_magnetic_field = magnetic_field;
+  *packaged_normal_covector = normal_covector;
+
   return max(get(*packaged_abs_char_speed));
 }
 
@@ -134,6 +161,16 @@ void Gforce::dg_boundary_terms(
     const tnsr::I<DataVector, 3, Frame::Inertial>& normal_dot_flux_tilde_b_int,
     const Scalar<DataVector>& normal_dot_flux_tilde_phi_int,
     const Scalar<DataVector>& abs_char_speed_int,
+    const Scalar<DataVector>& lapse_int,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& shift_int,
+    const Scalar<DataVector>& sqrt_det_spatial_metric_int,
+    const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric_int,
+    const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric_int,
+    const Scalar<DataVector>& pressure_int,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity_int,
+    const Scalar<DataVector>& lorentz_factor_int,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field_int,
+    const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector_int,
     const Scalar<DataVector>& tilde_d_ext,
     const Scalar<DataVector>& tilde_ye_ext,
     const Scalar<DataVector>& tilde_tau_ext,
@@ -147,6 +184,16 @@ void Gforce::dg_boundary_terms(
     const tnsr::I<DataVector, 3, Frame::Inertial>& normal_dot_flux_tilde_b_ext,
     const Scalar<DataVector>& normal_dot_flux_tilde_phi_ext,
     const Scalar<DataVector>& abs_char_speed_ext,
+    const Scalar<DataVector>& lapse_ext,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& shift_ext,
+    const Scalar<DataVector>& sqrt_det_spatial_metric_ext,
+    const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric_ext,
+    const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric_ext,
+    const Scalar<DataVector>& pressure_ext,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity_ext,
+    const Scalar<DataVector>& lorentz_factor_ext,
+    const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field_ext,
+    const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector_ext,
     const dg::Formulation dg_formulation) {
   if (dg_formulation == dg::Formulation::WeakInertial) {
     get(*boundary_correction_tilde_d) =

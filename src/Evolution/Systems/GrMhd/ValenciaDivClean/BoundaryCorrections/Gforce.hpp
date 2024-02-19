@@ -8,6 +8,7 @@
 
 #include "DataStructures/DataBox/Prefixes.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "Evolution/DiscontinuousGalerkin/NormalVectorTags.hpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/BoundaryCorrections/BoundaryCorrection.hpp"
 #include "Evolution/Systems/GrMhd/ValenciaDivClean/Tags.hpp"
 #include "NumericalAlgorithms/DiscontinuousGalerkin/Formulation.hpp"
@@ -103,7 +104,16 @@ class Gforce final : public BoundaryCorrection {
                  ::Tags::NormalDotFlux<Tags::TildeTau>,
                  ::Tags::NormalDotFlux<Tags::TildeS<Frame::Inertial>>,
                  ::Tags::NormalDotFlux<Tags::TildeB<Frame::Inertial>>,
-                 ::Tags::NormalDotFlux<Tags::TildePhi>, AbsCharSpeed>;
+                 ::Tags::NormalDotFlux<Tags::TildePhi>, AbsCharSpeed,
+                 gr::Tags::Lapse<DataVector>, gr::Tags::Shift<DataVector, 3>,
+                 gr::Tags::SqrtDetSpatialMetric<DataVector>,
+                 gr::Tags::SpatialMetric<DataVector, 3>,
+                 gr::Tags::InverseSpatialMetric<DataVector, 3>,
+                 hydro::Tags::Pressure<DataVector>,
+                 hydro::Tags::SpatialVelocity<DataVector, 3>,
+                 hydro::Tags::LorentzFactor<DataVector>,
+                 hydro::Tags::MagneticField<DataVector, 3>,
+                 evolution::dg::Tags::NormalCovector<3>>;
   using dg_package_data_temporary_tags =
       tmpl::list<gr::Tags::Lapse<DataVector>, gr::Tags::Shift<DataVector, 3>>;
   using dg_package_data_primitive_tags = tmpl::list<>;
@@ -132,6 +142,21 @@ class Gforce final : public BoundaryCorrection {
           packaged_normal_dot_flux_tilde_b,
       gsl::not_null<Scalar<DataVector>*> packaged_normal_dot_flux_tilde_phi,
       gsl::not_null<Scalar<DataVector>*> packaged_abs_char_speed,
+      gsl::not_null<Scalar<DataVector>*> packaged_lapse,
+      gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*> packaged_shift,
+      gsl::not_null<Scalar<DataVector>*> packaged_sqrt_det_spatial_metric,
+      gsl::not_null<tnsr::ii<DataVector, 3, Frame::Inertial>*>
+          packaged_spatial_metric,
+      gsl::not_null<tnsr::II<DataVector, 3, Frame::Inertial>*>
+          packaged_inv_spatial_metric,
+      gsl::not_null<Scalar<DataVector>*> packaged_pressure,
+      gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*>
+          packaged_spatial_velocity,
+      gsl::not_null<Scalar<DataVector>*> packaged_lorentz_factor,
+      gsl::not_null<tnsr::I<DataVector, 3, Frame::Inertial>*>
+          packaged_magnetic_field,
+      gsl::not_null<tnsr::i<DataVector, 3, Frame::Inertial>*>
+          packaged_normal_covector,
 
       const Scalar<DataVector>& tilde_d, const Scalar<DataVector>& tilde_ye,
       const Scalar<DataVector>& tilde_tau,
@@ -187,6 +212,16 @@ class Gforce final : public BoundaryCorrection {
           normal_dot_flux_tilde_b_int,
       const Scalar<DataVector>& normal_dot_flux_tilde_phi_int,
       const Scalar<DataVector>& abs_char_speed_int,
+      const Scalar<DataVector>& lapse_int,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& shift_int,
+      const Scalar<DataVector>& sqrt_det_spatial_metric_int,
+      const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric_int,
+      const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric_int,
+      const Scalar<DataVector>& pressure_int,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity_int,
+      const Scalar<DataVector>& lorentz_factor_int,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field_int,
+      const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector_int,
       const Scalar<DataVector>& tilde_d_ext,
       const Scalar<DataVector>& tilde_ye_ext,
       const Scalar<DataVector>& tilde_tau_ext,
@@ -202,6 +237,16 @@ class Gforce final : public BoundaryCorrection {
           normal_dot_flux_tilde_b_ext,
       const Scalar<DataVector>& normal_dot_flux_tilde_phi_ext,
       const Scalar<DataVector>& abs_char_speed_ext,
+      const Scalar<DataVector>& lapse_ext,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& shift_ext,
+      const Scalar<DataVector>& sqrt_det_spatial_metric_ext,
+      const tnsr::ii<DataVector, 3, Frame::Inertial>& spatial_metric_ext,
+      const tnsr::II<DataVector, 3, Frame::Inertial>& inv_spatial_metric_ext,
+      const Scalar<DataVector>& pressure_ext,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& spatial_velocity_ext,
+      const Scalar<DataVector>& lorentz_factor_ext,
+      const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field_ext,
+      const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector_ext,
       dg::Formulation dg_formulation);
 };
 
