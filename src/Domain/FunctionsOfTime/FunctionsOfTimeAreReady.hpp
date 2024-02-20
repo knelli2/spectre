@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "Domain/CoordinateMaps/Tags.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "Parallel/ArrayComponentId.hpp"
@@ -161,8 +162,11 @@ struct CheckFunctionsOfTimeAreReady {
       const ArrayIndex& array_index, ActionList /*meta*/,
       const ParallelComponent* component) {
     const bool ready = functions_of_time_are_ready_algorithm_callback<
-        domain::Tags::FunctionsOfTime>(cache, array_index, component,
-                                       db::get<::Tags::Time>(box));
+        domain::Tags::FunctionsOfTime>(
+        cache, array_index, component, db::get<::Tags::Time>(box),
+        db::get<domain::CoordinateMaps::Tags::CoordinateMap<
+            Metavariables::volume_dim, ::Frame::Grid, ::Frame::Inertial>>(box)
+            .function_of_time_names());
     return {ready ? Parallel::AlgorithmExecution::Continue
                   : Parallel::AlgorithmExecution::Retry,
             std::nullopt};
@@ -191,8 +195,11 @@ struct CheckFunctionsOfTimeAreReadyPostprocessor {
       Parallel::GlobalCache<Metavariables>& cache,
       const ArrayIndex& array_index, const ParallelComponent* component) {
     return functions_of_time_are_ready_algorithm_callback<
-        domain::Tags::FunctionsOfTime>(cache, array_index, component,
-                                       db::get<::Tags::Time>(*box));
+        domain::Tags::FunctionsOfTime>(
+        cache, array_index, component, db::get<::Tags::Time>(*box),
+        db::get<domain::CoordinateMaps::Tags::CoordinateMap<
+            Metavariables::volume_dim, ::Frame::Grid, ::Frame::Inertial>>(*box)
+            .function_of_time_names());
   }
 };
 }  // namespace domain

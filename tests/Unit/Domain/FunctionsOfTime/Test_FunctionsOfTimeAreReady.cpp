@@ -10,6 +10,9 @@
 
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/DataVector.hpp"
+#include "Domain/CoordinateMaps/CoordinateMap.hpp"
+#include "Domain/CoordinateMaps/Tags.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/Translation.hpp"
 #include "Domain/Creators/Tags/FunctionsOfTime.hpp"
 #include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
@@ -79,7 +82,9 @@ struct Component {
   using chare_type = ActionTesting::MockArrayChare;
   using array_index = int;
 
-  using simple_tags_from_options = tmpl::list<Tags::Time>;
+  using simple_tags_from_options =
+      tmpl::list<Tags::Time, domain::CoordinateMaps::Tags::CoordinateMap<
+                                 1, ::Frame::Grid, ::Frame::Inertial>>;
   using mutable_global_cache_tags =
       tmpl::list<domain::Tags::FunctionsOfTimeInitialize, OtherFunctionsOfTime>;
 
@@ -97,6 +102,7 @@ struct EmptyMetavars {
 };
 
 struct Metavariables {
+  static constexpr size_t volume_dim = 1;
   using component_list = tmpl::list<Component<Metavariables, 0_st>,
                                     Component<Metavariables, 1_st>>;
 };
@@ -128,14 +134,27 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTimeAreReady", "[Domain][Unit]") {
       std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
           0.0, fot_init, 0.1);
 
+  using Translation = domain::CoordinateMaps::TimeDependent::Translation<1>;
+  Translation translation_a{"FunctionA"};
+  Translation translation_b{"FunctionB"};
+  // using CoordMapBase =
+  //     domain::CoordinateMapBase<::Frame::Grid, ::Frame::Inertial, 1>;
+  using CoordMapOneTranslation =
+      domain::CoordinateMap<::Frame::Grid, ::Frame::Inertial, Translation>;
+  using CoordMapTwoTranslation =
+      domain::CoordinateMap<::Frame::Grid, ::Frame::Inertial, Translation,
+                            Translation>;
+
   MockRuntimeSystem runner{
       {}, {std::move(functions_of_time), std::move(other_functions_of_time)}};
   ActionTesting::emplace_array_component<component0>(
       make_not_null(&runner), ActionTesting::NodeId{0},
-      ActionTesting::LocalCoreId{0}, 0, 2.0);
+      ActionTesting::LocalCoreId{0}, 0, 2.0,
+      std::make_unique<CoordMapOneTranslation>(translation_a));
   ActionTesting::emplace_array_component<component1>(
       make_not_null(&runner), ActionTesting::NodeId{0},
-      ActionTesting::LocalCoreId{0}, 0, 2.0);
+      ActionTesting::LocalCoreId{0}, 0, 2.0,
+      std::make_unique<CoordMapTwoTranslation>(translation_a, translation_b));
   ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
 
   auto& cache = ActionTesting::cache<component0>(runner, 0);
@@ -324,7 +343,7 @@ SPECTRE_TEST_CASE("Unit.Domain.FunctionsOfTimeAreReady", "[Domain][Unit]") {
     EmptyMockRuntimeSystem empty_runner{{}};
     ActionTesting::emplace_array_component<empty_comp>(
         make_not_null(&empty_runner), ActionTesting::NodeId{0},
-        ActionTesting::LocalCoreId{0}, 0, 2.0);
+        ActionTesting::LocalCoreId{0}, 0, 2.0, nullptr);
 
     auto& empty_cache = ActionTesting::cache<empty_comp>(empty_runner, 0);
     CHECK(domain::functions_of_time_are_ready_algorithm_callback<
