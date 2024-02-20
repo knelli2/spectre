@@ -195,6 +195,26 @@ void Gforce::dg_boundary_terms(
     const tnsr::I<DataVector, 3, Frame::Inertial>& magnetic_field_ext,
     const tnsr::i<DataVector, 3, Frame::Inertial>& normal_covector_ext,
     const dg::Formulation dg_formulation) {
+  (void)lapse_int;
+  (void)shift_int;
+  (void)sqrt_det_spatial_metric_int;
+  (void)spatial_metric_int;
+  (void)inv_spatial_metric_int;
+  (void)pressure_int;
+  (void)spatial_velocity_int;
+  (void)lorentz_factor_int;
+  (void)magnetic_field_int;
+  (void)normal_covector_int;
+  (void)lapse_ext;
+  (void)shift_ext;
+  (void)sqrt_det_spatial_metric_ext;
+  (void)spatial_metric_ext;
+  (void)inv_spatial_metric_ext;
+  (void)pressure_ext;
+  (void)spatial_velocity_ext;
+  (void)lorentz_factor_ext;
+  (void)magnetic_field_ext;
+  (void)normal_covector_ext;
   if (dg_formulation == dg::Formulation::WeakInertial) {
     get(*boundary_correction_tilde_d) =
         0.5 * (get(normal_dot_flux_tilde_d_int) -

@@ -427,6 +427,9 @@ ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers, LocalTimeStepping>::
   using all_dg_package_temporary_tags =
       tmpl::transform<derived_boundary_corrections,
                       detail::get_dg_package_temporary_tags<tmpl::_1>>;
+  using all_sarah_tags =
+      tmpl::transform<derived_boundary_corrections,
+                      tmpl::bind<detail::get_sarah_list, tmpl::_1>>;
   using all_primitive_tags_for_face =
       tmpl::transform<derived_boundary_corrections,
                       detail::get_primitive_tags_for_face<
@@ -435,7 +438,8 @@ ComputeTimeDerivative<Dim, EvolutionSystem, DgStepChoosers, LocalTimeStepping>::
                                        tmpl::size_t<Dim>, Frame::Inertial>;
   using dg_package_data_projected_tags =
       tmpl::list<typename variables_tag::tags_list, fluxes_tags,
-                 all_dg_package_temporary_tags, all_primitive_tags_for_face>;
+                 all_dg_package_temporary_tags, all_sarah_tags,
+                 all_primitive_tags_for_face>;
   using all_face_temporary_tags =
       tmpl::remove_duplicates<tmpl::flatten<tmpl::push_back<
           tmpl::list<dg_package_data_projected_tags,
