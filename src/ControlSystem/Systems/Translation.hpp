@@ -12,6 +12,7 @@
 #include "ControlSystem/DataVectorHelpers.hpp"
 #include "ControlSystem/Measurements/BNSCenterOfMass.hpp"
 #include "ControlSystem/Measurements/BothHorizons.hpp"
+#include "ControlSystem/Measurements/SingleHorizon.hpp"
 #include "ControlSystem/Protocols/ControlError.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "ControlSystem/Protocols/Measurement.hpp"
@@ -56,6 +57,11 @@ namespace control_system::Systems {
  */
 template <size_t DerivOrder, typename Measurement>
 struct Translation : tt::ConformsTo<protocols::ControlSystem> {
+ private:
+  static constexpr size_t number_of_excisions =
+      tmpl::size<typename Measurement::submeasurements>::value;
+
+ public:
   static constexpr size_t deriv_order = DerivOrder;
 
   static std::string name() {
@@ -74,15 +80,18 @@ struct Translation : tt::ConformsTo<protocols::ControlSystem> {
   static_assert(
       tt::conforms_to_v<measurement, control_system::protocols::Measurement>);
 
-  using control_error = ControlErrors::Translation;
+  using control_error = ControlErrors::Translation<number_of_excisions>;
   static_assert(tt::conforms_to_v<control_error,
                                   control_system::protocols::ControlError>);
 
   // tag goes in control component
   struct MeasurementQueue : db::SimpleTag {
     using type = LinkedMessageQueue<
-        double, tmpl::list<QueueTags::Center<::domain::ObjectLabel::A>,
-                           QueueTags::Center<::domain::ObjectLabel::B>>>;
+        double, tmpl::conditional_t<
+                    number_of_excisions == 1,
+                    tmpl::list<QueueTags::Center<::domain::ObjectLabel::None>>,
+                    tmpl::list<QueueTags::Center<::domain::ObjectLabel::A>,
+                               QueueTags::Center<::domain::ObjectLabel::B>>>>;
   };
 
   using simple_tags = tmpl::list<MeasurementQueue>;
@@ -96,6 +105,32 @@ struct Translation : tt::ConformsTo<protocols::ControlSystem> {
             measurements::Tags::NeutronStarCenter<::domain::ObjectLabel::A>,
             measurements::Tags::NeutronStarCenter<::domain::ObjectLabel::B>>,
         tmpl::list<ylm::Tags::Strahlkorper<Frame::Distorted>>>;
+
+    template <typename Metavariables>
+    static void apply(
+        measurements::SingleHorizon<::domain::ObjectLabel::None>::Submeasurement
+            submeasurement,
+        const ylm::Strahlkorper<Frame::Distorted>& strahlkorper,
+        Parallel::GlobalCache<Metavariables>& cache,
+        const LinkedMessageId<double>& measurement_id) {
+      auto& control_sys_proxy =
+          Parallel::get_parallel_component<ControlComponent<
+              Metavariables, Translation<DerivOrder, Measurement>>>(cache);
+
+      const DataVector center =
+          array_to_datavector(strahlkorper.physical_center());
+
+      Parallel::simple_action<::Actions::UpdateMessageQueue<
+          QueueTags::Center<::domain::ObjectLabel::None>, MeasurementQueue,
+          UpdateControlSystem<Translation>>>(control_sys_proxy, measurement_id,
+                                             center);
+
+      if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
+        Parallel::printf("%s, time = %.16f: Received measurement '%s'.\n",
+                         name(), measurement_id.id,
+                         pretty_type::name(submeasurement));
+      }
+    }
 
     template <::domain::ObjectLabel Horizon, typename Metavariables>
     static void apply(
