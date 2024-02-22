@@ -14,6 +14,8 @@
 #include "ControlSystem/Tags/QueueTags.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "DataStructures/DataVector.hpp"
+#include "DataStructures/Matrix.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/RotationMatrixHelpers.hpp"
 #include "Domain/Creators/Tags/ObjectCenter.hpp"
 #include "Domain/FunctionsOfTime/QuaternionHelpers.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
@@ -70,11 +72,15 @@ namespace ControlErrors {
  * - There must exist an expansion map and a quaternion rotation map in the
  *   coordinate map with names "Expansion" and "Rotation", respectively.
  */
+template <size_t ExpectedNumberOfExcision>
 struct Translation : tt::ConformsTo<protocols::ControlError> {
-  static constexpr size_t expected_number_of_excisions = 2;
+  static constexpr size_t expected_number_of_excisions =
+      ExpectedNumberOfExcision;
 
-  using object_centers =
-      domain::object_list<domain::ObjectLabel::A, domain::ObjectLabel::B>;
+  using object_centers = tmpl::conditional_t<
+      ExpectedNumberOfExcision == 1,
+      domain::object_list<domain::ObjectLabel::None>,
+      domain::object_list<domain::ObjectLabel::A, domain::ObjectLabel::B>>;
 
   using options = tmpl::list<>;
   static constexpr Options::String help{
@@ -91,55 +97,90 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
                         const tuples::TaggedTuple<TupleTags...>& measurements) {
     const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
 
-    using quat = boost::math::quaternion<double>;
+    using queue_tag = tmpl::conditional_t<
+        ExpectedNumberOfExcision == 1,
+        control_system::QueueTags::Center<::domain::ObjectLabel::None>,
+        control_system::QueueTags::Center<::domain::ObjectLabel::A>>;
 
-    const quat quaternion = datavector_to_quaternion(
-        functions_of_time.at("Rotation")->func(time)[0]);
-    const double expansion_factor =
-        functions_of_time.at("Expansion")->func(time)[0][0];
+    const DataVector& current_position = get<queue_tag>(measurements);
 
-    using center_A =
-        control_system::QueueTags::Center<::domain::ObjectLabel::A>;
+    if constexpr (ExpectedNumberOfExcision == 2) {
+      using quat = boost::math::quaternion<double>;
 
-    const tnsr::I<double, 3, Frame::Grid>& grid_position_of_A_tnsr =
-        Parallel::get<domain::Tags::ObjectCenter<domain::ObjectLabel::A>>(
-            cache);
-    const DataVector grid_position_of_A{{grid_position_of_A_tnsr[0],
-                                         grid_position_of_A_tnsr[1],
-                                         grid_position_of_A_tnsr[2]}};
-    const DataVector& current_position_of_A = get<center_A>(measurements);
+      const quat quaternion = datavector_to_quaternion(
+          functions_of_time.at("Rotation")->func(time)[0]);
+      const double expansion_factor =
+          functions_of_time.at("Expansion")->func(time)[0][0];
 
-    const DataVector rotation_error =
-        rotation_control_error_(tuner, cache, time, "Rotation", measurements);
-    // Use A because it's on the positive x-axis, however, B would work as well.
-    // Just so long as we are consistent.
-    const DataVector rotation_error_cross_grid_pos_A =
-        cross(rotation_error, grid_position_of_A);
+      using center_tag = tmpl::conditional_t<
+          ExpectedNumberOfExcision == 1,
+          domain::Tags::ObjectCenter<::domain::ObjectLabel::None>,
+          domain::Tags::ObjectCenter<::domain::ObjectLabel::A>>;
 
-    const double expansion_error = expansion_control_error_(
-        tuner, cache, time, "Expansion", measurements)[0];
+      const tnsr::I<double, 3, Frame::Grid>& grid_position_of_A_tnsr =
+          Parallel::get<center_tag>(cache);
+      const DataVector grid_position_of_A{{grid_position_of_A_tnsr[0],
+                                           grid_position_of_A_tnsr[1],
+                                           grid_position_of_A_tnsr[2]}};
 
-    // From eq. 42 in 1304.3067
-    const quat middle_expression = datavector_to_quaternion(
-        current_position_of_A -
-        (1.0 + expansion_error / expansion_factor) * grid_position_of_A -
-        rotation_error_cross_grid_pos_A);
+      const DataVector rotation_error =
+          rotation_control_error_(tuner, cache, time, "Rotation", measurements);
+      // Use A because it's on the positive x-axis, however, B would work as
+      // well. Just so long as we are consistent.
+      const DataVector rotation_error_cross_grid_pos_A =
+          cross(rotation_error, grid_position_of_A);
 
-    // Because we are converting from a quaternion to a DataVector, there will
-    // be four components in the DataVector. However, translation control only
-    // requires three (the latter three to be exact, because the first component
-    // should be 0. We ASSERT this also.)
-    const DataVector result_with_four_components =
-        expansion_factor *
-        quaternion_to_datavector(quaternion * middle_expression *
-                                 conj(quaternion));
-    ASSERT(equal_within_roundoff(result_with_four_components[0], 0.0),
-           "Error in computing translation control error. First component of "
-           "resulting quaternion should be 0.0, but is " +
-               get_output(result_with_four_components[0]) + " instead.");
+      const double expansion_error = expansion_control_error_(
+          tuner, cache, time, "Expansion", measurements)[0];
 
-    return {result_with_four_components[1], result_with_four_components[2],
-            result_with_four_components[3]};
+      // From eq. 42 in 1304.3067
+      const quat middle_expression = datavector_to_quaternion(
+          current_position -
+          (1.0 + expansion_error / expansion_factor) * grid_position_of_A -
+          rotation_error_cross_grid_pos_A);
+
+      // Because we are converting from a quaternion to a DataVector, there will
+      // be four components in the DataVector. However, translation control only
+      // requires three (the latter three to be exact, because the first
+      // component should be 0. We ASSERT this also.)
+      const DataVector result_with_four_components =
+          expansion_factor *
+          quaternion_to_datavector(quaternion * middle_expression *
+                                   conj(quaternion));
+      ASSERT(equal_within_roundoff(result_with_four_components[0], 0.0),
+             "Error in computing translation control error. First component of "
+             "resulting quaternion should be 0.0, but is " +
+                 get_output(result_with_four_components[0]) + " instead.");
+
+      return {result_with_four_components[1], result_with_four_components[2],
+              result_with_four_components[3]};
+    } else {
+      DataVector result{3, 0.0};
+
+      double expansion_factor = 1.0;
+      if (functions_of_time.count("Expansion") == 1) {
+        expansion_factor = functions_of_time.at("Expansion")->func(time)[0][0];
+      }
+
+      if (functions_of_time.count("Rotation") == 1) {
+        const Matrix rot_matrix =
+            rotation_matrix<3>(time, *functions_of_time.at("Rotation").get());
+
+        for (size_t i = 0; i < 3; i++) {
+          for (size_t j = 0; j < 3; j++) {
+            result[i] += rot_matrix(i, j) * current_position[j];
+          }
+        }
+      } else {
+        for (size_t i = 0; i < 3; i++) {
+          result[i] = current_position[i];
+        }
+      }
+
+      result *= expansion_factor;
+
+      return result;
+    }
   }
 
  private:
