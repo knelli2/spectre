@@ -1,0 +1,255 @@
+// Distributed under the MIT License.
+// See LICENSE.txt for details.
+
+#pragma once
+
+#include <cstddef>
+#include <deque>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include "DataStructures/DataBox/Access.hpp"
+#include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/PrefixHelpers.hpp"
+#include "DataStructures/DataBox/Tag.hpp"
+#include "DataStructures/Tensor/TypeAliases.hpp"
+#include "DataStructures/Variables.hpp"
+#include "NumericalAlgorithms/Spectral/Mesh.hpp"
+#include "Options/String.hpp"
+#include "ParallelAlgorithms/Interpolation/Callbacks/Runtime/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/InterpolatedVars.hpp"
+#include "Utilities/TaggedTuple.hpp"
+
+/// \cond
+template <size_t VolumeDim>
+class ElementId;
+/// \endcond
+
+namespace intrp2 {
+
+namespace OptionTags {
+/*!
+ * \ingroup OptionGroupsGroup
+ * \brief Groups option tags for InterpolationTargets.
+ */
+struct InterpolationTargets {
+  static constexpr Options::String help{"Options for interpolation targets"};
+};
+
+/*!
+ * \ingroup OptionGroupsGroup
+ * \brief Groups option tags for the Interpolator.
+ */
+struct Interpolator {
+  static constexpr Options::String help{
+      "Options related to the Interpolator parallel component"};
+};
+
+/// Option tag that determines if volume data will be dumped from the
+/// Interpolator upon a failure.
+struct DumpVolumeDataOnFailure {
+  using type = bool;
+  static constexpr Options::String help{
+      "Whether or not to dump all volume data currently stored by the "
+      "interpolator. Volume data is written to the file corresponding to the "
+      "node it was collected on."};
+  using group = Interpolator;
+};
+}  // namespace OptionTags
+
+/// Tags for items held in the `DataBox` of `InterpolationTarget` or
+/// `Interpolator`.
+namespace Tags {
+/// Tag that determines if volume data will be dumped form the Interpolator upon
+/// failure
+struct DumpVolumeDataOnFailure : db::SimpleTag {
+  using type = bool;
+  using option_tags = tmpl::list<OptionTags::DumpVolumeDataOnFailure>;
+  static constexpr bool pass_metavariables = false;
+
+  static bool create_from_options(const bool input) { return input; }
+};
+
+/// Keeps track of which points have been filled with interpolated data.
+template <typename TemporalId>
+struct IndicesOfFilledInterpPoints : db::SimpleTag {
+  using type = std::unordered_map<TemporalId, std::unordered_set<size_t>>;
+};
+
+/// Keeps track of points that cannot be filled with interpolated data.
+///
+/// The InterpolationTarget can decide what to do with these points.
+/// In most cases the correct action is to throw an error, but in other
+/// cases one might wish to fill these points with a default value or
+/// take some other action.
+template <typename TemporalId>
+struct IndicesOfInvalidInterpPoints : db::SimpleTag {
+  using type = std::unordered_map<TemporalId, std::unordered_set<size_t>>;
+};
+
+/// `temporal_id`s that have been flagged to interpolate on, but that
+/// have not yet been added to Tags::TemporalIds.  A `temporal_id` is
+/// pending if the `FunctionOfTime`s are not up to date for the time
+/// associated with the `temporal_id`.
+template <typename TemporalId>
+struct PendingTemporalIds : db::SimpleTag {
+  using type = std::deque<TemporalId>;
+};
+
+/// `temporal_id`s on which to interpolate.
+template <typename TemporalId>
+struct TemporalIds : db::SimpleTag {
+  using type = std::deque<TemporalId>;
+};
+
+/// `temporal_id`s that we have already interpolated onto.
+///  This is used to prevent problems with multiple late calls to
+///  AddTemporalIdsToInterpolationTarget.
+template <typename TemporalId>
+struct CompletedTemporalIds : db::SimpleTag {
+  using type = std::deque<TemporalId>;
+};
+
+/// Holds interpolated variables on an InterpolationTarget.
+template <typename InterpolationTargetTag, typename TemporalId>
+struct InterpolatedVars : db::SimpleTag {
+  using type = std::unordered_map<
+      TemporalId,
+      Variables<
+          typename InterpolationTargetTag::vars_to_interpolate_to_target>>;
+};
+
+template <typename InterpolationTargetTag>
+struct VarsToInterpolateToTarget {
+  using type =
+      Variables<typename InterpolationTargetTag::vars_to_interpolate_to_target>;
+};
+
+/// Volume variables at all `temporal_id`s for all local `Element`s.
+/// Held by the Interpolator.
+template <typename Metavariables, typename TemporalId>
+struct VolumeVarsInfo : db::SimpleTag {
+  struct Info {
+    Mesh<Metavariables::volume_dim> mesh;
+    // Variables that have been sent from the Elements.
+    Variables<typename Metavariables::interpolator_source_vars>
+        source_vars_from_element;
+    // Variables, for each InterpolationTargetTag, that have been
+    // computed in the volume before interpolation, and that will
+    // be interpolated.
+    tuples::tagged_tuple_from_typelist<
+        db::wrap_tags_in<VarsToInterpolateToTarget,
+                         typename Metavariables::interpolation_target_tags>>
+        vars_to_interpolate;
+    // NOLINTNEXTLINE(google-runtime-references)
+    void pup(PUP::er& p) {
+      p | mesh;
+      p | source_vars_from_element;
+      p | vars_to_interpolate;
+    }
+  };
+  using type = std::unordered_map<
+      typename TemporalId::type,
+      std::unordered_map<ElementId<Metavariables::volume_dim>, Info>>;
+};
+
+namespace holders_detail {
+template <typename InterpolationTargetTag, typename Metavariables>
+using WrappedHolderTag = Vars::HolderTag<InterpolationTargetTag, Metavariables>;
+}  // namespace holders_detail
+
+/// `TaggedTuple` containing all local `Vars::Holder`s for
+/// all `InterpolationTarget`s.
+///
+/// A particular `Vars::Holder` can be retrieved from this
+/// `TaggedTuple` via a `Vars::HolderTag`.  An `Interpolator` uses the
+/// object in `InterpolatedVarsHolders` to iterate over all of the
+/// `InterpolationTarget`s.
+template <typename Metavariables>
+struct InterpolatedVarsHolders : db::SimpleTag {
+  using type = tuples::tagged_tuple_from_typelist<db::wrap_tags_in<
+      holders_detail::WrappedHolderTag,
+      typename Metavariables::interpolation_target_tags, Metavariables>>;
+};
+
+/// Number of local `Element`s.
+struct NumberOfElements : db::SimpleTag {
+  using type = size_t;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Tags needed for runtime targets
+/*!
+ * \brief Map between the string of the InterpolationTarget component element
+ * and the db::Access corresponding to that element.
+ *
+ * \note This is the expected way to retrieve and mutate tags on the target
+ * array element.
+ */
+struct DbAccesses : db::SimpleTag {
+  using type = std::unordered_map<std::string, std::unique_ptr<db::Access>>;
+};
+
+/*!
+ * \brief `std::unordered_set` of `db::tag_name`s of quantities to observe
+ */
+struct VarsToObserve : db::SimpleTag {
+  using type = std::unordered_set<std::string>;
+};
+
+/*!
+ * \brief Points of the target surface in the frame specified from the input
+ * file.
+ */
+template <size_t Dim>
+struct Points : db::SimpleTag {
+  using type = tnsr::I<DataVector, Dim, Frame::NoFrame>;
+};
+
+/*!
+ * \brief Frame of target points in `intrp2::Tags::Points`.
+ */
+struct Frame : db::SimpleTag {
+  using type = std::string;
+};
+
+/*!
+ * \brief For each time of an interpolation, this is a map between tensors and
+ * the interpolated volume data
+ */
+template <typename TemporalId>
+struct InterpolatedVars : db::SimpleTag {
+  using type = std::unordered_map<
+      TemporalId, std::unordered_map<std::string, std::vector<DataVector>>>;
+};
+
+struct InvalidPointsFillValue : db::SimpleTag {
+  using type = double;
+};
+
+template <typename TemporalId>
+struct NumberOfFilledPoints : db::SimpleTag {
+  using type = std::unordered_map<TemporalId, size_t>;
+};
+
+template <typename TemporalId>
+struct CurrentTemporalIds : db::SimpleTag {
+  using type = std::unordered_set<TemporalId>;
+};
+
+template <typename Target>
+struct Callbacks : db::SimpleTag {
+  using type =
+      std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>;
+};
+
+template <typename Target, size_t Dim>
+using common_target_tags = tmpl::list<
+    intrp2::Tags::Frame, intrp2::Tags::Points<Dim>, intrp2::Tags::VarsToObserve,
+    intrp2::Tags::CompletedTemporalIds<typename Target::temporal_id_tag>>;
+}  // namespace Tags
+}  // namespace intrp2
