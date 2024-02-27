@@ -28,6 +28,7 @@
 #include "Domain/Structure/ElementId.hpp"
 #include "Domain/Tags.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
+#include "Options/Auto.hpp"
 #include "Options/Context.hpp"
 #include "Options/ParseError.hpp"
 #include "Options/String.hpp"
@@ -47,8 +48,6 @@ namespace Events::Tags {
 template <size_t Dim>
 struct ObserverMesh;
 }  // namespace Events::Tags
-// TODO: Remove
-struct Sphere;
 namespace intrp2 {
 template <class Metavariables, bool IncludeDenseTriggers>
 struct InterpolationTarget;
@@ -179,8 +178,17 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
         "Set of points to interpolate to."};
   };
 
-  // TODO: Add option for filling invalid points with a preferred value (NaN or
-  // double)
+ private:
+  struct NaN {};
+
+ public:
+  struct InvalidPointFillValue {
+    using type = Options::Auto<double, NaN>;
+    static constexpr Options::String help = {
+        "If a point is not in the computational domain, fill the variables "
+        "that would have been interpolated to this point with this input "
+        "value"};
+  };
 
   struct Callbacks {
     static constexpr Options::String help = {"List of callbacks to run."};
@@ -190,7 +198,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   };
 
   using options = tmpl::flatten<
-      tmpl::list<Points,
+      tmpl::list<Points, InvalidPointFillValue,
                  tmpl::conditional_t<use_runtime_frame, tmpl::list<InputFrame>,
                                      tmpl::list<>>,
                  tmpl::conditional_t<use_runtime_callbacks,
@@ -203,7 +211,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   // Constructor for a compile-time frame. The frame won't be `NoSuchType` here
   // so it's ok to use `pretty_type::name` to get the string name of the frame.
   InterpolateToPoints(
-      PointsType target,
+      PointsType target, std::optional<double> invalid_fill_value,
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp2::callbacks::Callback<Target>>>{},
@@ -213,12 +221,14 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 
   // Constructor for a runtime frame
   InterpolateToPoints(
-      PointsType target, std::string frame,
+      PointsType target, std::optional<double> invalid_fill_value,
+      std::string frame,
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp2::callbacks::Callback<Target>>>{},
       const Options::Context& context = {})
       : frame_(std::move(frame)),
+        invalid_fill_value_(invalid_fill_value),
         target_(std::move(target)),
         callbacks_(std::move(callbacks)) {
     tensors_to_observe_.clear();
@@ -276,11 +286,10 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 
  private:
   std::string frame_{};
+  std::optional<double> invalid_fill_value_{};
   PointsType target_{};
   std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
       callbacks_{};
-  // QUESTION: Volume tensors or all tensors? Probably volume tensors since
-  // that's what we need here.
   std::unordered_set<std::string> tensors_to_observe_{};
   std::unordered_set<std::string> volume_tensors_to_send_{};
 
@@ -475,11 +484,9 @@ void InterpolateToPoints<Target, Dim>::operator()(
         }
       });
 
-  // 3. Interpolate and send interpolated data to target
-  //    TODO: Fix the 'true' here to be correct. How to get the "is using dense
-  //    triggers" param here?
-  auto& receiver_proxy = Parallel::get_parallel_component<
-      InterpolationTarget<Metavariables, true>>(cache)[name()];
+  auto& receiver_proxy =
+      Parallel::get_parallel_component<InterpolationTarget<Metavariables>>(
+          cache)[name()];
   Parallel::simple_action<intrp2::Actions::ReceiveVolumeTensors>(
       receiver_proxy, temporal_id, std::move(interpolated_vars),
       element_coord_holder.offsets);
@@ -496,11 +503,13 @@ InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
       [this](
           const gsl::not_null<std::string*> frame,
           const gsl::not_null<tnsr::I<DataVector, Dim, Frame::NoFrame>*> points,
-          const gsl::not_null<std::unordered_set<std::string>*>
-              vars_to_observe) {
+          const gsl::not_null<std::unordered_set<std::string>*> vars_to_observe,
+          const gsl::not_null<double*> invalid_points_fill_value) {
         *frame = frame_;
         *points = target_->target_points_no_frame();
         *vars_to_observe = tensors_to_observe_;
+        *invalid_points_fill_value = invalid_fill_value_.value_or(
+            std::numeric_limits<double>::quiet_NaN());
       },
       make_not_null(&typed_box));
 
@@ -510,6 +519,7 @@ InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
 template <typename Target, size_t Dim>
 void InterpolateToPoints<Target, Dim>::pup(PUP::er& p) {
   p | frame_;
+  p | invalid_fill_value_;
   p | target_;
   p | callbacks_;
   p | tensors_to_observe_;

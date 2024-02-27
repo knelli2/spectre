@@ -106,9 +106,6 @@ struct InitializeInterpolationTarget {
   }
 };
 
-// TODO: Will need another simple action that does basically the exact same
-// thing, except the simple action will need to also take the events that will
-// be created at runtime.
 struct InitializeInterpolationTargetCallback {
   template <typename ParallelComponent, typename DbTagList,
             typename Metavariables>
@@ -126,10 +123,16 @@ struct InitializeInterpolationTargetCallback {
 
     // We need the compile-time type of the event to initialize things
     // properly, so we have to loop over all the compile-time events and down
-    // cast to check the event type
+    // cast to check the event type. If this array index doesn't correspond to
+    // the event that was passed in, nothing will happen
     tmpl::for_each<interpolation_events>([&event, &box,
                                           &array_index](auto for_each_event_v) {
       using EventType = tmpl::type_from<decltype(for_each_event_v)>;
+      const std::string& name = EventType::name();
+
+      if (array_index != name) {
+        return;
+      }
 
       const EventType* const derived =
           dynamic_cast<const EventType*>(event.get());

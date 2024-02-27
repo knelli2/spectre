@@ -48,16 +48,16 @@ namespace tuples {
 template <typename... Tags>
 class TaggedTuple;
 }  // namespace tuples
-namespace intrp {
+namespace intrp2 {
 template <class Metavariables, bool IncludeDenseTriggers>
-struct InterpolationTarget2;
+struct InterpolationTarget;
 namespace Events {
 struct MarkAsInterpolation;
 }  // namespace Events
 namespace Actions {
-struct InitializeInterpolationTarget2Callback;
+struct InitializeInterpolationTargetCallback;
 }  // namespace Actions
-}  // namespace intrp
+}  // namespace intrp2
 /// \endcond
 
 namespace control_system::Actions {
@@ -156,16 +156,20 @@ struct InitializeMeasurements {
                   using interpolation_event =
                       tmpl::type_from<decltype(interpolation_event_v)>;
                   auto& interpolation_proxy = Parallel::get_parallel_component<
-                      intrp::InterpolationTarget2<Metavariables, true>>(cache);
+                      intrp2::InterpolationTarget<Metavariables, true>>(cache);
                   const std::string& event_name = interpolation_event::name();
 
+                  // Note that the callback will run on all elements of the
+                  // array, but only one element (the new one) will actually be
+                  // initialized
                   interpolation_proxy(event_name)
                       .insert(
                           cache.get_this_proxy(),
                           Parallel::Phase::Initialization,
                           std::unordered_map<Parallel::Phase, size_t>{},
                           std::make_unique<Parallel::SimpleActionCallback<
-                              InitializeInterpolationTarget2Callback>>(
+                              intrp2::Actions::
+                                  InitializeInterpolationTargetCallback>>(
                               interpolation_proxy, std::make_unique<::Event>(
                                                        interpolation_event{})));
                 });
@@ -205,8 +209,6 @@ struct InitializeMeasurements {
           make_not_null(&box));
     }
 
-    // TODO: Maybe need to create the new target elements from here since this
-    // is the only place outside of the input file where events are created
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };

@@ -47,9 +47,11 @@ struct EventsAndDenseTriggers;
 /// \endcond
 
 namespace intrp2 {
-template <class Metavariables, bool IncludeDenseTriggers>
+template <class Metavariables>
 struct InterpolationTarget {
   using metavariables = Metavariables;
+  static constexpr bool include_dense_triggers =
+      Metavariables::intrp::include_dense_triggers;
   using chare_type = ::Parallel::Algorithms::Array;
   using array_index = std::string;
 
@@ -62,7 +64,7 @@ struct InterpolationTarget {
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
 
   using array_allocation_tags = tmpl::conditional_t<
-      IncludeDenseTriggers,
+      include_dense_triggers,
       tmpl::list<evolution::OptionTags::EventsAndDenseTriggers>, tmpl::list<>>;
 
   static void allocate_array(
@@ -101,24 +103,17 @@ struct InterpolationTarget {
       const std::unordered_set<size_t>& procs_to_ignore);
 };
 
-template <class Metavariables, bool IncludeDenseTriggers>
-void InterpolationTarget2<Metavariables, IncludeDenseTriggers>::
-    allocate_array_impl(
-        Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
-        const tuples::tagged_tuple_from_typelist<simple_tags_from_options>&
-            initialization_items,
-        const evolution::EventsAndDenseTriggers& events_and_dense_triggers,
-        const std::unordered_set<size_t>& procs_to_ignore) {
+template <class Metavariables>
+void InterpolationTarget2<Metavariables>::allocate_array_impl(
+    Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
+    const tuples::tagged_tuple_from_typelist<simple_tags_from_options>&
+        initialization_items,
+    const evolution::EventsAndDenseTriggers& events_and_dense_triggers,
+    const std::unordered_set<size_t>& procs_to_ignore) {
   auto& local_cache = *Parallel::local_branch(global_cache);
   auto& interpolation_target =
       Parallel::get_parallel_component<InterpolationTarget2>(local_cache);
 
-  // TODO: This only captures the events and triggers from the input file. We
-  // also need a way to get the events from dense triggers, but those currently
-  // aren't stored in the cache; they are stored in the dg element DataBox.
-  // Additionally, all control systems are run from events (using dense
-  // triggers) that aren't added in these lists. They are added afterwards. So
-  // somehow we have to account for those...
   const EventsAndTriggers& events_and_triggers =
       Parallel::get<::Tags::EventsAndTriggers>(local_cache);
 
@@ -133,7 +128,7 @@ void InterpolationTarget2<Metavariables, IncludeDenseTriggers>::
 
   events_and_triggers.for_each_event(is_interpolation_event);
 
-  if constexpr (IncludeDenseTriggers) {
+  if constexpr (include_dense_triggers) {
     events_and_dense_triggers.for_each_event(is_interpolation_event);
   } else {
     (void)events_and_dense_triggers;
