@@ -17,8 +17,8 @@
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Targets/AngularOrdering.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
-#include "ParallelAlgorithms/Interpolation/Targets/AngularOrdering.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -63,7 +63,7 @@ struct Sphere : Target<3> {
     static constexpr Options::String help = {"Radius of the sphere(s)"};
   };
   struct AngularOrdering {
-    using type = intrp::AngularOrdering;
+    using type = intrp2::AngularOrdering;
     static constexpr Options::String help = {
         "Chooses theta,phi ordering in 2d array"};
   };

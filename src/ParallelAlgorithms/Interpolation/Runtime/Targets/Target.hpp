@@ -33,11 +33,6 @@ namespace intrp2::Targets {
 /*!
  * \brief Base class for computing the target points we would like to
  * interpolate tensors to.
- *
- * \note A virtual member function that derived classes needs to implement is
- * marked private in this base class. See the
- * `intrp::Targets::Target::target_points` function for a description on what
- * needs to be implemented.
  */
 template <size_t Dim>
 class Target : public PUP::able {
@@ -104,7 +99,6 @@ class Target : public PUP::able {
         });
   }
 
- private:
   virtual const tnsr::I<DataVector, Dim, Frame::NoFrame>&
   target_points_no_frame() const = 0;
 };
