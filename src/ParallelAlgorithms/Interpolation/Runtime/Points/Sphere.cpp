@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Sphere.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Sphere.hpp"
 
 #include <array>
 #include <cstddef>
@@ -20,7 +20,7 @@
 #include "Utilities/SetNumberOfGridPoints.hpp"
 #include "Utilities/StdHelpers.hpp"
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 namespace {
 struct SphereVisitor {
   const Options::Context& context;
@@ -154,4 +154,4 @@ bool operator==(const Sphere& lhs, const Sphere& rhs) {
 bool operator!=(const Sphere& lhs, const Sphere& rhs) {
   return not(lhs == rhs);
 }
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

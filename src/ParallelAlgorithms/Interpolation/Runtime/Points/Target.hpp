@@ -29,7 +29,7 @@ struct BlockLogical;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /*!
  * \brief Base class for computing the target points we would like to
  * interpolate tensors to.
@@ -102,4 +102,4 @@ class Target : public PUP::able {
   virtual const tnsr::I<DataVector, Dim, Frame::NoFrame>&
   target_points_no_frame() const = 0;
 };
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

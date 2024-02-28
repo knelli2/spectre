@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/SpecifiedPoints.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/SpecifiedPoints.hpp"
 
 #include <array>
 #include <cstddef>
@@ -13,7 +13,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/SetNumberOfGridPoints.hpp"
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 
 template <size_t Dim>
 SpecifiedPoints<Dim>::SpecifiedPoints(
@@ -72,4 +72,4 @@ GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
 
 #undef DIM
 #undef INSTANTIATE
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

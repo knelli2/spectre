@@ -11,7 +11,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -20,7 +20,7 @@ struct NoFrame;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /// A list of specified points to interpolate to.
 template <size_t Dim>
 struct SpecifiedPoints : Target<Dim> {
@@ -63,4 +63,4 @@ struct SpecifiedPoints : Target<Dim> {
 template <size_t Dim>
 bool operator!=(const SpecifiedPoints<Dim>& lhs,
                 const SpecifiedPoints<Dim>& rhs);
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

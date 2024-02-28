@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/KerrHorizon.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/KerrHorizon.hpp"
 
 #include <array>
 #include <cstddef>
@@ -20,7 +20,7 @@
 #include "Utilities/SetNumberOfGridPoints.hpp"
 #include "Utilities/StdArrayHelpers.hpp"
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 KerrHorizon::KerrHorizon(const size_t l_max,
                          const std::array<double, 3>& center, const double mass,
                          const std::array<double, 3>& dimensionless_spin,
@@ -106,4 +106,4 @@ bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
 bool operator!=(const KerrHorizon& lhs, const KerrHorizon& rhs) {
   return not(lhs == rhs);
 }
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

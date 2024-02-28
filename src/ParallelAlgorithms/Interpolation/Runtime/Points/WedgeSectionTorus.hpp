@@ -11,7 +11,7 @@
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -20,7 +20,7 @@ struct NoFrame;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /*!
  * \brief A solid torus of points, useful, e.g., when measuring data from an
  * accretion disc.
@@ -126,4 +126,4 @@ struct WedgeSectionTorus : Target<3> {
 };
 
 bool operator!=(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs);
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

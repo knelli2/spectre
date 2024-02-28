@@ -17,8 +17,8 @@
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/AngularOrdering.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -36,7 +36,7 @@ struct NoFrame;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /*!
  * \brief A series of concentric spherical surfaces.
  *
@@ -282,4 +282,4 @@ struct Sphere : Target<3> {
 
 template <size_t Dim>
 bool operator!=(const Sphere& lhs, const Sphere& rhs);
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

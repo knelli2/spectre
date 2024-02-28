@@ -10,7 +10,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -19,7 +19,7 @@ struct NoFrame;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /// A line segment extending from `Begin` to `End`, containing `NumberOfPoints`
 /// uniformly-spaced points including the endpoints.
 template <size_t Dim>
@@ -88,4 +88,4 @@ struct LineSegment : Target<Dim> {
 
 template <size_t Dim>
 bool operator!=(const LineSegment<Dim>& lhs, const LineSegment<Dim>& rhs);
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

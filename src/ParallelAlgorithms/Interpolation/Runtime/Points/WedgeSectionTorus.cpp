@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/WedgeSectionTorus.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/WedgeSectionTorus.hpp"
 
 #include <array>
 #include <cmath>
@@ -19,7 +19,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/SetNumberOfGridPoints.hpp"
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 WedgeSectionTorus::WedgeSectionTorus(
     const std::array<double, 2>& radial_bounds,
     const std::array<double, 2>& theta_bounds,
@@ -197,4 +197,4 @@ bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
 bool operator!=(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
   return not(lhs == rhs);
 }
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

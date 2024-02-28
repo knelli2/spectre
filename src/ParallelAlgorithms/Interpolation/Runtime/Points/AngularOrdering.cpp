@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/AngularOrdering.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
 
 #include <string>
 

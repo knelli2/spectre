@@ -11,8 +11,8 @@
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/AngularOrdering.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -21,7 +21,7 @@ struct NoFrame;
 }  // namespace Frame
 /// \endcond
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 /*!
  * \brief A surface that conforms to the horizon of a Kerr black hole in
  * Kerr-Schild coordinates.
@@ -108,4 +108,4 @@ struct KerrHorizon : Target<3> {
 };
 
 bool operator!=(const KerrHorizon& lhs, const KerrHorizon& rhs);
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points

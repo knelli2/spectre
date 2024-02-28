@@ -36,7 +36,7 @@
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
 #include "Time/Tags/Time.hpp"
 #include "Utilities/OptionalHelpers.hpp"
 #include "Utilities/PrettyType.hpp"
@@ -74,7 +74,7 @@ struct ExampleOfTarget {
   // at runtime. Otherwise it must be one of `Grid`, `Distorted`, `Inertial`.
   using frame = NoSuchType;
   // Struct containing a way to calculate the target points
-  using points = Sphere;
+  using points = NoSuchType;
 
   // List of callbacks that the target can possibly create at runtime. These
   // callbacks may or may not be called. It depends on if they are specific in

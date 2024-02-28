@@ -1,7 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
-#include "ParallelAlgorithms/Interpolation/Runtime/Targets/LineSegment.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/LineSegment.hpp"
 
 #include <array>
 #include <cstddef>
@@ -12,7 +12,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/SetNumberOfGridPoints.hpp"
 
-namespace intrp2::Targets {
+namespace intrp2::points {
 
 template <size_t Dim>
 LineSegment<Dim>::LineSegment(const std::array<double, Dim>& begin,
@@ -87,4 +87,4 @@ GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
 
 #undef DIM
 #undef INSTANTIATE
-}  // namespace intrp2::Targets
+}  // namespace intrp2::points
