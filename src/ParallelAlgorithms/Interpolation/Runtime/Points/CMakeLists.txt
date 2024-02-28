@@ -22,6 +22,5 @@ spectre_target_headers(
   LineSegment.hpp
   SpecifiedPoints.hpp
   Sphere.hpp
-  Target.hpp
   WedgeSectionTorus.hpp
 )

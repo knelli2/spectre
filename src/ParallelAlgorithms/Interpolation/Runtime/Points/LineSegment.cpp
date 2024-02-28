@@ -47,7 +47,6 @@ const std::array<double, Dim>& LineSegment<Dim>::end() const {
 
 template <size_t Dim>
 void LineSegment<Dim>::pup(PUP::er& p) {
-  Target<Dim>::pup(p);
   p | name_;
   p | begin_;
   p | end_;
@@ -59,9 +58,6 @@ const tnsr::I<DataVector, Dim, Frame::NoFrame>&
 LineSegment<Dim>::target_points_no_frame() const {
   return points_;
 }
-
-template <size_t Dim>
-PUP::able::PUP_ID LineSegment<Dim>::my_PUP_ID = 0;  // NOLINT
 
 template <size_t Dim>
 bool operator==(const LineSegment<Dim>& lhs, const LineSegment<Dim>& rhs) {

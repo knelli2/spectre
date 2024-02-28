@@ -168,7 +168,6 @@ bool WedgeSectionTorus::use_uniform_theta_grid() const {
 }
 
 void WedgeSectionTorus::pup(PUP::er& p) {
-  Target<3>::pup(p);
   p | name_;
   p | radial_bounds_;
   p | theta_bounds_;
@@ -182,8 +181,6 @@ const tnsr::I<DataVector, 3, Frame::NoFrame>&
 WedgeSectionTorus::target_points_no_frame() const {
   return points_;
 }
-
-PUP::able::PUP_ID WedgeSectionTorus::my_PUP_ID = 0;  // NOLINT
 
 bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
   return lhs.name_ == rhs.name_ and lhs.radial_bounds_ == rhs.radial_bounds_ and

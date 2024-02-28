@@ -11,7 +11,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -23,7 +23,10 @@ struct NoFrame;
 namespace intrp2::points {
 /// A list of specified points to interpolate to.
 template <size_t Dim>
-struct SpecifiedPoints : Target<Dim> {
+struct SpecifiedPoints : protocols::Points {
+  using tags_on_target = tmpl::list<>;
+  using points_volume_compute_tags = tmpl::list<>;
+
   struct Points {
     using type = std::vector<std::array<double, Dim>>;
     static constexpr Options::String help = {"Coordinates of each point"};
@@ -36,22 +39,13 @@ struct SpecifiedPoints : Target<Dim> {
 
   SpecifiedPoints() = default;
 
-  /// \cond
-  explicit SpecifiedPoints(CkMigrateMessage* /*unused*/) {}
-  using PUP::able::register_constructor;
-  // NOLINTNEXTLINE
-  WRAPPED_PUPable_decl_base_template(Target<Dim>, SpecifiedPoints<Dim>);
-  /// \endcond
-
-  const std::string& name() const override;
-
   // NOLINTNEXTLINE(google-runtime-references)
-  void pup(PUP::er& p) override;
+  void pup(PUP::er& p);
+
+  const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
+      const;
 
  private:
-  const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
-      const override;
-
   std::string name_{"SpecifiedPoints"};
   tnsr::I<DataVector, Dim, Frame::NoFrame> points_{};
 

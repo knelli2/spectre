@@ -18,7 +18,7 @@
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -47,7 +47,10 @@ namespace intrp2::points {
  * `Strahlkorper` for `AngularOrdering`, and using these surfaces for a CCE
  * worldtube requires `Cce` for `AngularOrdering`.
  */
-struct Sphere : Target<3> {
+struct Sphere : protocols::Points {
+  using tags_on_target = tmpl::list<>;
+  using points_volume_compute_tags = tmpl::list<>;
+
   struct LMax {
     using type = size_t;
     static constexpr Options::String help = {
@@ -77,15 +80,6 @@ struct Sphere : Target<3> {
          const Options::Context& context = {});
 
   Sphere() = default;
-
-  /// \cond
-  explicit Sphere(CkMigrateMessage* /*unused*/) {}
-  using PUP::able::register_constructor;
-  // NOLINTNEXTLINE
-  WRAPPED_PUPable_decl_base_template(Target, Sphere);
-  /// \endcond
-
-  const std::string& name() const override;
 
   using argument_tags =
       tmpl::list<domain::Tags::Element<3>,
@@ -264,12 +258,11 @@ struct Sphere : Target<3> {
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)
-  void pup(PUP::er& p) override;
+  void pup(PUP::er& p);
+
+  const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
  private:
-  const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame()
-      const override;
-
   std::string name_{"Sphere"};
   size_t l_max_{};
   std::array<double, 3> center_{};

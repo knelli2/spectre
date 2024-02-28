@@ -33,7 +33,6 @@ const std::string& SpecifiedPoints<Dim>::name() const {
 
 template <size_t Dim>
 void SpecifiedPoints<Dim>::pup(PUP::er& p) {
-  Target<Dim>::pup(p);
   p | name_;
   p | points_;
 }
@@ -43,9 +42,6 @@ const tnsr::I<DataVector, Dim, Frame::NoFrame>&
 SpecifiedPoints<Dim>::target_points_no_frame() const {
   return points_;
 }
-
-template <size_t Dim>
-PUP::able::PUP_ID SpecifiedPoints<Dim>::my_PUP_ID = 0;  // NOLINT
 
 template <size_t Dim>
 bool operator==(const SpecifiedPoints<Dim>& lhs,

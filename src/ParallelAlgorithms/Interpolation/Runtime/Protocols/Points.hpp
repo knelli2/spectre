@@ -7,13 +7,15 @@ namespace intrp2::protocols {
 /*!
  * \brief A protocol for the type alias `points` in a `intrp2::Target`.
  *
- * \details A struct conforming to the `Points` protocol must have
+ * \details A struct conforming to the `Points` protocol must
  *
- * - a type alias `tags_on_target` which is any simple or compute tags that
+ * - have a type alias `tags_on_target` which is any simple or compute tags that
  *   these points offer in the target DataBox.
  *
- * - a type alias `points_volume_compute_tags` that is a list of compute tags in
- *   the element DataBox that will be used to compute the points.
+ * - have a type alias `points_volume_compute_tags` that is a list of compute
+ * tags in the element DataBox that will be used to compute the points.
+ *
+ * - be option creatable.
  *
  * A struct that conforms to this protocol can also optionally conform to the
  * `db:protocols::Apply` protocol:
@@ -27,6 +29,8 @@ struct Points {
 
     using points_volume_compute_tags =
         typename ConformingType::points_volume_compute_tags;
+
+    using options = typename ConformingType::options;
   };
 };
 }  // namespace intrp2::protocols

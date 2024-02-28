@@ -12,7 +12,7 @@
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -31,7 +31,10 @@ namespace intrp2::points {
  * harmonic basis and `AngularOrdering` which encodes the collocation
  * ordering.
  */
-struct KerrHorizon : Target<3> {
+struct KerrHorizon : protocols::Points {
+  using tags_on_target = tmpl::list<>;
+  using points_volume_compute_tags = tmpl::list<>;
+
   struct LMax {
     using type = size_t;
     static constexpr Options::String help = {
@@ -68,15 +71,6 @@ struct KerrHorizon : Target<3> {
 
   KerrHorizon() = default;
 
-  /// \cond
-  explicit KerrHorizon(CkMigrateMessage* /*unused*/) {}
-  using PUP::able::register_constructor;
-  // NOLINTNEXTLINE
-  WRAPPED_PUPable_decl_base_template(Target<3>, KerrHorizon);
-  /// \endcond
-
-  const std::string& name() const override;
-
   /// @{
   /*!
    * \brief Methods specific to the KerrHorizon target that return the input
@@ -90,12 +84,11 @@ struct KerrHorizon : Target<3> {
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)
-  void pup(PUP::er& p) override;
+  void pup(PUP::er& p);
+
+  const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
  private:
-  const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame()
-      const override;
-
   std::string name_{"KerrHorizon"};
   size_t l_max_{};
   std::array<double, 3> center_{};

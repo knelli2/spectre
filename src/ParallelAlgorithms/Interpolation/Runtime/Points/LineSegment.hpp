@@ -10,7 +10,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -23,7 +23,10 @@ namespace intrp2::points {
 /// A line segment extending from `Begin` to `End`, containing `NumberOfPoints`
 /// uniformly-spaced points including the endpoints.
 template <size_t Dim>
-struct LineSegment : Target<Dim> {
+struct LineSegment : protocols::Points {
+  using tags_on_target = tmpl::list<>;
+  using points_volume_compute_tags = tmpl::list<>;
+
   struct Begin {
     using type = std::array<double, Dim>;
     static constexpr Options::String help = {"Beginning endpoint"};
@@ -48,15 +51,6 @@ struct LineSegment : Target<Dim> {
 
   LineSegment() = default;
 
-  /// \cond
-  explicit LineSegment(CkMigrateMessage* /*unused*/) {}
-  using PUP::able::register_constructor;
-  // NOLINTNEXTLINE
-  WRAPPED_PUPable_decl_base_template(Target<Dim>, LineSegment<Dim>);
-  /// \endcond
-
-  const std::string& name() const override;
-
   /// @{
   /*!
    * \brief Methods specific to the Sphere target that return the input
@@ -70,12 +64,12 @@ struct LineSegment : Target<Dim> {
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)
-  void pup(PUP::er& p) override;
+  void pup(PUP::er& p);
+
+  const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
+      const;
 
  private:
-  const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
-      const override;
-
   std::string name_{"LineSegment"};
   std::array<double, Dim> begin_{};
   std::array<double, Dim> end_{};

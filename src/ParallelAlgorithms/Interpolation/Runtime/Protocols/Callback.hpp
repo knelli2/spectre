@@ -51,7 +51,7 @@ struct Callback {
 
     using volume_compute_tags = typename ConformingType::volume_compute_tags;
 
-    using option_tags = typename ConformingType::option_tags;
+    using options = typename ConformingType::options;
   };
 };
 }  // namespace intrp2::protocols

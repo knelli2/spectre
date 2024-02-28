@@ -128,7 +128,6 @@ intrp::AngularOrdering Sphere::angular_ordering() const {
 }
 
 void Sphere::pup(PUP::er& p) {
-  Target<3>::pup(p);
   p | name_;
   p | l_max_;
   p | center_;
@@ -141,8 +140,6 @@ const tnsr::I<DataVector, 3, Frame::NoFrame>& Sphere::target_points_no_frame()
     const {
   return points_;
 }
-
-PUP::able::PUP_ID Sphere::my_PUP_ID = 0;  // NOLINT
 
 bool operator==(const Sphere& lhs, const Sphere& rhs) {
   return lhs.name_ == rhs.name_ and lhs.l_max_ == rhs.l_max_ and

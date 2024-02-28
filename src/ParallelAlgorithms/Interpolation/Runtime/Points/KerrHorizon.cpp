@@ -78,7 +78,6 @@ intrp::AngularOrdering KerrHorizon::angular_ordering() const {
 }
 
 void KerrHorizon::pup(PUP::er& p) {
-  Target<3>::pup(p);
   p | name_;
   p | l_max_;
   p | center_;
@@ -92,8 +91,6 @@ const tnsr::I<DataVector, 3, Frame::NoFrame>&
 KerrHorizon::target_points_no_frame() const {
   return points_;
 }
-
-PUP::able::PUP_ID KerrHorizon::my_PUP_ID = 0;  // NOLINT
 
 bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
   return lhs.name_ == rhs.name_ and lhs.l_max_ == rhs.l_max_ and
