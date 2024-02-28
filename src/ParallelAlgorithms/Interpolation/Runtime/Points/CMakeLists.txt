@@ -17,6 +17,7 @@ spectre_target_headers(
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
   AngularOrdering.hpp
+  BlockLogicalCoordinates.hpp
   KerrHorizon.hpp
   LineSegment.hpp
   SpecifiedPoints.hpp

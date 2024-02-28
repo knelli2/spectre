@@ -36,7 +36,7 @@
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Points/Target.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
 #include "Time/Tags/Time.hpp"
 #include "Utilities/OptionalHelpers.hpp"
 #include "Utilities/PrettyType.hpp"
@@ -205,17 +205,17 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
   // Constructor for a compile-time frame. The frame won't be `NoSuchType` here
   // so it's ok to use `pretty_type::name` to get the string name of the frame.
   InterpolateToPoints(
-      PointsType target, std::optional<double> invalid_fill_value,
+      PointsType points, std::optional<double> invalid_fill_value,
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp2::callbacks::Callback<Target>>>{},
       const Options::Context& context = {})
-      : InterpolateToPoints(std::move(target), pretty_type::name<Frame>(),
+      : InterpolateToPoints(std::move(points), pretty_type::name<Frame>(),
                             std::move(callbacks), context) {}
 
   // Constructor for a runtime frame
   InterpolateToPoints(
-      PointsType target, std::optional<double> invalid_fill_value,
+      PointsType points, std::optional<double> invalid_fill_value,
       std::string frame,
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
           callbacks = std::vector<
@@ -223,7 +223,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
       const Options::Context& context = {})
       : frame_(std::move(frame)),
         invalid_fill_value_(invalid_fill_value),
-        target_(std::move(target)),
+        points_(std::move(points)),
         callbacks_(std::move(callbacks)) {
     tensors_to_observe_.clear();
     for (const auto& callback : callbacks) {
@@ -281,7 +281,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
  private:
   std::string frame_{};
   std::optional<double> invalid_fill_value_{};
-  PointsType target_{};
+  PointsType points_{};
   std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
       callbacks_{};
   std::unordered_set<std::string> tensors_to_observe_{};
@@ -421,10 +421,11 @@ void InterpolateToPoints<Target, Dim>::operator()(
     const ObservationValue& /*observation_value*/) const {
   // TODO: Fix the time argument here. Need something like
   // InterpolationTarget_detail::get_temporal_id_value
+  const double time = 0.0;
   const std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>
-      block_logical_coords = target_->block_logical_coordinates(
-          box, cache, temporal_id.time(), frame_);
+      block_logical_coords =
+          intrp2::block_logical_coordinates(box, cache, time, frame_, points_);
 
   const std::vector<ElementId<Dim>> element_ids{{array_index}};
   const auto element_coord_holders =
@@ -500,7 +501,7 @@ InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
           const gsl::not_null<std::unordered_set<std::string>*> vars_to_observe,
           const gsl::not_null<double*> invalid_points_fill_value) {
         *frame = frame_;
-        *points = target_->target_points_no_frame();
+        *points = points_->target_points_no_frame();
         *vars_to_observe = tensors_to_observe_;
         *invalid_points_fill_value = invalid_fill_value_.value_or(
             std::numeric_limits<double>::quiet_NaN());
@@ -514,7 +515,7 @@ template <typename Target, size_t Dim>
 void InterpolateToPoints<Target, Dim>::pup(PUP::er& p) {
   p | frame_;
   p | invalid_fill_value_;
-  p | target_;
+  p | points_;
   p | callbacks_;
   p | tensors_to_observe_;
 }
