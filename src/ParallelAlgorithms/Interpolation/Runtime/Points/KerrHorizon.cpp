@@ -24,7 +24,7 @@ namespace intrp2::points {
 KerrHorizon::KerrHorizon(const size_t l_max,
                          const std::array<double, 3>& center, const double mass,
                          const std::array<double, 3>& dimensionless_spin,
-                         const intrp::AngularOrdering angular_ordering,
+                         const intrp2::AngularOrdering angular_ordering,
                          const Options::Context& context)
     : l_max_(l_max),
       center_(center),
@@ -53,7 +53,7 @@ KerrHorizon::KerrHorizon(const size_t l_max,
                         ylm::radius(strahlkorper),
                         ylm::rhat(ylm::theta_phi(strahlkorper)));
 
-  if (angular_ordering_ == intrp::AngularOrdering::Cce) {
+  if (angular_ordering_ == intrp2::AngularOrdering::Cce) {
     const auto physical_extents =
         strahlkorper.ylm_spherepack().physical_extents();
     for (size_t i = 0; i < 3; i++) {
@@ -65,20 +65,17 @@ KerrHorizon::KerrHorizon(const size_t l_max,
   }
 }
 
-const std::string& KerrHorizon::name() const { return name_; }
-
 size_t KerrHorizon::l_max() const { return l_max_; }
 const std::array<double, 3>& KerrHorizon::center() const { return center_; }
 double KerrHorizon::mass() const { return mass_; }
 const std::array<double, 3>& KerrHorizon::dimensionless_spin() const {
   return dimensionless_spin_;
 }
-intrp::AngularOrdering KerrHorizon::angular_ordering() const {
+intrp2::AngularOrdering KerrHorizon::angular_ordering() const {
   return angular_ordering_;
 }
 
 void KerrHorizon::pup(PUP::er& p) {
-  p | name_;
   p | l_max_;
   p | center_;
   p | mass_;
@@ -93,8 +90,8 @@ KerrHorizon::target_points_no_frame() const {
 }
 
 bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
-  return lhs.name_ == rhs.name_ and lhs.l_max_ == rhs.l_max_ and
-         lhs.center_ == rhs.center_ and lhs.mass_ == rhs.mass_ and
+  return lhs.l_max_ == rhs.l_max_ and lhs.center_ == rhs.center_ and
+         lhs.mass_ == rhs.mass_ and
          lhs.dimensionless_spin_ == rhs.dimensionless_spin_ and
          lhs.angular_ordering_ == rhs.angular_ordering_ and
          lhs.points_ == rhs.points_;

@@ -8,7 +8,7 @@
 #include <string>
 
 #include "DataStructures/DataVector.hpp"
-#include "DataStructures/Tensor/TypeAliases.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
@@ -106,7 +106,6 @@ struct WedgeSectionTorus : protocols::Points {
   const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
  private:
-  std::string name_{"WedgeSectionTorus"};
   std::array<double, 2> radial_bounds_{};
   std::array<double, 2> theta_bounds_{};
   std::array<size_t, 3> number_of_grid_points_{};

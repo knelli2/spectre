@@ -8,7 +8,7 @@
 #include <string>
 
 #include "DataStructures/DataVector.hpp"
-#include "DataStructures/Tensor/TypeAliases.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "Utilities/TMPL.hpp"
@@ -70,7 +70,6 @@ struct LineSegment : protocols::Points {
       const;
 
  private:
-  std::string name_{"LineSegment"};
   std::array<double, Dim> begin_{};
   std::array<double, Dim> end_{};
   tnsr::I<DataVector, Dim, Frame::NoFrame> points_{};

@@ -149,8 +149,6 @@ WedgeSectionTorus::WedgeSectionTorus(
   get<2>(points_) = radii * cos(thetas);
 }
 
-const std::string& WedgeSectionTorus::name() const { return name_; }
-
 const std::array<double, 2>& WedgeSectionTorus::radial_bounds() const {
   return radial_bounds_;
 }
@@ -168,7 +166,6 @@ bool WedgeSectionTorus::use_uniform_theta_grid() const {
 }
 
 void WedgeSectionTorus::pup(PUP::er& p) {
-  p | name_;
   p | radial_bounds_;
   p | theta_bounds_;
   p | number_of_grid_points_;
@@ -183,7 +180,7 @@ WedgeSectionTorus::target_points_no_frame() const {
 }
 
 bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
-  return lhs.name_ == rhs.name_ and lhs.radial_bounds_ == rhs.radial_bounds_ and
+  return lhs.radial_bounds_ == rhs.radial_bounds_ and
          lhs.theta_bounds_ == rhs.theta_bounds_ and
          lhs.number_of_grid_points_ == rhs.number_of_grid_points_ and
          lhs.use_uniform_radial_grid_ == rhs.use_uniform_radial_grid_ and

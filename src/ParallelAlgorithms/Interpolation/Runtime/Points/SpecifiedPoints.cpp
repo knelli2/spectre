@@ -27,13 +27,7 @@ SpecifiedPoints<Dim>::SpecifiedPoints(
 }
 
 template <size_t Dim>
-const std::string& SpecifiedPoints<Dim>::name() const {
-  return name_;
-}
-
-template <size_t Dim>
 void SpecifiedPoints<Dim>::pup(PUP::er& p) {
-  p | name_;
   p | points_;
 }
 
@@ -46,7 +40,7 @@ SpecifiedPoints<Dim>::target_points_no_frame() const {
 template <size_t Dim>
 bool operator==(const SpecifiedPoints<Dim>& lhs,
                 const SpecifiedPoints<Dim>& rhs) {
-  return lhs.name_ == rhs.name_ and lhs.points_ == rhs.points_;
+  return lhs.points_ == rhs.points_;
 }
 
 template <size_t Dim>

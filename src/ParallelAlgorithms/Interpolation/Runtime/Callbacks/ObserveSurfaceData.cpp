@@ -80,7 +80,7 @@ void fill_ylm_legend_and_data(
 #define FRAMETYPE(instantiation_data) BOOST_PP_TUPLE_ELEM(0, instantiation_data)
 
 #define INSTANTIATE(_, instantiation_data)                                  \
-  template void intrp::callbacks::detail::fill_ylm_legend_and_data(         \
+  template void intrp2::callbacks::detail::fill_ylm_legend_and_data(        \
       gsl::not_null<std::vector<std::string>*> legend,                      \
       gsl::not_null<std::vector<double>*> data,                             \
       const ylm::Strahlkorper<FRAMETYPE(instantiation_data)>& strahlkorper, \

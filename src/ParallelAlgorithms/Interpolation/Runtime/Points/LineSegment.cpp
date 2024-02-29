@@ -32,11 +32,6 @@ LineSegment<Dim>::LineSegment(const std::array<double, Dim>& begin,
 }
 
 template <size_t Dim>
-const std::string& LineSegment<Dim>::name() const {
-  return name_;
-}
-
-template <size_t Dim>
 const std::array<double, Dim>& LineSegment<Dim>::begin() const {
   return begin_;
 }
@@ -47,7 +42,6 @@ const std::array<double, Dim>& LineSegment<Dim>::end() const {
 
 template <size_t Dim>
 void LineSegment<Dim>::pup(PUP::er& p) {
-  p | name_;
   p | begin_;
   p | end_;
   p | points_;
@@ -61,8 +55,8 @@ LineSegment<Dim>::target_points_no_frame() const {
 
 template <size_t Dim>
 bool operator==(const LineSegment<Dim>& lhs, const LineSegment<Dim>& rhs) {
-  return lhs.name_ == rhs.name_ and lhs.begin_ == rhs.begin_ and
-         lhs.end_ == rhs.end_ and lhs.points_ == rhs.points_;
+  return lhs.begin_ == rhs.begin_ and lhs.end_ == rhs.end_ and
+         lhs.points_ == rhs.points_;
 }
 
 template <size_t Dim>

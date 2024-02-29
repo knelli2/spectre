@@ -11,6 +11,9 @@
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
 #include "DataStructures/DataBox/ValidateSelection.hpp"
+#include "DataStructures/DataVector.hpp"
+#include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
+#include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
 #include "IO/H5/TensorData.hpp"
 #include "IO/Observer/ObserverComponent.hpp"
@@ -38,7 +41,7 @@ struct Grid;
 struct Distorted;
 }  // namespace Frame
 namespace intrp2::callbacks {
-template <typename TagsToObserve>
+template <typename Target, typename TagsToObserve>
 struct ObserveDataOnStrahlkorper;
 }  // namespace intrp2::callbacks
 /// \endcond
@@ -97,7 +100,7 @@ void fill_ylm_legend_and_data(gsl::not_null<std::vector<std::string>*> legend,
 /// to address this is to have a known maximum \f$l_{max}\f$ for a given surface
 /// and write all coefficients up to that maximum \f$l_{max}\f$.
 template <typename Target, typename... TagsToObserve>
-struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
+struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>>
     : public Callback<Target>, protocols::Callback {
   using tags_to_observe_on_target = tmpl::list<>;
   using non_observation_tags_on_target = tmpl::list<>;
@@ -125,7 +128,7 @@ struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
 
   ObserveDataOnStrahlkorper(std::string subfile_name,
                             const std::vector<std::string>& values_to_observe,
-                            const Options::Context& context = {})
+                            const Options::Context& /*context*/ = {})
       : subfile_name_(std::move(subfile_name)) {
     db::validate_selection<available_tags_to_observe>(values_to_observe);
     for (const auto& value : values_to_observe) {
@@ -162,15 +165,15 @@ struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
 
       const auto& domain = Parallel::get<domain::Tags::Domain<3>>(cache);
       const auto& functions_of_time =
-          Parallel::get<domain::Tags::FunctionOfTime>(cache);
+          Parallel::get<domain::Tags::FunctionsOfTime>(cache);
 
       if (frame == "Distorted") {
+        // QUESTION: Average radius? Something else?
         ylm::Strahlkorper<Frame::Distorted> strahlkorper_dist_frame{
-            strahlkorper.l_max(), strahlkorper.radius(),
+            strahlkorper.l_max(), strahlkorper.average_radius(),
             strahlkorper.expansion_center()};
-        strahlkorper_dist_frame.coefficients().set_data_ref(
-            strahlkorper.coefficients().data(),
-            strahlkorper.coefficients().size());
+        strahlkorper_dist_frame.coefficients().set_data_ref(make_not_null(
+            &const_cast<DataVector&>(strahlkorper.coefficients())));
         strahlkorper_coords_in_different_frame(make_not_null(&inertial_coords),
                                                strahlkorper_dist_frame, domain,
                                                functions_of_time, time);
@@ -179,11 +182,10 @@ struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
                                     << frame
                                     << "' for ObserveDataOnStrahlkorper.");
         ylm::Strahlkorper<Frame::Grid> strahlkorper_grid_frame{
-            strahlkorper.l_max(), strahlkorper.radius(),
+            strahlkorper.l_max(), strahlkorper.average_radius(),
             strahlkorper.expansion_center()};
-        strahlkorper_grid_frame.coefficients().set_data_ref(
-            strahlkorper.coefficients().data(),
-            strahlkorper.coefficients().size());
+        strahlkorper_grid_frame.coefficients().set_data_ref(make_not_null(
+            &const_cast<DataVector&>(strahlkorper.coefficients())));
         strahlkorper_coords_in_different_frame(make_not_null(&inertial_coords),
                                                strahlkorper_grid_frame, domain,
                                                functions_of_time, time);
@@ -207,23 +209,22 @@ struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
     // probably unnecessary, because Strahlkorpers are typically only
     // visualized with scalar quantities (used set the color at different
     // points on the surface).
-    tmpl::for_each<TagsToObserve>(
-        [&box, &tensor_components, &vars_to_observe](auto tag_v) {
+    tmpl::for_each<tmpl::list<TagsToObserve...>>(
+        [&access, &tensor_components, &vars_to_observe](auto tag_v) {
           using Tag = tmpl::type_from<decltype(tag_v)>;
           const auto tag_name = db::tag_name<Tag>();
           if (vars_to_observe.count(tag_name) != 1) {
             return;
           }
 
-          const auto& tensor = get<Tag>(box);
+          const auto& tensor = get<Tag>(access);
           for (size_t i = 0; i < tensor.size(); ++i) {
             tensor_components.emplace_back(
                 tag_name + tensor.component_suffix(i), tensor[i]);
           }
         });
 
-    const std::string& surface_name =
-        pretty_type::name<InterpolationTargetTag>();
+    const std::string& surface_name = pretty_type::name<Target>();
     const std::string subfile_path{std::string{"/"} + surface_name};
     const std::vector<size_t> extents_vector{
         {ylm.physical_extents()[0], ylm.physical_extents()[1]}};

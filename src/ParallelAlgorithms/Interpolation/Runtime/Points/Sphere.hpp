@@ -26,9 +26,9 @@ namespace domain::Tags {
 template <size_t Dim, typename Frame>
 struct Coordinates;
 struct FunctionOfTime;
-template <size_t 3>
+template <size_t Dim>
 struct Domain;
-template <size_t 3>
+template <size_t Dim>
 struct Element;
 }  // namespace domain::Tags
 namespace Frame {
@@ -48,6 +48,11 @@ namespace intrp2::points {
  * worldtube requires `Cce` for `AngularOrdering`.
  */
 struct Sphere : protocols::Points {
+ private:
+  using BlockCoords = std::vector<std::optional<
+      IdPair<domain::BlockId, tnsr::I<double, 3, ::Frame::BlockLogical>>>>;
+
+ public:
   using tags_on_target = tmpl::list<>;
   using points_volume_compute_tags = tmpl::list<>;
 
@@ -76,7 +81,7 @@ struct Sphere : protocols::Points {
 
   Sphere(size_t l_max, const std::array<double, 3>& center,
          const typename Radius::type& input_radii,
-         intrp::AngularOrdering angular_ordering,
+         intrp2::AngularOrdering angular_ordering,
          const Options::Context& context = {});
 
   Sphere() = default;
@@ -254,7 +259,7 @@ struct Sphere : protocols::Points {
   size_t l_max() const;
   const std::array<double, 3>& center() const;
   const std::set<double>& radii() const;
-  intrp::AngularOrdering angular_ordering() const;
+  intrp2::AngularOrdering angular_ordering() const;
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)
@@ -263,11 +268,10 @@ struct Sphere : protocols::Points {
   const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
  private:
-  std::string name_{"Sphere"};
   size_t l_max_{};
   std::array<double, 3> center_{};
   std::set<double> radii_{};
-  intrp::AngularOrdering angular_ordering_{};
+  intrp2::AngularOrdering angular_ordering_{};
   tnsr::I<DataVector, 3, Frame::NoFrame> points_{};
 
   friend bool operator==(const Sphere& lhs, const Sphere& rhs);

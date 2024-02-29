@@ -14,6 +14,8 @@ spectre_target_headers(
   ${LIBRARY}
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
+  InterpolationTarget.hpp
+  Tags.hpp
   )
 
 add_dependencies(
@@ -24,6 +26,18 @@ add_dependencies(
 target_link_libraries(
   ${LIBRARY}
   PUBLIC
+  DataStructures
+  Domain
+  ErrorHandling
+  GeneralRelativitySolutions
+  H5
+  Options
+  Parallel
+  Spectral
+  SphericalHarmonics
+  Utilities
+  INTERFACE
+  EventsAndTriggers
   )
 
 add_subdirectory(Callbacks)

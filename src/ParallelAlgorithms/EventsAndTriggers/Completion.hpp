@@ -63,6 +63,8 @@ class Completion : public Event {
     return true;
   }
 
+  std::string name() override;
+
   bool needs_evolved_variables() const override { return false; }
 };
 }  // namespace Events

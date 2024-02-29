@@ -59,7 +59,7 @@ struct SphereVisitor {
 
 Sphere::Sphere(const size_t l_max, const std::array<double, 3>& center,
                const typename Radius::type& input_radii,
-               const intrp::AngularOrdering angular_ordering,
+               const intrp2::AngularOrdering angular_ordering,
                const Options::Context& context)
     : l_max_(l_max),
       center_(center),
@@ -84,7 +84,7 @@ Sphere::Sphere(const size_t l_max, const std::array<double, 3>& center,
 
     // If the angular ordering is Strahlkorper then we don't have to do
     // anything to the coords because they are already in the right order
-    if (angular_ordering_ == intrp::AngularOrdering::Cce) {
+    if (angular_ordering_ == intrp2::AngularOrdering::Cce) {
       const auto physical_extents =
           strahlkorper.ylm_spherepack().physical_extents();
 
@@ -118,17 +118,14 @@ Sphere::Sphere(const size_t l_max, const std::array<double, 3>& center,
   // LCOV_EXCL_STOP
 }
 
-const std::string& Sphere::name() const { return name_; }
-
 size_t Sphere::l_max() const { return l_max_; }
 const std::array<double, 3>& Sphere::center() const { return center_; }
 const std::set<double>& Sphere::radii() const { return radii_; }
-intrp::AngularOrdering Sphere::angular_ordering() const {
+intrp2::AngularOrdering Sphere::angular_ordering() const {
   return angular_ordering_;
 }
 
 void Sphere::pup(PUP::er& p) {
-  p | name_;
   p | l_max_;
   p | center_;
   p | radii_;
@@ -142,8 +139,8 @@ const tnsr::I<DataVector, 3, Frame::NoFrame>& Sphere::target_points_no_frame()
 }
 
 bool operator==(const Sphere& lhs, const Sphere& rhs) {
-  return lhs.name_ == rhs.name_ and lhs.l_max_ == rhs.l_max_ and
-         lhs.center_ == rhs.center_ and lhs.radii_ == rhs.radii_ and
+  return lhs.l_max_ == rhs.l_max_ and lhs.center_ == rhs.center_ and
+         lhs.radii_ == rhs.radii_ and
          lhs.angular_ordering_ == rhs.angular_ordering_ and
          lhs.points_ == rhs.points_;
 }

@@ -20,8 +20,7 @@
 #include "DataStructures/Variables.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Options/String.hpp"
-#include "ParallelAlgorithms/Interpolation/Callbacks/Runtime/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/InterpolatedVars.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
 /// \cond
@@ -38,6 +37,17 @@ namespace OptionTags {
  */
 struct InterpolationTargets {
   static constexpr Options::String help{"Options for interpolation targets"};
+};
+
+/// Option tag that determines if volume data will be dumped from the
+/// Interpolator upon a failure.
+struct DumpVolumeDataOnFailure {
+  using type = bool;
+  static constexpr Options::String help{
+      "Whether or not to dump all volume data currently stored by the "
+      "interpolator. Volume data is written to the file corresponding to the "
+      "node it was collected on."};
+  using group = InterpolationTargets;
 };
 }  // namespace OptionTags
 

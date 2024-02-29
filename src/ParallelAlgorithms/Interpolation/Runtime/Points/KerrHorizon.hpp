@@ -8,7 +8,7 @@
 #include <string>
 
 #include "DataStructures/DataVector.hpp"
-#include "DataStructures/Tensor/TypeAliases.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
@@ -54,7 +54,7 @@ struct KerrHorizon : protocols::Points {
         "Dimensionless spin of black hole"};
   };
   struct AngularOrdering {
-    using type = intrp::AngularOrdering;
+    using type = intrp2::AngularOrdering;
     static constexpr Options::String help = {
         "Chooses theta,phi ordering in 2d array"};
   };
@@ -66,7 +66,7 @@ struct KerrHorizon : protocols::Points {
 
   KerrHorizon(size_t l_max, const std::array<double, 3>& center, double mass,
               const std::array<double, 3>& dimensionless_spin,
-              intrp::AngularOrdering angular_ordering,
+              intrp2::AngularOrdering angular_ordering,
               const Options::Context& context = {});
 
   KerrHorizon() = default;
@@ -80,7 +80,7 @@ struct KerrHorizon : protocols::Points {
   const std::array<double, 3>& center() const;
   double mass() const;
   const std::array<double, 3>& dimensionless_spin() const;
-  intrp::AngularOrdering angular_ordering() const;
+  intrp2::AngularOrdering angular_ordering() const;
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)
@@ -89,12 +89,11 @@ struct KerrHorizon : protocols::Points {
   const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
  private:
-  std::string name_{"KerrHorizon"};
   size_t l_max_{};
   std::array<double, 3> center_{};
   double mass_{};
   std::array<double, 3> dimensionless_spin_{};
-  intrp::AngularOrdering angular_ordering_{};
+  intrp2::AngularOrdering angular_ordering_{};
   tnsr::I<DataVector, 3, Frame::NoFrame> points_{};
 
   friend bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs);

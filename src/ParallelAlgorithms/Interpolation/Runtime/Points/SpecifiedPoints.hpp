@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "DataStructures/DataVector.hpp"
+#include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
@@ -46,7 +47,6 @@ struct SpecifiedPoints : protocols::Points {
       const;
 
  private:
-  std::string name_{"SpecifiedPoints"};
   tnsr::I<DataVector, Dim, Frame::NoFrame> points_{};
 
   template <size_t LocalDim>
