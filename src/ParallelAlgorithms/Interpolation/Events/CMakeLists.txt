@@ -7,6 +7,5 @@ spectre_target_headers(
   HEADERS
   GetComputeItemsOnSource.hpp
   Interpolate.hpp
-  InterpolateToPoints.hpp
   InterpolateWithoutInterpComponent.hpp
   )

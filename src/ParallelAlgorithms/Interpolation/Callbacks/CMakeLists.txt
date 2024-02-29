@@ -10,5 +10,3 @@ spectre_target_headers(
   ObserveSurfaceData.hpp
   ObserveTimeSeriesOnSurface.hpp
   )
-
-add_subdirectory(Runtime)
