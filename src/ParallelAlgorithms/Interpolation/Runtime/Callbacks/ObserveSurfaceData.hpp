@@ -10,6 +10,7 @@
 
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
+#include "DataStructures/DataBox/ValidateSelection.hpp"
 #include "Domain/StrahlkorperTransformations.hpp"
 #include "IO/H5/TensorData.hpp"
 #include "IO/Observer/ObserverComponent.hpp"
@@ -24,7 +25,8 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/Tags.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -96,10 +98,45 @@ void fill_ylm_legend_and_data(gsl::not_null<std::vector<std::string>*> legend,
 /// and write all coefficients up to that maximum \f$l_{max}\f$.
 template <typename Target, typename... TagsToObserve>
 struct ObserveDataOnStrahlkorper<tmpl::list<TagsToObserve...>>
-    : public Callback<Target> {
-  using const_global_cache_tags = tmpl::list<observers::Tags::SurfaceFileName>;
+    : public Callback<Target>, protocols::Callback {
+  using tags_to_observe_on_target = tmpl::list<>;
+  using non_observation_tags_on_target = tmpl::list<>;
+  using volume_compute_tags = tmpl::list<>;
+
+  struct SubfileName {
+    using type = std::string;
+    static constexpr Options::String help = {
+        "The name of the subfile inside the HDF5 file without an extension and "
+        "without a preceding '/'."};
+  };
+  struct ValuesToObserve {
+    using type = std::vector<std::string>;
+    static constexpr Options::String help = {
+        "List specifying the name of each value to observe."};
+  };
+
+  using options = tmpl::list<SubfileName, ValuesToObserve>;
 
   using available_tags_to_observe = tmpl::list<TagsToObserve...>;
+
+  static constexpr Options::String help = {
+      "Observe values (doubles) over a whole surface. These are usually "
+      "reduced or integrated quantities."};
+
+  ObserveDataOnStrahlkorper(std::string subfile_name,
+                            const std::vector<std::string>& values_to_observe,
+                            const Options::Context& context = {})
+      : subfile_name_(std::move(subfile_name)) {
+    db::validate_selection<available_tags_to_observe>(values_to_observe);
+    for (const auto& value : values_to_observe) {
+      values_to_observe_.insert(value);
+    }
+  }
+
+  void pup(PUP::er& p) override {
+    p | subfile_name_;
+    p | values_to_observe_;
+  }
 
   template <typename Metavariables>
   static void apply(const db::Access& access,

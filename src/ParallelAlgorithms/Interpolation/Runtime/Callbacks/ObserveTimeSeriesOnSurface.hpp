@@ -20,7 +20,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/Tags.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -55,6 +55,10 @@ template <typename Target, typename... TagsToObserve>
 struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
     : public Callback<Target> {
   static_assert(... and std::is_same_v<typename TagsToObserve::type, double>);
+
+  using tags_to_observe_on_target = tmpl::list<>;
+  using non_observation_tags_on_target = tmpl::list<>;
+  using volume_compute_tags = tmpl::list<>;
 
   /// \cond
   ObserveTimeSeriesOnSurface2() = default;
@@ -94,7 +98,10 @@ struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
     }
   }
 
-  void pup(PUP::er& p) override {}
+  void pup(PUP::er& p) override {
+    p | subfile_name_;
+    p | values_to_observe_;
+  }
 
   template <typename Metavariables>
   static void apply(const db::Access& access,
