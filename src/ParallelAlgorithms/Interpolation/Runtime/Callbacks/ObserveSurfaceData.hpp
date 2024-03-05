@@ -31,6 +31,7 @@
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -41,7 +42,8 @@ struct Grid;
 struct Distorted;
 }  // namespace Frame
 namespace intrp2::callbacks {
-template <typename Target, typename TagsToObserve>
+template <typename Target, typename TagsToObserve, typename NonObservationTags,
+          typename VolumeComputeTags>
 struct ObserveDataOnStrahlkorper;
 }  // namespace intrp2::callbacks
 /// \endcond
@@ -99,12 +101,14 @@ void fill_ylm_legend_and_data(gsl::not_null<std::vector<std::string>*> legend,
 /// coefficients will need to be updated to account for this. One possible way
 /// to address this is to have a known maximum \f$l_{max}\f$ for a given surface
 /// and write all coefficients up to that maximum \f$l_{max}\f$.
-template <typename Target, typename... TagsToObserve>
-struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>>
-    : public Callback<Target>, protocols::Callback {
-  using tags_to_observe_on_target = tmpl::list<>;
-  using non_observation_tags_on_target = tmpl::list<>;
-  using volume_compute_tags = tmpl::list<>;
+template <typename Target, typename... TagsToObserve,
+          typename NonObservationTags, typename VolumeComputeTags>
+struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
+                                 NonObservationTags, VolumeComputeTags>
+    : public Callback<Target>, tt::ConformsTo<protocols::Callback> {
+  using tags_to_observe_on_target = tmpl::list<TagsToObserve...>;
+  using non_observation_tags_on_target = NonObservationTags;
+  using volume_compute_tags = VolumeComputeTags;
 
   struct SubfileName {
     using type = std::string;
@@ -120,8 +124,6 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>>
 
   using options = tmpl::list<SubfileName, ValuesToObserve>;
 
-  using available_tags_to_observe = tmpl::list<TagsToObserve...>;
-
   static constexpr Options::String help = {
       "Observe values (doubles) over a whole surface. These are usually "
       "reduced or integrated quantities."};
@@ -130,7 +132,7 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>>
                             const std::vector<std::string>& values_to_observe,
                             const Options::Context& /*context*/ = {})
       : subfile_name_(std::move(subfile_name)) {
-    db::validate_selection<available_tags_to_observe>(values_to_observe);
+    db::validate_selection<tags_to_observe_on_target>(values_to_observe);
     for (const auto& value : values_to_observe) {
       values_to_observe_.insert(value);
     }
@@ -209,7 +211,7 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>>
     // probably unnecessary, because Strahlkorpers are typically only
     // visualized with scalar quantities (used set the color at different
     // points on the surface).
-    tmpl::for_each<tmpl::list<TagsToObserve...>>(
+    tmpl::for_each<tags_to_observe_on_target>(
         [&access, &tensor_components, &vars_to_observe](auto tag_v) {
           using Tag = tmpl::type_from<decltype(tag_v)>;
           const auto tag_name = db::tag_name<Tag>();

@@ -12,6 +12,7 @@
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -45,7 +46,7 @@ namespace intrp2::points {
  * The `target_points` form a 3D mesh ordered with $r$ varying fastest, then
  * $\theta$, and finally $\phi$ varying slowest.
  */
-struct WedgeSectionTorus : protocols::Points {
+struct WedgeSectionTorus : public tt::ConformsTo<protocols::Points> {
   using tags_on_target = tmpl::list<>;
   using points_volume_compute_tags = tmpl::list<>;
 

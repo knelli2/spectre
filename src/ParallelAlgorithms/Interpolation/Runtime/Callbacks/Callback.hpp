@@ -25,7 +25,7 @@ class Callback : PUP::able {
   Callback& operator=(Callback&&) = default;
   /// \endcond
 
-  ~Callback() override = default;
+  // ~Callback() override = default;
   explicit Callback(CkMigrateMessage* msg) : PUP::able(msg) {}
   WRAPPED_PUPable_abstract(Callback);  // NOLINT
 

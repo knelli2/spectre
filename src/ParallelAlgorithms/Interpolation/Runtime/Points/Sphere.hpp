@@ -19,6 +19,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -47,7 +48,7 @@ namespace intrp2::points {
  * `Strahlkorper` for `AngularOrdering`, and using these surfaces for a CCE
  * worldtube requires `Cce` for `AngularOrdering`.
  */
-struct Sphere : protocols::Points {
+struct Sphere : public tt::ConformsTo<protocols::Points> {
  private:
   using BlockCoords = std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, 3, ::Frame::BlockLogical>>>>;

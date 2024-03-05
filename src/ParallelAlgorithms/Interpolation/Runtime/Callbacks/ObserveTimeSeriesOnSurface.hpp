@@ -20,7 +20,9 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -34,10 +36,10 @@ struct ObserverWriter;
 namespace intrp2 {
 namespace callbacks {
 /// \cond
-template <typename Target, typename TagsToObserve>
-struct ObserveTimeSeriesOnSurface2;
+template <typename Target, typename TagsToObserve, typename NonObservationTags,
+          typename VolumeComputeTags>
+struct ObserveTimeSeriesOnSurface;
 /// \endcond
-
 /// \brief post_interpolation_callback that outputs
 /// a time series on a surface.
 ///
@@ -51,21 +53,26 @@ struct ObserveTimeSeriesOnSurface2;
 ///
 /// For requirements on InterpolationTargetTag, see
 /// intrp2::protocols::InterpolationTargetTag
-template <typename Target, typename... TagsToObserve>
-struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
-    : public Callback<Target> {
-  static_assert(... and std::is_same_v<typename TagsToObserve::type, double>);
+// TODO: Rename to ObserveTimeSeriesOnTarget
+template <typename Target, typename... TagsToObserve,
+          typename NonObservationTags, typename VolumeComputeTags>
+struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
+                                  NonObservationTags, VolumeComputeTags>
+    : public Callback<Target>, tt::ConformsTo<protocols::Callback> {
+  static_assert(tmpl2::flat_all_v<
+                std::is_same_v<typename TagsToObserve::type, double>...>);
 
-  using tags_to_observe_on_target = tmpl::list<>;
-  using non_observation_tags_on_target = tmpl::list<>;
-  using volume_compute_tags = tmpl::list<>;
+  using tags_to_observe_on_target = tmpl::list<TagsToObserve...>;
+  using non_observation_tags_on_target = NonObservationTags;
+  using volume_compute_tags = VolumeComputeTags;
 
   /// \cond
-  ObserveTimeSeriesOnSurface2() = default;
-  explicit ObserveTimeSeriesOnSurface2(CkMigrateMessage* /*unused*/) {}
+  ObserveTimeSeriesOnSurface() = default;
+  explicit ObserveTimeSeriesOnSurface(CkMigrateMessage* /*unused*/) {}
   using PUP::able::register_constructor;
   // NOLINTNEXTLINE
-  WRAPPED_PUPable_decl_base_template(Callback, ObserveTimeSeriesOnSurface2);
+  WRAPPED_PUPable_decl_base_template(Callback<Target>,
+                                     ObserveTimeSeriesOnSurface);
   /// \endcond
 
   struct SubfileName {
@@ -82,17 +89,15 @@ struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
 
   using options = tmpl::list<SubfileName, ValuesToObserve>;
 
-  using available_tags_to_observe = tmpl::list<TagsToObserve...>;
-
   static constexpr Options::String help = {
       "Observe values (doubles) over a whole surface. These are usually "
       "reduced or integrated quantities."};
 
-  ObserveTimeSeriesOnSurface2(std::string subfile_name,
-                              const std::vector<std::string>& values_to_observe,
-                              const Options::Context& context = {})
+  ObserveTimeSeriesOnSurface(std::string subfile_name,
+                             const std::vector<std::string>& values_to_observe,
+                             const Options::Context& /*context*/ = {})
       : subfile_name_(std::move(subfile_name)) {
-    db::validate_selection<available_tags_to_observe>(values_to_observe);
+    db::validate_selection<tags_to_observe_on_target>(values_to_observe);
     for (const auto& value : values_to_observe) {
       values_to_observe_.insert(value);
     }
@@ -104,9 +109,8 @@ struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
   }
 
   template <typename Metavariables>
-  static void apply(const db::Access& access,
-                    Parallel::GlobalCache<Metavariables>& cache,
-                    const double time) {
+  void apply(const db::Access& access,
+             Parallel::GlobalCache<Metavariables>& cache, const double time) {
     auto& proxy = Parallel::get_parallel_component<
         observers::ObserverWriter<Metavariables>>(cache);
 
@@ -124,7 +128,7 @@ struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
     legend.emplace_back("Time");
     legend.emplace_back(time);
 
-    tmpl::for_each<available_tags_to_observe>(
+    tmpl::for_each<tags_to_observe_on_target>(
         [&access, &vars_to_observe, &legend, &data](auto tag_v) {
           using Tag = tmpl::type_from<decltype(tag_v)>;
           const std::string tag_name = db::tag_name<Tag>();
@@ -152,9 +156,13 @@ struct ObserveTimeSeriesOnSurface2<Target, tmpl::list<TagsToObserve...>>
 };
 
 /// \cond
-template <typename Target, typename... TagsToObserve>
-PUP::able::PUP_ID ObserveTimeSeriesOnSurface2<
-    Target, tmpl::list<TagsToObserve...>>::my_PUP_ID = 0;  // NOLINT
+// NOLINTBEGIN
+template <typename Target, typename... TagsToObserve,
+          typename NonObservationTags, typename VolumeComputeTags>
+PUP::able::PUP_ID ObserveTimeSeriesOnSurface<
+    Target, tmpl::list<TagsToObserve...>, NonObservationTags,
+    VolumeComputeTags>::my_PUP_ID = 0;
+// NOLINTEND
 /// \endcond
 }  // namespace callbacks
 }  // namespace intrp2

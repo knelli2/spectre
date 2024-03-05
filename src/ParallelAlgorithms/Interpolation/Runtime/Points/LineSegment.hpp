@@ -11,6 +11,7 @@
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -23,7 +24,7 @@ namespace intrp2::points {
 /// A line segment extending from `Begin` to `End`, containing `NumberOfPoints`
 /// uniformly-spaced points including the endpoints.
 template <size_t Dim>
-struct LineSegment : protocols::Points {
+struct LineSegment : public tt::ConformsTo<protocols::Points> {
   using tags_on_target = tmpl::list<>;
   using points_volume_compute_tags = tmpl::list<>;
 

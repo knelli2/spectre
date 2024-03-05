@@ -34,9 +34,9 @@ namespace intrp2::protocols {
  *
  * \code{cpp}
  * template <typename Metavariables, typename TemporalId>
- * static void apply(const db::Access& access,
- *                   Parallel::GlobalCache<Metavariables>& cache,
- *                   const TemporalId& time);
+ * void apply(const db::Access& access,
+ *            Parallel::GlobalCache<Metavariables>& cache,
+ *            const TemporalId& time);
  * \endcode
  *
  * TODO: Add example

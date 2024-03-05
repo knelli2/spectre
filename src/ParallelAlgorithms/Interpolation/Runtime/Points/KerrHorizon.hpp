@@ -13,6 +13,7 @@
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -31,7 +32,7 @@ namespace intrp2::points {
  * harmonic basis and `AngularOrdering` which encodes the collocation
  * ordering.
  */
-struct KerrHorizon : protocols::Points {
+struct KerrHorizon : public tt::ConformsTo<protocols::Points> {
   using tags_on_target = tmpl::list<>;
   using points_volume_compute_tags = tmpl::list<>;
 

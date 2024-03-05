@@ -13,6 +13,7 @@
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -24,7 +25,7 @@ struct NoFrame;
 namespace intrp2::points {
 /// A list of specified points to interpolate to.
 template <size_t Dim>
-struct SpecifiedPoints : protocols::Points {
+struct SpecifiedPoints : public tt::ConformsTo<protocols::Points> {
   using tags_on_target = tmpl::list<>;
   using points_volume_compute_tags = tmpl::list<>;
 

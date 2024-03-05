@@ -4,6 +4,7 @@
 set(LIBRARY "Test_ParallelInterpolationRuntime")
 
 set(LIBRARY_SOURCES
+  Test_Protocols.cpp
   )
 
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")
@@ -14,7 +15,7 @@ target_link_libraries(
   # Boost::boost
   # ControlSystem
   # CoordinateMaps
-  # DataStructures
+  DataStructures
   # Domain
   # DomainCreators
   # DomainStructure

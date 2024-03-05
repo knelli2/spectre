@@ -34,7 +34,7 @@ namespace intrp2::protocols {
  *
  * TODO: Add example
  */
-struct Callback {
+struct Target {
   template <typename ConformingType>
   struct test {
     using temporal_id_tag = typename ConformingType::temporal_id_tag;

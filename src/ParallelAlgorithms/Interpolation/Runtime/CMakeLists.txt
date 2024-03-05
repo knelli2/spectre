@@ -5,10 +5,10 @@ set(LIBRARY ParallelInterpolationRuntime)
 
 add_spectre_library(${LIBRARY})
 
-spectre_target_sources(
-  ${LIBRARY}
-  PRIVATE
-  )
+# spectre_target_sources(
+#   ${LIBRARY}
+#   PRIVATE
+#   )
 
 spectre_target_headers(
   ${LIBRARY}
@@ -22,6 +22,10 @@ add_dependencies(
   ${LIBRARY}
   module_GlobalCache
   )
+
+add_subdirectory(Callbacks)
+add_subdirectory(Events)
+add_subdirectory(Points)
 
 target_link_libraries(
   ${LIBRARY}
@@ -39,7 +43,3 @@ target_link_libraries(
   INTERFACE
   EventsAndTriggers
   )
-
-add_subdirectory(Callbacks)
-add_subdirectory(Events)
-add_subdirectory(Points)
