@@ -60,8 +60,8 @@ struct LineSegment : public tt::ConformsTo<protocols::Points> {
    * \note We don't offer the number of points because that can be easily
    * retrieved from the tensor of points.
    */
-  const std::array<double, Dim>& begin() const;
-  const std::array<double, Dim>& end() const;
+  const std::array<double, Dim>& begin_point() const;
+  const std::array<double, Dim>& end_point() const;
   /// @}
 
   // NOLINTNEXTLINE(google-runtime-references)

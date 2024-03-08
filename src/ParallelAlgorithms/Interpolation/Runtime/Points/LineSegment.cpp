@@ -32,11 +32,11 @@ LineSegment<Dim>::LineSegment(const std::array<double, Dim>& begin,
 }
 
 template <size_t Dim>
-const std::array<double, Dim>& LineSegment<Dim>::begin() const {
+const std::array<double, Dim>& LineSegment<Dim>::begin_point() const {
   return begin_;
 }
 template <size_t Dim>
-const std::array<double, Dim>& LineSegment<Dim>::end() const {
+const std::array<double, Dim>& LineSegment<Dim>::end_point() const {
   return end_;
 }
 
