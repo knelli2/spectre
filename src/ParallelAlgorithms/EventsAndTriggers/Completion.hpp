@@ -63,7 +63,7 @@ class Completion : public Event {
     return true;
   }
 
-  std::string name() override;
+  std::string name() const override;
 
   bool needs_evolved_variables() const override { return false; }
 };

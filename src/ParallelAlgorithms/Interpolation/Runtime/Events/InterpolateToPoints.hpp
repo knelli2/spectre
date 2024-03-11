@@ -36,7 +36,9 @@
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Events/MarkAsInterpolation.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Time/Tags/Time.hpp"
 #include "Utilities/OptionalHelpers.hpp"
 #include "Utilities/PrettyType.hpp"
@@ -49,7 +51,7 @@ template <size_t Dim>
 struct ObserverMesh;
 }  // namespace Events::Tags
 namespace intrp2 {
-template <class Metavariables, bool IncludeDenseTriggers>
+template <class Metavariables>
 struct InterpolationTarget;
 namespace Actions {
 struct ReceiveVolumeTensors;
@@ -58,12 +60,6 @@ struct ReceiveVolumeTensors;
 /// \endcond
 
 namespace intrp2::Events {
-struct MarkAsInterpolation {
-  // This will be used to initialize the Accesses that correspond to the
-  // individual targets
-  virtual std::unique_ptr<db::Access> initialize_target_element_box() const = 0;
-};
-
 struct ExampleOfTarget {
   static std::string name() { return "ExampleOfTarget"; }
 
@@ -104,7 +100,7 @@ struct ExampleCallback {
  * `block_logical_coordinates` for it's own points.
  */
 template <typename Target, size_t Dim>
-class InterpolateToPoints : public Event, MarkAsInterpolation {
+class InterpolateToPoints : public Event, public MarkAsInterpolation {
   using temporal_id_tag = typename Target::temporal_id_tag;
   using TemporalId = typename temporal_id_tag::type;
   using PointsType = typename Target::points;
@@ -210,8 +206,9 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
           callbacks = std::vector<
               std::unique_ptr<intrp2::callbacks::Callback<Target>>>{},
       const Options::Context& context = {})
-      : InterpolateToPoints(std::move(points), pretty_type::name<Frame>(),
-                            std::move(callbacks), context) {}
+      : InterpolateToPoints(std::move(points), std::move(invalid_fill_value),
+                            pretty_type::name<Frame>(), std::move(callbacks),
+                            context) {}
 
   // Constructor for a runtime frame
   InterpolateToPoints(
@@ -220,7 +217,7 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>
           callbacks = std::vector<
               std::unique_ptr<intrp2::callbacks::Callback<Target>>>{},
-      const Options::Context& context = {})
+      const Options::Context& /*context*/ = {})
       : frame_(std::move(frame)),
         invalid_fill_value_(invalid_fill_value),
         points_(std::move(points)),
@@ -302,9 +299,9 @@ class InterpolateToPoints : public Event, MarkAsInterpolation {
 template <typename Target, size_t Dim>
 template <typename ComputeTag, typename F>
 void InterpolateToPoints<Target, Dim>::for_compute_tag_arguments(const F&& f) {
-  using argument_tags = typename ComputeTag::argument_tags;
+  using local_argument_tags = typename ComputeTag::argument_tags;
 
-  tmpl::for_each<argument_tags>([&f](auto tag_v) { f(tag_v); });
+  tmpl::for_each<local_argument_tags>([&f](auto tag_v) { f(tag_v); });
 }
 
 template <typename Target, size_t Dim>
@@ -321,7 +318,7 @@ void InterpolateToPoints<Target, Dim>::compute_tensor_maps() {
       for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
         using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
 
-        all_points_tags_.insert(db::tag_name<Tag>());
+        all_points_tags_.insert(db::tag_name<ArgumentTag>());
       });
     }
   });
@@ -463,7 +460,7 @@ void InterpolateToPoints<Target, Dim>::operator()(
         const std::string& tag_name = db::tag_name<Tag>();
 
         // If we don't need to send this tensor, then skip it
-        if (not volume_tensors_to_send_.count(tag_name) == 1) {
+        if (not volume_tensors_to_send_.contains(tag_name)) {
           return;
         }
 
@@ -497,7 +494,8 @@ InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
   db::mutate_apply<common_tags_on_target, tmpl::list<>>(
       [this](
           const gsl::not_null<std::string*> frame,
-          const gsl::not_null<tnsr::I<DataVector, Dim, Frame::NoFrame>*> points,
+          const gsl::not_null<tnsr::I<DataVector, Dim, ::Frame::NoFrame>*>
+              points,
           const gsl::not_null<std::unordered_set<std::string>*> vars_to_observe,
           const gsl::not_null<double*> invalid_points_fill_value) {
         *frame = frame_;

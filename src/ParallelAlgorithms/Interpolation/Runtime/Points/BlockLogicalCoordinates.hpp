@@ -16,6 +16,7 @@
 #include "Utilities/TypeTraits/CreateHasTypeAlias.hpp"
 
 namespace intrp2 {
+template <size_t Dim>
 using BlockCoords = std::vector<std::optional<
     IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>;
 
@@ -39,7 +40,7 @@ CREATE_HAS_TYPE_ALIAS_V(argument_tags)
  * `::block_logical_coordinates()` function.
  */
 template <typename BoxType, typename Metavariables, typename Points>
-std::optional<BlockCoords> block_logical_coordinates(
+std::optional<BlockCoords<Metavariables::volume_dim>> block_logical_coordinates(
     const BoxType& box, const Parallel::GlobalCache<Metavariables>& cache,
     const double time, const std::string& frame, const Points& points) {
   if constexpr (detail::has_argument_tags_v<Points>) {

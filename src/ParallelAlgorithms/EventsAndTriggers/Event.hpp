@@ -50,7 +50,7 @@ class Event : public PUP::able {
 
   virtual bool is_interpolation() { return false; }
 
-  virtual std::string name() = 0;
+  virtual std::string name() const = 0;
 
   template <typename ComputeTagsList, typename DataBoxType,
             typename Metavariables, typename ArrayIndex,

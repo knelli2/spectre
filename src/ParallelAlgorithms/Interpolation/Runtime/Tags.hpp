@@ -81,8 +81,8 @@ struct CompletedTemporalIds : db::SimpleTag {
  * \note This is the expected way to retrieve and mutate tags on the target
  * array element.
  */
-struct DbAccesses : db::SimpleTag {
-  using type = std::unordered_map<std::string, std::unique_ptr<db::Access>>;
+struct DbAccess : db::SimpleTag {
+  using type = std::unique_ptr<db::Access>;
 };
 
 /*!

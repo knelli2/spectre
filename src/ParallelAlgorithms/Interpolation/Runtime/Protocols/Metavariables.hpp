@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include "Parallel/Protocols/ArrayElementsAllocator.hpp"
+#include "Utilities/ProtocolHelpers.hpp"
+
 namespace intrp2::protocols {
 /*!
  * \brief A protocol for compile time interpolation options in the metavariables
@@ -10,24 +13,25 @@ namespace intrp2::protocols {
  *
  * A class conforming to this protocol is placed in the metavariables to choose
  * compile-time options for interpolation. The conforming class must:
- * - provide a static member variable `bool include_dense_triggers`: Whether or
- *   not the executable uses dense triggers or not. This is necessary so the
- *   interpolation parallel component can be constructed from dense triggers as
- *   well as standard triggers.
- * - be names `intrp`.
+ * - provide a type alias `elements_allocator` which conforms to the
+ *   `Parallel::protocols::ArrayElementsAllocator` that will initialize the
+ *   elements of the interpolation array component.
+ * - provide a type alias `element_initializer` which is a simple action that
+ *   takes no arguments which will initialize the `intrp2::Tags::DbAccess` tag
+ *   of the DataBox. Note that the array index of this simple action must be a
+ *   `std::string`.
+ * - be named `intrp`.
  *
  * TODO: Add example
  */
 struct Metavariables {
   template <typename ConformingType>
   struct test {
-    using include_dense_triggers_type = const bool;
-    using include_dense_triggers_return_type =
-        decltype(ConformingType::include_dense_triggers);
-    static_assert(std::is_same_v<include_dense_triggers_type,
-                                 include_dense_triggers_return_type>,
-                  "The metavariable 'enable_time_dependent_maps' should be a "
-                  "static constexpr bool.");
+    using elements_allocator = typename ConformingType::elements_allocator;
+    static_assert(
+        tt::assert_conforms_to_v<elements_allocator,
+                                 Parallel::protocols::ArrayElementsAllocator>);
+    using element_initializer = typename ConformingType::element_initializer;
   };
 };
 }  // namespace intrp2::protocols

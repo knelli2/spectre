@@ -9,6 +9,8 @@
 #include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "Options/String.hpp"
+#include "Parallel/GlobalCache.hpp"
+#include "Parallel/Protocols/ArrayElementsAllocator.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Metavariables.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
@@ -73,9 +75,34 @@ struct TestTarget : public tt::ConformsTo<intrp2::protocols::Target> {
   using compile_time_callbacks = tmpl::list<TestCallback<2>>;
 };
 
+struct Initializer {
+  template <typename ParallelComponent, typename DbTagList,
+            typename Metavariables>
+  static void apply(db::DataBox<DbTagList>& /*box*/,
+                    const Parallel::GlobalCache<Metavariables>& /*cache*/,
+                    const std::string& /*array_index*/) {}
+};
+
+struct Allocator : tt::ConformsTo<Parallel::protocols::ArrayElementsAllocator> {
+  template <typename Component>
+  using array_allocation_tags = tmpl::list<>;
+  template <typename ParallelComponent, typename Metavariables,
+            typename... InitializationTags>
+  static void apply(
+      Parallel::CProxy_GlobalCache<Metavariables>& /*global_cache*/,
+      const tuples::TaggedTuple<
+          InitializationTags...>& /*initialization_items*/,
+      const tuples::tagged_tuple_from_typelist<
+          typename ParallelComponent::array_allocation_tags>&
+      /*array_allocation_items*/
+      = {},
+      const std::unordered_set<size_t>& /*procs_to_ignore*/ = {}) {}
+};
+
 struct TestMetavars {
   struct intrp : tt::ConformsTo<intrp2::protocols::Metavariables> {
-    static constexpr bool include_dense_triggers = true;
+    using elements_allocator = Allocator;
+    using element_initializer = Initializer;
   };
 };
 }  // namespace
