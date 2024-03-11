@@ -10,6 +10,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "Options/String.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Metavariables.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Target.hpp"
 #include "Utilities/Gsl.hpp"
@@ -71,7 +72,17 @@ struct TestTarget : public tt::ConformsTo<intrp2::protocols::Target> {
       tmpl::list<TestCallback<0>, TestCallback<1>>;
   using compile_time_callbacks = tmpl::list<TestCallback<2>>;
 };
+
+struct TestMetavars {
+  struct intrp : tt::ConformsTo<intrp2::protocols::Metavariables> {
+    static constexpr bool include_dense_triggers = true;
+  };
+};
 }  // namespace
+
+// Check metavariables protocol conformance
+static_assert(tt::assert_conforms_to_v<TestMetavars::intrp,
+                                       intrp2::protocols::Metavariables>);
 
 // Check points protocol conformance
 static_assert(tt::assert_conforms_to_v<TestPoints, intrp2::protocols::Points>);
