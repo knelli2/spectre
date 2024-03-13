@@ -43,6 +43,7 @@ void strahlkorper_coefs_in_ringdown_distorted_frame(
       time_dependent_map_options{initial_time, shape_map_options,
                                  rotation_map_options, expansion_map_options,
                                  translation_map_options};
+  Parallel::printf("TEST\n");
 //   const domain::creators::Sphere domain_creator{
 //       0.01,
 //       200.0,
