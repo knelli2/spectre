@@ -1,10 +1,14 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
+#include "Domain/CoordinateMaps/Distribution.hpp"
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Creators/SphereTimeDependentMaps.hpp"
+#include "Domain/StrahlkorperTransformations.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Parallel/Printf.hpp"
+#include "Utilities/Gsl.hpp"
 
 #include <array>
 #include <cstddef>
@@ -44,16 +48,25 @@ void strahlkorper_coefs_in_ringdown_distorted_frame(
                                  rotation_map_options, expansion_map_options,
                                  translation_map_options};
   Parallel::printf("TEST\n");
-//   const domain::creators::Sphere domain_creator{
-//       0.01,
-//       200.0,
-//       domain::creators::Sphere::Excision{nullptr},
-//       0,
-//       5,
-//       std::nullopt,
-//       {100.0},
-//       domain::CoordinateMaps::Distribution::Linear,
-//       ShellWedges::All,
-//       time_dependent_map_options};
+  const domain::creators::Sphere domain_creator{
+      0.01,
+      200.0,
+      domain::creators::Sphere::Excision{nullptr},
+      static_cast<size_t>(0),
+      static_cast<size_t>(5),
+      true,
+      std::nullopt,
+      {100.0},
+      domain::CoordinateMaps::Distribution::Linear,
+      ShellWedges::All,
+      time_dependent_map_options};
+  Parallel::printf("TEST 2\n");
+
+  ylm::Strahlkorper<Frame::Distorted> ahc_ringdown_distorted;
+  strahlkorper_in_different_frame(
+      make_not_null(&ahc_ringdown_distorted), ahc_inertial_h5[0],
+      domain_creator.create_domain(), domain_creator.functions_of_time(),
+      match_time);
+  Parallel::printf("TEST 3\n");
 }
 }  // namespace evolution::Ringdown

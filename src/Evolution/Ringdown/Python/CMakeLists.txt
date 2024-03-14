@@ -23,6 +23,7 @@ spectre_python_link_libraries(
     ${LIBRARY}
     PRIVATE
     Boost::boost
+    CoordinateMaps
     DataStructures
     Domain
     DomainCreators

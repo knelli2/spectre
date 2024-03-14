@@ -21,6 +21,7 @@ target_link_libraries(
   ${LIBRARY}
   PUBLIC
   Boost::boost
+  CoordinateMaps
   DataStructures
   DomainCreators
   Domain

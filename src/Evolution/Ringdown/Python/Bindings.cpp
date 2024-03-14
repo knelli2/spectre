@@ -5,7 +5,10 @@
 #include <pybind11/stl.h>
 // #include <pybind11/stl.h> if you want stl containers
 
+#include "Domain/Creators/RegisterDerivedWithCharm.hpp"
 #include "Domain/Creators/SphereTimeDependentMaps.hpp"
+#include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
+#include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
 #include "Utilities/ErrorHandling/SegfaultHandler.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
@@ -15,11 +18,10 @@ namespace py = pybind11;
 
 namespace evolution::Ringdown::py_bindings {  // NOLINT
 void bind_strahlkorper_coefs_in_ringdown_distorted_frame(py::module& m) {
-  tmpl::for_each<domain::creators::sphere::TimeDependentMapOptions::maps_list>(
-      [](auto map_v) {
-        using map = tmpl::type_from<decltype(map_v)>;
-        register_classes_with_charm<map>();
-      });
+  domain::creators::register_derived_with_charm();
+  domain::creators::time_dependence::register_derived_with_charm();
+  domain::FunctionsOfTime::register_derived_with_charm();
+
   m.def("strahlkorper_coefs_in_ringdown_distorted_frame",
         &evolution::Ringdown::strahlkorper_coefs_in_ringdown_distorted_frame,
         py::arg("path_to_horizons_h5"), py::arg("surface_subfile_name"),
