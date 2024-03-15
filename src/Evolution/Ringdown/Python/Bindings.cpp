@@ -10,6 +10,7 @@
 #include "Domain/Creators/TimeDependence/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Evolution/Ringdown/StrahlkorperCoefsInRingdownDistortedFrame.hpp"
+#include "Evolution/Ringdown/WrapFillYlmData.hpp"
 #include "Utilities/ErrorHandling/SegfaultHandler.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 #include "Utilities/TMPL.hpp"
@@ -31,6 +32,10 @@ void bind_strahlkorper_coefs_in_ringdown_distorted_frame(py::module& m) {
         py::arg("exp_func_and_2_derivs"),
         py::arg("exp_outer_bdry_func_and_2_derivs"),
         py::arg("rot_func_and_2_derivs"));
+
+  m.def("wrap_fill_ylm_data", &evolution::Ringdown::wrap_fill_ylm_data,
+        py::arg("coefs"), py::arg("match_time"), py::arg("center"),
+        py::arg("l_max"));
 }
 }  // namespace evolution::Ringdown::py_bindings
 

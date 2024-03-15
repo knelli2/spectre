@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "DataStructures/DataVector.hpp"
+
 #include <array>
 #include <cstddef>
 #include <string>
