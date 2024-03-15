@@ -31,9 +31,6 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
 
   const size_t l_max{ahc_inertial_h5[0].l_max()};
 
-  const domain::creators::sphere::TimeDependentMapOptions::TranslationMapOptions
-      translation_map_options{
-          {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}}};
   const domain::creators::sphere::TimeDependentMapOptions::ShapeMapOptions
       shape_map_options{l_max, std::nullopt};
   const domain::creators::sphere::TimeDependentMapOptions::ExpansionMapOptions
@@ -45,10 +42,11 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
   const domain::creators::sphere::TimeDependentMapOptions
       time_dependent_map_options{match_time, shape_map_options,
                                  rotation_map_options, expansion_map_options,
-                                 translation_map_options};
+                                 std::nullopt};
   const domain::creators::Sphere domain_creator{
       0.01,
       200.0,
+      // nullptr because no boundary condition
       domain::creators::Sphere::Excision{nullptr},
       static_cast<size_t>(0),
       static_cast<size_t>(5),
