@@ -8,6 +8,7 @@ set(LIBRARY_SOURCES
   )
 
 add_subdirectory(Actions)
+add_subdirectory(Callbacks)
 add_subdirectory(Points)
 
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")
@@ -24,17 +25,18 @@ target_link_libraries(
   # DomainStructure
   # Events
   # GeneralRelativitySolutions
-  # GrSurfaces
+  GrSurfaces
   # H5
   # Interpolation
   # IoTestHelpers
   # Logging
   # MathFunctions
   # Observer
-  # ParallelInterpolation
   # RelativisticEulerSolutions
   # Spectral
   # SphericalHarmonics
+  ObserverHelpers
+  Parallel
   ParallelInterpolationRuntime
   Utilities
   )

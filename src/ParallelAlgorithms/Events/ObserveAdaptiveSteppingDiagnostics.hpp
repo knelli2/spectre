@@ -69,6 +69,10 @@ class ObserveAdaptiveSteppingDiagnostics : public Event {
         "without a preceding '/'."};
   };
 
+  std::string name() const override {
+    return "ObserveAdaptiveSteppingDiagnostics";
+  }
+
   /// \cond
   explicit ObserveAdaptiveSteppingDiagnostics(CkMigrateMessage* /*unused*/) {}
   using PUP::able::register_constructor;

@@ -16,7 +16,8 @@ namespace intrp2::callbacks {
 // will have different sets of callbacks, and they need to be distinguishable in
 // option creation.
 template <typename Target>
-class Callback : PUP::able {
+class Callback : public PUP::able {
+ public:
   /// \cond
   Callback() = default;
   Callback(const Callback&) = default;
@@ -31,7 +32,7 @@ class Callback : PUP::able {
 
   template <typename Metavariables, typename TemporalId>
   void invoke(const db::Access& access,
-              const Parallel::GlobalCache<Metavariables>& cache,
+              Parallel::GlobalCache<Metavariables>& cache,
               const TemporalId& temporal_id) {
     using factory_classes =
         typename std::decay_t<Metavariables>::factory_creation::factory_classes;

@@ -63,7 +63,8 @@ template <typename Frame>
 void fill_ylm_legend_and_data(gsl::not_null<std::vector<std::string>*> legend,
                               gsl::not_null<std::vector<double>*> data,
                               const ylm::Strahlkorper<Frame>& strahlkorper,
-                              double time, size_t max_l);
+                              const std::string& frame, double time,
+                              size_t max_l);
 }  // namespace detail
 
 /// \brief post_interpolation_callback that outputs 2D "volume" data on a
@@ -110,6 +111,28 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
   using non_observation_tags_on_target = NonObservationTags;
   using volume_compute_tags = VolumeComputeTags;
 
+ private:
+  template <typename ComputeTag>
+  struct get_simple_tag {
+    using type = typename ComputeTag::base;
+  };
+  using partition =
+      tmpl::partition<tags_to_observe_on_target, db::is_compute_tag<tmpl::_1>>;
+  using compute_to_simple_tags =
+      tmpl::transform<typename partition::first_type, get_simple_tag<tmpl::_1>>;
+  using simple_tags_to_observe =
+      tmpl::append<typename partition::second_type, compute_to_simple_tags>;
+
+ public:
+  /// \cond
+  ObserveDataOnStrahlkorper() = default;
+  explicit ObserveDataOnStrahlkorper(CkMigrateMessage* /*unused*/) {}
+  using PUP::able::register_constructor;
+  // NOLINTNEXTLINE
+  WRAPPED_PUPable_decl_base_template(Callback<Target>,
+                                     ObserveDataOnStrahlkorper);
+  /// \endcond
+
   struct SubfileName {
     using type = std::string;
     static constexpr Options::String help = {
@@ -130,9 +153,10 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
 
   ObserveDataOnStrahlkorper(std::string subfile_name,
                             const std::vector<std::string>& values_to_observe,
-                            const Options::Context& /*context*/ = {})
+                            const Options::Context& context = {})
       : subfile_name_(std::move(subfile_name)) {
-    db::validate_selection<tags_to_observe_on_target>(values_to_observe);
+    db::validate_selection<tags_to_observe_on_target>(values_to_observe,
+                                                      context);
     for (const auto& value : values_to_observe) {
       values_to_observe_.insert(value);
     }
@@ -144,9 +168,8 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
   }
 
   template <typename Metavariables>
-  static void apply(const db::Access& access,
-                    Parallel::GlobalCache<Metavariables>& cache,
-                    const double time) {
+  void apply(const db::Access& access,
+             Parallel::GlobalCache<Metavariables>& cache, const double time) {
     const ylm::Strahlkorper<Frame::NoFrame>& strahlkorper =
         get<ylm::Tags::Strahlkorper<Frame::NoFrame>>(access);
     const ylm::Spherepack& ylm = strahlkorper.ylm_spherepack();
@@ -170,24 +193,19 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
           Parallel::get<domain::Tags::FunctionsOfTime>(cache);
 
       if (frame == "Distorted") {
-        // QUESTION: Average radius? Something else?
+        Parallel::printf("In Distorted frame\n");
         ylm::Strahlkorper<Frame::Distorted> strahlkorper_dist_frame{
-            strahlkorper.l_max(), strahlkorper.average_radius(),
-            strahlkorper.expansion_center()};
-        strahlkorper_dist_frame.coefficients().set_data_ref(make_not_null(
-            &const_cast<DataVector&>(strahlkorper.coefficients())));
+            strahlkorper.coefficients(), strahlkorper};
         strahlkorper_coords_in_different_frame(make_not_null(&inertial_coords),
                                                strahlkorper_dist_frame, domain,
                                                functions_of_time, time);
       } else {
+        Parallel::printf("In Grid frame\n");
         ASSERT(frame == "Grid", "Unknown frame '"
                                     << frame
                                     << "' for ObserveDataOnStrahlkorper.");
         ylm::Strahlkorper<Frame::Grid> strahlkorper_grid_frame{
-            strahlkorper.l_max(), strahlkorper.average_radius(),
-            strahlkorper.expansion_center()};
-        strahlkorper_grid_frame.coefficients().set_data_ref(make_not_null(
-            &const_cast<DataVector&>(strahlkorper.coefficients())));
+            strahlkorper.coefficients(), strahlkorper};
         strahlkorper_coords_in_different_frame(make_not_null(&inertial_coords),
                                                strahlkorper_grid_frame, domain,
                                                functions_of_time, time);
@@ -201,9 +219,6 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
           {"InertialCoordinates_z"s, get<2>(inertial_coords)});
     }
 
-    const std::unordered_set<std::string>& vars_to_observe =
-        db::get<intrp2::Tags::VarsToObserve>(access);
-
     // Output each tag if it is a scalar. Otherwise, throw a compile-time
     // error. This could be generalized to handle tensors of nonzero rank by
     // looping over the components, so each component could be visualized
@@ -211,11 +226,11 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
     // probably unnecessary, because Strahlkorpers are typically only
     // visualized with scalar quantities (used set the color at different
     // points on the surface).
-    tmpl::for_each<tags_to_observe_on_target>(
-        [&access, &tensor_components, &vars_to_observe](auto tag_v) {
+    tmpl::for_each<simple_tags_to_observe>(
+        [this, &access, &tensor_components](auto tag_v) {
           using Tag = tmpl::type_from<decltype(tag_v)>;
           const auto tag_name = db::tag_name<Tag>();
-          if (vars_to_observe.count(tag_name) != 1) {
+          if (not values_to_observe_.contains(tag_name)) {
             return;
           }
 
@@ -226,15 +241,14 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
           }
         });
 
-    const std::string& surface_name = pretty_type::name<Target>();
-    const std::string subfile_path{std::string{"/"} + surface_name};
+    const std::string subfile_path = "/"s + subfile_name_;
     const std::vector<size_t> extents_vector{
         {ylm.physical_extents()[0], ylm.physical_extents()[1]}};
     const std::vector<Spectral::Basis> bases_vector{
         2, Spectral::Basis::SphericalHarmonic};
     const std::vector<Spectral::Quadrature> quadratures_vector{
         {Spectral::Quadrature::Gauss, Spectral::Quadrature::Equiangular}};
-    const observers::ObservationId observation_id{time, subfile_path + ".vol"};
+    const observers::ObservationId observation_id{time, subfile_path + ".vol"s};
 
     auto& proxy = Parallel::get_parallel_component<
         observers::ObserverWriter<Metavariables>>(cache);
@@ -244,7 +258,7 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
     Parallel::threaded_action<observers::ThreadedActions::WriteVolumeData>(
         proxy[0], Parallel::get<observers::Tags::SurfaceFileName>(cache),
         subfile_path, observation_id,
-        std::vector<ElementVolumeData>{{surface_name, tensor_components,
+        std::vector<ElementVolumeData>{{subfile_name_, tensor_components,
                                         extents_vector, bases_vector,
                                         quadratures_vector}});
 
@@ -261,10 +275,9 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
     // l_max.
     detail::fill_ylm_legend_and_data(make_not_null(&ylm_legend),
                                      make_not_null(&ylm_data), strahlkorper,
-                                     time, strahlkorper.l_max());
+                                     frame, time, strahlkorper.l_max());
 
-    const std::string ylm_subfile_name{std::string{"/"} + surface_name +
-                                       "_Ylm"};
+    const std::string ylm_subfile_name{subfile_path + "_Ylm"s};
 
     Parallel::threaded_action<
         observers::ThreadedActions::WriteReductionDataRow>(
@@ -280,5 +293,15 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
   std::string subfile_name_{};
   std::unordered_set<std::string> values_to_observe_{};
 };
+
+/// \cond
+// NOLINTBEGIN
+template <typename Target, typename... TagsToObserve,
+          typename NonObservationTags, typename VolumeComputeTags>
+PUP::able::PUP_ID ObserveDataOnStrahlkorper<
+    Target, tmpl::list<TagsToObserve...>, NonObservationTags,
+    VolumeComputeTags>::my_PUP_ID = 0;
+// NOLINTEND
+/// \endcond
 }  // namespace callbacks
 }  // namespace intrp2

@@ -13,6 +13,7 @@
 
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
+#include "DataStructures/DataBox/TagTraits.hpp"
 #include "DataStructures/DataBox/ValidateSelection.hpp"
 #include "IO/Observer/ReductionActions.hpp"
 #include "Options/Context.hpp"
@@ -58,7 +59,7 @@ template <typename Target, typename... TagsToObserve,
           typename NonObservationTags, typename VolumeComputeTags>
 struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
                                   NonObservationTags, VolumeComputeTags>
-    : public Callback<Target>, tt::ConformsTo<protocols::Callback> {
+    : public Callback<Target>, public tt::ConformsTo<protocols::Callback> {
   static_assert(tmpl2::flat_all_v<
                 std::is_same_v<typename TagsToObserve::type, double>...>);
 
@@ -66,6 +67,19 @@ struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
   using non_observation_tags_on_target = NonObservationTags;
   using volume_compute_tags = VolumeComputeTags;
 
+ private:
+  template <typename ComputeTag>
+  struct get_simple_tag {
+    using type = typename ComputeTag::base;
+  };
+  using partition =
+      tmpl::partition<tags_to_observe_on_target, db::is_compute_tag<tmpl::_1>>;
+  using compute_to_simple_tags =
+      tmpl::transform<typename partition::first_type, get_simple_tag<tmpl::_1>>;
+  using simple_tags_to_observe =
+      tmpl::append<typename partition::second_type, compute_to_simple_tags>;
+
+ public:
   /// \cond
   ObserveTimeSeriesOnSurface() = default;
   explicit ObserveTimeSeriesOnSurface(CkMigrateMessage* /*unused*/) {}
@@ -95,9 +109,10 @@ struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
 
   ObserveTimeSeriesOnSurface(std::string subfile_name,
                              const std::vector<std::string>& values_to_observe,
-                             const Options::Context& /*context*/ = {})
+                             const Options::Context& context = {})
       : subfile_name_(std::move(subfile_name)) {
-    db::validate_selection<tags_to_observe_on_target>(values_to_observe);
+    db::validate_selection<tags_to_observe_on_target>(values_to_observe,
+                                                      context);
     for (const auto& value : values_to_observe) {
       values_to_observe_.insert(value);
     }
@@ -114,9 +129,6 @@ struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
     auto& proxy = Parallel::get_parallel_component<
         observers::ObserverWriter<Metavariables>>(cache);
 
-    const std::unordered_set<std::string>& vars_to_observe =
-        db::get<intrp2::Tags::VarsToObserve>(access);
-
     std::vector<std::string> legend{};
     std::vector<double> data{};
 
@@ -126,13 +138,13 @@ struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
     data.reserve(max_size);
 
     legend.emplace_back("Time");
-    legend.emplace_back(time);
+    data.emplace_back(time);
 
-    tmpl::for_each<tags_to_observe_on_target>(
-        [&access, &vars_to_observe, &legend, &data](auto tag_v) {
+    tmpl::for_each<simple_tags_to_observe>(
+        [this, &access, &legend, &data](auto tag_v) {
           using Tag = tmpl::type_from<decltype(tag_v)>;
           const std::string tag_name = db::tag_name<Tag>();
-          if (vars_to_observe.count(tag_name) == 1) {
+          if (values_to_observe_.contains(tag_name)) {
             legend.emplace_back(tag_name);
             data.emplace_back(db::get<Tag>(access));
           }

@@ -24,8 +24,8 @@ template <typename Frame>
 void fill_ylm_legend_and_data(
     const gsl::not_null<std::vector<std::string>*> legend,
     const gsl::not_null<std::vector<double>*> data,
-    const ylm::Strahlkorper<Frame>& strahlkorper, const double time,
-    const size_t max_l) {
+    const ylm::Strahlkorper<Frame>& strahlkorper, const std::string& frame,
+    const double time, const size_t max_l) {
   ASSERT(max_l >= strahlkorper.l_max(),
          "The Lmax of the Ylm data to write ("
              << strahlkorper.l_max()
@@ -33,7 +33,6 @@ void fill_ylm_legend_and_data(
              << ").");
   const std::array<double, 3> expansion_center =
       strahlkorper.expansion_center();
-  const std::string frame{get_output(Frame{})};
   // we only store half and thus only write half of the coefficients
   const size_t num_coefficients =
       ylm::Spherepack::spectral_size(max_l, max_l) / 2;
@@ -84,7 +83,7 @@ void fill_ylm_legend_and_data(
       gsl::not_null<std::vector<std::string>*> legend,                      \
       gsl::not_null<std::vector<double>*> data,                             \
       const ylm::Strahlkorper<FRAMETYPE(instantiation_data)>& strahlkorper, \
-      double time, size_t max_l);
+      const std::string& frame, double time, size_t max_l);
 
 GENERATE_INSTANTIATIONS(INSTANTIATE, (Frame::Grid, Frame::Inertial,
                                       Frame::Distorted, Frame::NoFrame))

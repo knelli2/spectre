@@ -14,4 +14,5 @@ spectre_target_headers(
   Callback.hpp
   ObserveSurfaceData.hpp
   ObserveTimeSeriesOnSurface.hpp
+  RegisterDerivedWithCharm.hpp
   )

@@ -84,6 +84,8 @@ class ChangeSlabSize : public Event {
   WRAPPED_PUPable_decl_template(ChangeSlabSize);  // NOLINT
   /// \endcond
 
+  std::string name() const override { return "ChangeSlabSize"; }
+
   struct StepChoosers {
     static constexpr Options::String help = "Limits on slab size";
     using type =
