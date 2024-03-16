@@ -6,19 +6,17 @@ from pathlib import Path
 from typing import Optional, Union
 
 import click
+import numpy as np
 import yaml
 from rich.pretty import pretty_repr
-
-logger = logging.getLogger(__name__)
-
-import spectre.IO.H5 as spectre_h5
-from spectre.Domain import deserialize_functions_of_time
-from spectre.DataStructures import DataVector
-
-import numpy as np
 from scipy.optimize import curve_fit as curve_fit
 
+import spectre.IO.H5 as spectre_h5
+from spectre.DataStructures import DataVector
+from spectre.Domain import deserialize_functions_of_time
 import spectre.Evolution.Ringdown as Ringdown
+
+logger = logging.getLogger(__name__)
 
 
 def compute_ahc_coefs_in_ringdown_distorted_frame(
