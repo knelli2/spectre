@@ -72,20 +72,46 @@ struct YlmsFromFile {
         "derivatives.";
   };
 
-  struct CoeffSubfileNames {
-    using type = std::array<std::string, 4>;
+  struct SubfileNames {
+    using type = std::array<std::string, 3>;
     static constexpr Options::String help =
-        "Subfile names for the different order derviatives of the ylm "
+        "Subfile names for the different order derivatives of the ylm "
         "coefficients.";
   };
 
-  using options = tmpl::list<H5Filename, CoeffSubfileNames>;
+  struct MatchTime {
+    using type = double;
+    static constexpr Options::String help =
+        "Time in the H5File to get the coefficients at. Will likely be the "
+        "same as the initial time";
+  };
+
+  struct MatchTimeEpsilon {
+    using type = Options::Auto<double>;
+    static constexpr Options::String help =
+        "Look for times in the H5File within this epsilon of the match time. "
+        "This is to avoid having to know the exact time to all digits. Default "
+        "is 1e-12.";
+  };
+
+  struct Y00Coef {
+    using type = Options::Auto<double, Options::AutoLabel::None>;
+    static constexpr Options::String help =
+        "The 00 coefficient of the shape map. All derivs will be set to zero. "
+        "(Not sure if you need this, but adding it just in case)";
+  };
+
+  using options = tmpl::list<H5Filename, SubfileNames, MatchTime,
+                             MatchTimeEpsilon, Y00Coef>;
 
   static constexpr Options::String help = {
       "Strings that locate ylm coefficients for ringdown domain."};
 
-  std::string h5filename{};
-  std::array<std::string, 4> coeffsubfilenames{};
+  std::string h5_filename{};
+  std::array<std::string, 3> subfile_names{};
+  double match_time{};
+  std::optional<double> match_time_epsilon{};
+  std::optional<double> y00_coef{};
 };
 
 // Label for shape map options
@@ -195,8 +221,7 @@ struct TimeDependentMapOptions {
     using options = tmpl::list<InitialValues, DecayTimescaleRotation>;
 
     std::array<std::array<double, 4>, 3> initial_values{};
-    double decay_timescale{
-        std::numeric_limits<double>::signaling_NaN()};
+    double decay_timescale{std::numeric_limits<double>::signaling_NaN()};
   };
 
   struct ExpansionMapOptions {
@@ -367,7 +392,5 @@ struct TimeDependentMapOptions {
   std::optional<RotationMapOptions> rotation_map_options_{};
   std::optional<ExpansionMapOptions> expansion_map_options_{};
   std::optional<TranslationMapOptions> translation_map_options_{};
-  std::optional<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile>>
-      initial_shape_values_{};
 };
 }  // namespace domain::creators::sphere
