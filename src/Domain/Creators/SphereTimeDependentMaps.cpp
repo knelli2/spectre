@@ -26,6 +26,7 @@
 #include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/GeneralRelativity/KerrHorizon.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Utilities/MakeArray.hpp"
 
 namespace domain::creators::sphere {
 
@@ -67,9 +68,9 @@ TimeDependentMapOptions::create_functions_of_time(
       ylm::Spherepack::spectral_size(shape_map_options_.l_max,
                                      shape_map_options_.l_max),
       0.0};
+  std::array<DataVector, 3> shape_funcs =
+      make_array<3, DataVector>(shape_zeros);
   DataVector shape_func{};
-  DataVector shape_func_1st_deriv = shape_zeros;
-  DataVector shape_func_2nd_deriv = shape_zeros;
   DataVector size_func{1, 0.0};
 
   if (shape_map_options_.initial_values.has_value()) {
@@ -84,35 +85,38 @@ TimeDependentMapOptions::create_functions_of_time(
                     inner_radius, ylm.theta_phi_points(), mass_and_spin.mass,
                     mass_and_spin.spin)) /
                     inner_radius;
-      shape_func = ylm.phys_to_spec(radial_distortion);
+      shape_funcs[0] = ylm.phys_to_spec(radial_distortion);
       // Transform from SPHEREPACK to actual Ylm for size func
-      size_func[0] = shape_func[0] * sqrt(0.5 * M_PI);
+      size_func[0] = shape_funcs[0][0] * sqrt(0.5 * M_PI);
       // Set l=0 for shape map to 0 because size is going to be used
-      shape_func[0] = 0.0;
-    }
-    if (std::holds_alternative<YlmsFromFile>(initial_shape_values_.value())) {
-      const auto& files = std::get<YlmsFromFile>(initial_shape_values_.value());
-      const auto h5_filename = files.h5filename;
-      const auto coeff_subfile_names = files.coeffsubfilenames;
-      const size_t num_times_requested = 5;
-      // Read Ylm coefficients from file:
-      const std::vector<ylm::Strahlkorper<Frame::Grid>> strahlkorpers =
-          ylm::read_surface_ylm<Frame::Grid>(
-              h5_filename, coeff_subfile_names[0], num_times_requested);
-      // for (auto& strahlkorper : strahlkorpers) {
-      // }
+      shape_funcs[0][0] = 0.0;
+    } else if (std::holds_alternative<YlmsFromFile>(
+                   shape_map_options_.initial_values.value())) {
+      const auto& files =
+          std::get<YlmsFromFile>(shape_map_options_.initial_values.value());
+      const std::string& h5_filename = files.h5_filename;
+      const std::array<std::string, 3>& subfile_names = files.subfile_names;
+      const double match_time = files.match_time;
+      const std::optional<double>& match_time_epsilon =
+          files.match_time_epsilon;
+      const std::optional<double>& y00_coef = files.y00_coef;
+      size_func[0] = y00_coef.value_or(0.0);
 
-      shape_func = strahlkorpers[0].coefficients();
-      shape_func[1] = 0.0;
-      shape_func_1st_deriv = -0.0 * strahlkorpers[1].coefficients();
-      // Need to determine what lmax is, whether from file, or set some other
-      // way.
-      shape_func_2nd_deriv =
-          DataVector{shape_func.size(),
-                     0.0};  // shape_zeros; //strahlkorpers[2].coefficients();
-      size_func[0] = 0.0;
+      for (size_t i = 0; i < subfile_names.size(); i++) {
+        // Frame doesn't matter here
+        const ylm::Strahlkorper<Frame::Distorted> file_strahlkorper =
+            ylm::read_surface_ylm_single_time<Frame::Distorted>(
+                h5_filename, gsl::at(subfile_names, i), match_time,
+                match_time_epsilon.value_or(1e-12));
+        const ylm::Strahlkorper<Frame::Distorted> this_strahlkorper{
+            shape_map_options_.l_max, 1.0, std::array{0.0, 0.0, 0.0}};
 
-      // Need to transform to correct frame (Distorted).
+        gsl::at(shape_funcs, i) =
+            file_strahlkorper.ylm_spherepack().prolong_or_restrict(
+                file_strahlkorper.coefficients(),
+                this_strahlkorper.ylm_spherepack());
+        gsl::at(shape_funcs, i)[0] = 0.0;
+      }
     }
   } else {
     shape_func = shape_zeros;
@@ -122,10 +126,7 @@ TimeDependentMapOptions::create_functions_of_time(
   // ShapeMap FunctionOfTime
   result[shape_name] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
-          initial_time_,
-          std::array<DataVector, 3>{{std::move(shape_func),
-                                     std::move(shape_func_1st_deriv),
-                                     std::move(shape_func_2nd_deriv)}},
+          initial_time_, std::move(shape_funcs),
           expiration_times.at(shape_name));
 
   DataVector size_deriv{1, 0.0};

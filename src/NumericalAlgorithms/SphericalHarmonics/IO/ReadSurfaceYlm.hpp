@@ -30,4 +30,9 @@ template <typename Frame>
 std::vector<ylm::Strahlkorper<Frame>> read_surface_ylm(
     const std::string& file_name, const std::string& surface_subfile_name,
     size_t requested_number_of_times_from_end);
+
+template <typename Frame>
+ylm::Strahlkorper<Frame> read_surface_ylm_single_time(
+    const std::string& file_name, const std::string& surface_subfile_name,
+    double time, double epsilon);
 }  // namespace ylm
