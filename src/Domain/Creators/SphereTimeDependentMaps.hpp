@@ -20,6 +20,7 @@
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Options/Auto.hpp"
+#include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -146,6 +147,9 @@ struct TimeDependentMapOptions {
   using GridToInertialComposition =
       domain::CoordinateMap<Frame::Grid, Frame::Inertial, ShapeMap,
                             RotScaleTransMap>;
+  using GridToInertialComposition2 =
+      domain::CoordinateMap<Frame::Grid, Frame::Inertial, IdentityMap,
+                            RotScaleTransMap>;
   using GridToInertialSimple =
       domain::CoordinateMap<Frame::Grid, Frame::Inertial, RotScaleTransMap>;
   using DistortedToInertialComposition =
@@ -161,7 +165,7 @@ struct TimeDependentMapOptions {
                  IdentityForComposition<Frame::Distorted, Frame::Inertial>,
                  GridToDistortedComposition, GridToInertialShapeMap,
                  GridToInertialSimple, GridToInertialComposition,
-                 DistortedToInertialComposition>;
+                 GridToInertialComposition2, DistortedToInertialComposition>;
 
   /// \brief The initial time of the functions of time.
   struct InitialTime {
@@ -171,7 +175,7 @@ struct TimeDependentMapOptions {
   };
 
   struct ShapeMapOptions {
-    using type = ShapeMapOptions;
+    using type = Options::Auto<ShapeMapOptions, Options::AutoLabel::None>;
     static std::string name() { return "ShapeMap"; }
     static constexpr Options::String help = {
         "Options for a time-dependent shape map in the inner-most shell of the "
@@ -302,10 +306,12 @@ struct TimeDependentMapOptions {
   TimeDependentMapOptions() = default;
 
   TimeDependentMapOptions(
-      double initial_time, const ShapeMapOptions& shape_map_options,
+      double initial_time,
+      const std::optional<ShapeMapOptions>& shape_map_options,
       std::optional<RotationMapOptions> rotation_map_options,
       std::optional<ExpansionMapOptions> expansion_map_options,
-      std::optional<TranslationMapOptions> translation_map_options);
+      std::optional<TranslationMapOptions> translation_map_options,
+      const Options::Context& context = {});
 
   /*!
    * \brief Create the function of time map using the options that were
@@ -388,7 +394,7 @@ struct TimeDependentMapOptions {
   RotScaleTransMap inner_rot_scale_trans_map_{};
   RotScaleTransMap transition_rot_scale_trans_map_{};
 
-  ShapeMapOptions shape_map_options_{};
+  std::optional<ShapeMapOptions> shape_map_options_{};
   std::optional<RotationMapOptions> rotation_map_options_{};
   std::optional<ExpansionMapOptions> expansion_map_options_{};
   std::optional<TranslationMapOptions> translation_map_options_{};
