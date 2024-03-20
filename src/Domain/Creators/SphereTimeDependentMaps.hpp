@@ -95,7 +95,7 @@ struct YlmsFromFile {
   };
 
   struct Y00Coef {
-    using type = Options::Auto<double, Options::AutoLabel::None>;
+    using type = Options::Auto<std::array<double, 3>, Options::AutoLabel::None>;
     static constexpr Options::String help =
         "The 00 coefficient of the shape map. All derivs will be set to zero. "
         "(Not sure if you need this, but adding it just in case)";
@@ -111,7 +111,7 @@ struct YlmsFromFile {
   std::array<std::string, 3> subfile_names{};
   double match_time{};
   std::optional<double> match_time_epsilon{};
-  std::optional<double> y00_coef{};
+  std::optional<std::array<double, 3>> y00_coef{};
 };
 
 // Label for shape map options
