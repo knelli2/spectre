@@ -70,8 +70,8 @@ TimeDependentMapOptions::create_functions_of_time(
       0.0};
   std::array<DataVector, 3> shape_funcs =
       make_array<3, DataVector>(shape_zeros);
-  DataVector shape_func{};
-  DataVector size_func{1, 0.0};
+  std::array<DataVector, 4> size_funcs =
+      make_array<4, DataVector>(DataVector{1, 0.0});
 
   if (shape_map_options_.initial_values.has_value()) {
     if (std::holds_alternative<KerrSchildFromBoyerLindquist>(
@@ -87,7 +87,7 @@ TimeDependentMapOptions::create_functions_of_time(
                     inner_radius;
       shape_funcs[0] = ylm.phys_to_spec(radial_distortion);
       // Transform from SPHEREPACK to actual Ylm for size func
-      size_func[0] = shape_funcs[0][0] * sqrt(0.5 * M_PI);
+      size_funcs[0][0] = shape_funcs[0][0] * sqrt(0.5 * M_PI);
       // Set l=0 for shape map to 0 because size is going to be used
       shape_funcs[0][0] = 0.0;
     } else if (std::holds_alternative<YlmsFromFile>(
@@ -99,8 +99,7 @@ TimeDependentMapOptions::create_functions_of_time(
       const double match_time = files.match_time;
       const std::optional<double>& match_time_epsilon =
           files.match_time_epsilon;
-      const std::optional<double>& y00_coef = files.y00_coef;
-      size_func[0] = y00_coef.value_or(0.0);
+      const std::optional<std::array<double, 3>>& y00_coef = files.y00_coef;
 
       for (size_t i = 0; i < subfile_names.size(); i++) {
         // Frame doesn't matter here
@@ -116,11 +115,11 @@ TimeDependentMapOptions::create_functions_of_time(
                 file_strahlkorper.coefficients(),
                 this_strahlkorper.ylm_spherepack());
         gsl::at(shape_funcs, i)[0] = 0.0;
+        if (y00_coef.has_value()) {
+          gsl::at(size_funcs, i)[0] = gsl::at(y00_coef.value(), i);
+        }
       }
     }
-  } else {
-    shape_func = shape_zeros;
-    size_func[0] = 0.0;
   }
 
   // ShapeMap FunctionOfTime
@@ -129,17 +128,9 @@ TimeDependentMapOptions::create_functions_of_time(
           initial_time_, std::move(shape_funcs),
           expiration_times.at(shape_name));
 
-  DataVector size_deriv{1, 0.0};
-  DataVector size_2nd_deriv{1, 0.0};
-
   // Size FunctionOfTime (used in ShapeMap)
   result[size_name] = std::make_unique<FunctionsOfTime::PiecewisePolynomial<3>>(
-      initial_time_,
-      std::array<DataVector, 4>{{std::move(size_func),
-                                 std::move(size_deriv),
-                                 std::move(size_2nd_deriv),
-                                 {0.0}}},
-      expiration_times.at(size_name));
+      initial_time_, std::move(size_funcs), expiration_times.at(size_name));
 
   // ExpansionMap FunctionOfTime
   if (expansion_map_options_.has_value()) {
