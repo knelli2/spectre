@@ -17,9 +17,9 @@ namespace intrp2::protocols {
  *   `Parallel::protocols::ArrayElementsAllocator` that will initialize the
  *   elements of the interpolation array component.
  * - provide a type alias `element_initializer` which is a simple action that
- *   takes no arguments which will initialize the `intrp2::Tags::DbAccess` tag
- *   of the DataBox. Note that the array index of this simple action must be a
- *   `std::string`.
+ *   takes no arguments which will initialize the `db::Access` inside the
+ *   `intrp2::Tags::AccessWrapper` tag of the DataBox. Note that the array index
+ *   of this simple action must be a `std::string`.
  * - be named `intrp`.
  *
  * TODO: Add example

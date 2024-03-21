@@ -3,7 +3,9 @@
 
 #pragma once
 
+#include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/TagTraits.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/TMPL.hpp"
 
 namespace intrp2::metafunctions {
@@ -32,6 +34,11 @@ template <typename Callback>
 struct get_tags_to_observe {
   using type = typename Callback::tags_to_observe_on_target;
 };
+
+template <typename Callback>
+struct get_non_observation_tags {
+  using type = typename Callback::non_observation_tags_on_target;
+};
 }  // namespace detail
 
 template <typename Target>
@@ -42,4 +49,16 @@ template <typename Target>
 using all_tags_to_observe =
     simple_tags_from_mixed_tags<tmpl::flatten<tmpl::transform<
         all_callbacks<Target>, detail::get_tags_to_observe<tmpl::_1>>>>;
+
+template <typename Target>
+using all_non_observation_tags =
+    simple_tags_from_mixed_tags<tmpl::flatten<tmpl::transform<
+        all_callbacks<Target>, detail::get_non_observation_tags<tmpl::_1>>>>;
+
+template <typename Target, size_t Dim>
+using create_box_type =
+    db::compute_databox_type<tmpl::remove_duplicates<tmpl::append<
+        all_tags_to_observe<Target>, all_non_observation_tags<Target>,
+        Tags::common_target_tags<typename Target::temporal_id_tag::type, Dim>,
+        typename Target::points::tags_on_target>>>;
 }  // namespace intrp2::metafunctions

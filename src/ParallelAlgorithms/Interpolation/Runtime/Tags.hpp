@@ -26,10 +26,12 @@
 /// \cond
 template <size_t VolumeDim>
 class ElementId;
+namespace intrp2 {
+struct AccessWrapper;
+}  // namespace intrp2
 /// \endcond
 
 namespace intrp2 {
-
 namespace OptionTags {
 /*!
  * \ingroup OptionGroupsGroup
@@ -81,13 +83,14 @@ struct CompletedTemporalIds : db::SimpleTag {
  * \note This is the expected way to retrieve and mutate tags on the target
  * array element.
  */
-struct DbAccess : db::SimpleTag {
-  using type = std::unique_ptr<db::Access>;
+struct AccessWrapper : db::SimpleTag {
+  using type = std::unique_ptr<intrp2::AccessWrapper>;
 };
 
 /*!
  * \brief `std::unordered_set` of `db::tag_name`s of quantities to observe
  */
+// NOTE: Don't think we need this
 struct VarsToObserve : db::SimpleTag {
   using type = std::unordered_set<std::string>;
 };
@@ -164,10 +167,12 @@ struct Callbacks : db::SimpleTag {
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>;
 };
 
-template <typename Target, size_t Dim>
+template <typename TemporalId, size_t Dim>
 using common_target_tags =
-    tmpl::list<intrp2::Tags::Frame, intrp2::Tags::Points<Dim>,
-               intrp2::Tags::VarsToObserve,
-               intrp2::Tags::InvalidPointsFillValue>;
+    tmpl::list<CompletedTemporalIds<TemporalId>, Points<Dim>,
+               NumberOfSetsOfPoints, Frame, InterpolatedVars<TemporalId>,
+               InvalidPointsFillValue, InvalidIndices<TemporalId>,
+               NumberOfFilledPoints<TemporalId>, CurrentTemporalIds<TemporalId>,
+               Callbacks<TemporalId>>;
 }  // namespace Tags
 }  // namespace intrp2

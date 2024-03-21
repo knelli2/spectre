@@ -20,6 +20,7 @@
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/EventsAndTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Tags.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/AccessWrapper.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Events/MarkAsInterpolation.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Metavariables.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
@@ -69,8 +70,9 @@ void initialize_element_from_events(const gsl::not_null<BoxType*> box,
     if (derived != nullptr) {
       // Yes this is strange to get a pointer to a unique pointer, but that's
       // what is required
-      db::mutate<intrp2::Tags::DbAccess>(
-          [&](const gsl::not_null<std::unique_ptr<db::Access>*> access) {
+      db::mutate<intrp2::Tags::AccessWrapper>(
+          [&](const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+                  access_wrapper) {
             const intrp2::Events::MarkAsInterpolation* const
                 event_for_initialization =
                     dynamic_cast<const intrp2::Events::MarkAsInterpolation*>(
@@ -79,8 +81,8 @@ void initialize_element_from_events(const gsl::not_null<BoxType*> box,
             ASSERT(event_for_initialization != nullptr,
                    "Event for initialization is nullptr");
 
-            (*access) =
-                event_for_initialization->initialize_target_element_box();
+            event_for_initialization->initialize_target_element_box(
+                access_wrapper);
           },
           box);
     }
@@ -126,7 +128,7 @@ namespace Actions {
  */
 struct InitializeInterpolationTarget {
   using const_global_cache_tags = tmpl::list<>;
-  using simple_tags = tmpl::list<intrp2::Tags::DbAccess>;
+  using simple_tags = tmpl::list<intrp2::Tags::AccessWrapper>;
   using compute_tags = tmpl::list<>;
 
   // Iterable action

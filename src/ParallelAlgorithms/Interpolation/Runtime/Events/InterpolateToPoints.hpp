@@ -35,6 +35,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/AccessWrapper.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Events/MarkAsInterpolation.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
@@ -105,14 +106,12 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
   using TemporalId = typename temporal_id_tag::type;
   using PointsType = typename Target::points;
   using points_tags = typename PointsType::tags_on_target;
-  using runtime_callbacks = typename Target::possible_runtime_callbacks;
-  using compile_time_callbacks = typename Target::compile_time_callbacks;
-  using all_callbacks = tmpl::append<runtime_callbacks, compile_time_callbacks>;
+  using all_callbacks = metafunctions::all_callbacks<Target>;
 
   using Frame = typename Target::frame;
   static constexpr bool use_runtime_frame = std::is_same_v<Frame, NoSuchType>;
   static constexpr bool use_runtime_callbacks =
-      tmpl::size<runtime_callbacks>::value > 0;
+      tmpl::size<typename Target::possible_runtime_callbacks>::value > 0;
 
   template <typename LocalCallback>
   struct get_target_tensors {
@@ -135,15 +134,6 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
   using all_non_observation_tags_on_targets =
       tmpl::remove_duplicates<tmpl::flatten<
           tmpl::transform<all_callbacks, get_non_observation_tags<tmpl::_1>>>>;
-
-  using common_tags_on_target =
-      tmpl::list<intrp2::Tags::Frame, intrp2::Tags::Points<Dim>,
-                 intrp2::Tags::VarsToObserve>;
-
-  using all_tags_on_target =
-      tmpl::remove_duplicates<tmpl::append<all_target_tensors_to_observe,
-                                           all_non_observation_tags_on_targets,
-                                           points_tags, common_tags_on_target>>;
 
  public:
   /// \cond
@@ -268,7 +258,9 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
 
   // This will be used to initialize the Accesses that correspond to the
   // individual targets
-  std::unique_ptr<db::Access> initialize_target_element_box() const override;
+  void initialize_target_element_box(
+      const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+          access_wrapper) const override;
 
   // NOLINTNEXTLINE
   void pup(PUP::er& p);
@@ -416,6 +408,14 @@ void InterpolateToPoints<Target, Dim>::operator()(
     Parallel::GlobalCache<Metavariables>& cache,
     const ElementId<Dim>& array_index, const ParallelComponent* const /*meta*/,
     const ObservationValue& /*observation_value*/) const {
+  // TODO: Write simple action and call it only on the zeroth element that sends
+  // the points/frame to the target element. Then on the target element, it
+  // checks if any points are invalid and stores that information. We only need
+  // to do this once and we don't want to do the actual calculation on the
+  // element (because it may be slow) so we only have one element send the
+  // message and then do the calculation on the target (also because the target
+  // is what actually needs to know about the invalid points)
+
   // TODO: Fix the time argument here. Need something like
   // InterpolationTarget_detail::get_temporal_id_value
   const double time = 0.0;
@@ -485,28 +485,32 @@ void InterpolateToPoints<Target, Dim>::operator()(
 }
 
 template <typename Target, size_t Dim>
-std::unique_ptr<db::Access>
-InterpolateToPoints<Target, Dim>::initialize_target_element_box() const {
-  using BoxType = db::compute_databox_type<all_tags_on_target>;
+InterpolateToPoints<Target, Dim>::initialize_target_element_box(
+    const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*> access_wrapper)
+    const {
+  *access_wrapper = std::make_unique<intrp2::TargetAccessType<Target, Dim>>();
+  auto& access = (*access_wrapper)->access();
 
-  BoxType typed_box{};
-
-  db::mutate_apply<common_tags_on_target, tmpl::list<>>(
-      [this](
-          const gsl::not_null<std::string*> frame,
-          const gsl::not_null<tnsr::I<DataVector, Dim, ::Frame::NoFrame>*>
-              points,
-          const gsl::not_null<std::unordered_set<std::string>*> vars_to_observe,
-          const gsl::not_null<double*> invalid_points_fill_value) {
+  db::mutate<intrp2::Tags::Frame, intrp2::Tags::Points<Dim>,
+             intrp2::Tags::VarsToObserve, intrp2::Tags::InvalidPointsFillValue,
+             intrp2::Tags::Callbacks<Target>>(
+      [this](const gsl::not_null<std::string*> frame,
+             const gsl::not_null<tnsr::I<DataVector, Dim, ::Frame::NoFrame>*>
+                 points,
+             // const gsl::not_null<std::unordered_set<std::string>*>
+             // vars_to_observe,
+             const gsl::not_null<double*> invalid_points_fill_value,
+             const gsl::not_null<std::vector<
+                 std::unique_ptr<intrp2::callbacks::Callback<Target>>>*>
+                 callbacks) {
         *frame = frame_;
         *points = points_->target_points_no_frame();
-        *vars_to_observe = tensors_to_observe_;
+        // *vars_to_observe = tensors_to_observe_;
         *invalid_points_fill_value = invalid_fill_value_.value_or(
             std::numeric_limits<double>::quiet_NaN());
+        *callbacks = std::move(callbacks);
       },
-      make_not_null(&typed_box));
-
-  return std::make_unique<BoxType>(std::move(typed_box));
+      make_not_null(&access));
 }
 
 template <typename Target, size_t Dim>

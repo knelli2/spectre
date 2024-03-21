@@ -11,15 +11,16 @@
 #include <unordered_set>
 #include <vector>
 
-#include "DataStructures/DataBox/DataBox.hpp"  // IWYU pragma: keep
+#include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/Tensor/IndexType.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Framework/ActionTesting.hpp"
 #include "Parallel/Phase.hpp"
-#include "Parallel/PhaseDependentActionList.hpp"  // IWYU pragma: keep
+#include "Parallel/PhaseDependentActionList.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/LogicalTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Trigger.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/AccessWrapper.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Actions/InitializeInterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Events/MarkAsInterpolation.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Metavariables.hpp"
@@ -37,6 +38,29 @@ struct AccessTag : db::SimpleTag {
   using type = bool;
 };
 
+struct TestAccessWrapper : public intrp2::AccessWrapper {
+ private:
+  using BoxType = db::compute_databox_type<tmpl::list<AccessTag>>;
+
+ public:
+  TestAccessWrapper() = default;
+  explicit TestAccessWrapper(CkMigrateMessage* /*unused*/) {}
+  WRAPPED_PUPable_decl_template(TestAccessWrapper);  // NOLINT
+
+  TestAccessWrapper(BoxType box) : box_(std::move(box)) {}
+
+  db::Access& access() override { return db::as_access(box_); }
+
+  void pup(PUP::er& p) override { p | box_; }
+
+ private:
+  void pup_typed_box(PUP::er& p) override { p | box_; }
+
+  BoxType box_{};
+};
+
+PUP::able::PUP_ID TestAccessWrapper::my_PUP_ID = 0;  // NOLINT
+
 template <size_t Index>
 class TestEvent : public ::Event, public intrp2::Events::MarkAsInterpolation {
  public:
@@ -50,15 +74,28 @@ class TestEvent : public ::Event, public intrp2::Events::MarkAsInterpolation {
 
   TestEvent() = default;
 
-  std::unique_ptr<db::Access> initialize_target_element_box() const override {
-    auto box = db::create<tmpl::list<AccessTag>>(true);
-    return std::make_unique<db::DataBox<tmpl::list<AccessTag>>>(std::move(box));
+  void initialize_target_element_box(
+      const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+          access_wrapper) const override {
+    *access_wrapper =
+        serialize_and_deserialize(std::make_unique<TestAccessWrapper>());
+    db::Access& access = (*access_wrapper)->access();
+    db::mutate<AccessTag>(
+        [](const gsl::not_null<bool*> access_tag) { *access_tag = true; },
+        make_not_null(&access));
   }
 
   bool needs_evolved_variables() const override { return false; }
 
   // NOLINTNEXTLINE
-  void pup(PUP::er& /*p*/) override {}
+  void pup(PUP::er& p) override {
+    // NOTE: This is because we have unused pipe operators from the
+    // WRAPPED_PUPable_decl_template above and no matter what I tried, I
+    // couldn't get them to go away. Even adding gcc diagnostic pragmas didn't
+    // fix it. So we are left with this dumbass solution
+    TestAccessWrapper fuck_you{};
+    p | fuck_you;
+  }
 };
 
 template <size_t Index>
@@ -110,9 +147,10 @@ struct Metavariables {
   };
 
   struct factory_creation {
-    using factory_classes =
-        tmpl::map<tmpl::pair<::Trigger, tmpl::list<Triggers::Always>>,
-                  tmpl::pair<::Event, event_list>>;
+    using factory_classes = tmpl::map<
+        tmpl::pair<::Trigger, tmpl::list<Triggers::Always>>,
+        tmpl::pair<::Event, event_list>,
+        tmpl::pair<intrp2::AccessWrapper, tmpl::list<TestAccessWrapper>>>;
   };
 };
 
@@ -145,26 +183,25 @@ SPECTRE_TEST_CASE("Unit.ParallelAlgorithms.Interpolation.Runtime.Initialize",
                                                       array_index);
 
     // Shouldn't have been initialized yet
-    db::mutate<intrp2::Tags::DbAccess>(
-        [](const gsl::not_null<std::unique_ptr<db::Access>*> access) {
-          CHECK_FALSE(*access);
-        },
+    db::mutate<intrp2::Tags::AccessWrapper>(
+        [](const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+               access_wrapper) { CHECK_FALSE(*access_wrapper); },
         make_not_null(&box));
 
     ActionTesting::next_action<component>(make_not_null(&runner), array_index);
 
     // Should now be initialized
-    db::mutate<intrp2::Tags::DbAccess>(
-        [](const gsl::not_null<std::unique_ptr<db::Access>*> access) {
-          CHECK(*access);
-
-          // ** because access is a pointer to a unique_ptr
-          CHECK(db::get<AccessTag>(**access));
+    db::mutate<intrp2::Tags::AccessWrapper>(
+        [](const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+               access_wrapper) {
+          REQUIRE(*access_wrapper);
+          auto& access = (*access_wrapper)->access();
+          CHECK(db::get<AccessTag>(access));
 
           // For the next test
-          access->reset();
+          access_wrapper->reset();
 
-          CHECK_FALSE(*access);
+          CHECK_FALSE(*access_wrapper);
         },
         make_not_null(&box));
 
@@ -183,12 +220,11 @@ SPECTRE_TEST_CASE("Unit.ParallelAlgorithms.Interpolation.Runtime.Initialize",
     });
 
     // Again, should now be initialized
-    db::mutate<intrp2::Tags::DbAccess>(
-        [](const gsl::not_null<std::unique_ptr<db::Access>*> access) {
-          CHECK(*access);
-
-          // ** because access is a pointer to a unique_ptr
-          CHECK(db::get<AccessTag>(**access));
+    db::mutate<intrp2::Tags::AccessWrapper>(
+        [](const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+               access_wrapper) {
+          REQUIRE(*access_wrapper);
+          CHECK(db::get<AccessTag>((*access_wrapper)->access()));
         },
         make_not_null(&box));
   }

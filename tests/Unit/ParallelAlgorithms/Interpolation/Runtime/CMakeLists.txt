@@ -4,6 +4,7 @@
 set(LIBRARY "Test_ParallelInterpolationRuntime")
 
 set(LIBRARY_SOURCES
+  Test_AccessWrapper.cpp
   Test_Protocols.cpp
   Test_Metafunctions.cpp
   )

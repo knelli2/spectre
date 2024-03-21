@@ -51,7 +51,8 @@ struct ReceiveVolumeTensors {
     // Check if we already have completed interpolation at this
     // temporal_id.
     db::Access& access =
-        db::get_mutable_reference<Tags::DbAccess>(make_not_null(&box));
+        db::get_mutable_reference<Tags::AccessWrapper>(make_not_null(&box))
+            ->access();
 
     if (UNLIKELY(
             alg::found(db::get<Tags::CompletedTemporalIds<TemporalId>>(access),

@@ -91,7 +91,8 @@ struct MockTargetComponent {
   using phase_dependent_action_list = tmpl::list<
       Parallel::PhaseActions<Parallel::Phase::Initialization,
                              tmpl::list<ActionTesting::InitializeDataBox<
-                                 tmpl::list<intrp2::Tags::DbAccess>>>>>;
+                                 //  tmpl::list<intrp2::Tags::DbAccess>>>>>;
+                                 tmpl::list<>>>>>;
 };
 
 struct TestMetavars {
@@ -109,9 +110,12 @@ void test() {
   std::unique_ptr<db::Access> access = std::make_unique<BoxType>();
 
   ActionTesting::MockRuntimeSystem<TestMetavars> runner{{}};
-  ActionTesting::emplace_array_component_and_initialize<target_component>(
+  // ActionTesting::emplace_array_component_and_initialize<target_component>(
+  //     make_not_null(&runner), ActionTesting::NodeId{0},
+  //     ActionTesting::LocalCoreId{0}, "MockTarget", {std::move(access)});
+  ActionTesting::emplace_array_component<target_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
-      ActionTesting::LocalCoreId{0}, "MockTarget", {std::move(access)});
+      ActionTesting::LocalCoreId{0}, "MockTarget");
   ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
 }
 }  // namespace

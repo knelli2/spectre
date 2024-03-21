@@ -5,7 +5,8 @@
 
 #include <memory>
 
-#include "DataStructures/DataBox/Access.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/AccessWrapper.hpp"
+#include "Utilities/Gsl.hpp"
 
 namespace intrp2::Events {
 /// To designate an Event as an interpolation event. Necessary to be able to
@@ -13,7 +14,11 @@ namespace intrp2::Events {
 struct MarkAsInterpolation {
   // This will be used to initialize the Accesses that correspond to the
   // individual targets
-  virtual std::unique_ptr<db::Access> initialize_target_element_box() const = 0;
+  // TODO: This needs to take an intrp2::AccessWrapper because it needs to be
+  // created in the event because that knows the box type
+  virtual void initialize_target_element_box(
+      const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
+          access_wrapper) const = 0;
   virtual ~MarkAsInterpolation() {}
 };
 }  // namespace intrp2::Events
