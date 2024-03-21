@@ -87,6 +87,12 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
 
   Sphere() = default;
 
+  // TODO: In order to avoid this, ask for the ObservationBox instead. Then in
+  // the operator() convert it to an access. Then based on which frame we are
+  // using, we get the specific coordinates tag from the access, not the box, so
+  // it doesn't trigger a compile time error. It is of course still somebody
+  // elses responsibility for making sure the tags are actually in the
+  // box/access, but that can be left to the observation box.
   using argument_tags =
       tmpl::list<domain::Tags::Element<3>,
                  domain::Tags::Coordinates<3, Frame::Grid>,
