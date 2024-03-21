@@ -47,10 +47,12 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         functions_of_time = deserialize_functions_of_time(
             volfile.get_functions_of_time(obs_ids[which_obs_id]))
 
-        exp_func_and_2_derivs = [
-            x[0] for x in functions_of_time['Expansion'].func_and_2_derivs(
-                fot_times[which_obs_id])
-        ]
+        # exp_func_and_2_derivs = [
+        #     x[0] for x in functions_of_time['Expansion'].func_and_2_derivs(
+        #         fot_times[which_obs_id])
+        # ]
+        exp_func_and_2_derivs = [1.0, 0.0, 0.0]
+
         exp_outer_bdry_func_and_2_derivs = [
             x[0] for x in functions_of_time['ExpansionOuterBoundary'].
             func_and_2_derivs(fot_times[which_obs_id])
@@ -67,6 +69,14 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
                 path_to_ah_h5, ahc_subfile_path, ahc_times, number_of_steps,
                 match_time, settling_timescale, exp_func_and_2_derivs,
                 exp_outer_bdry_func_and_2_derivs, rot_func_and_2_derivs))
+
+        # Print out coefficients for insertion into BBH domain
+        print("Expansion: ", exp_func_and_2_derivs)
+        print("ExpansionOutrBdry: ", exp_outer_bdry_func_and_2_derivs)
+        print("Rotation: ", rot_func_and_2_derivs)
+        print("Match time: ", match_time)
+        print("Settling timescale: ", settling_timescale)
+        print("Lmax: ", ahc_lmax)
 
     # Cubic fit transformed coefs to get first and second time derivatives
     def cubic(x, a, b, c, d):
@@ -106,9 +116,15 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         ahc_times[-number_of_steps:], coefs_at_different_times)
 
     # output coefs to H5
-    fit_ahc_coefs_dv = DataVector(fit_ahc_coefs)
-    fit_ahc_dt_coefs_dv = DataVector(fit_ahc_dt_coefs)
-    fit_ahc_dt2_coefs_dv = DataVector(fit_ahc_dt2_coefs)
+    # HACK: no translation, so inertial and distorted centers are the same,
+    # i.e. are both the origin
+    ahc_legend[1] = ahc_legend[1].replace("Inertial", "Distorted")
+    ahc_legend[2] = ahc_legend[2].replace("Inertial", "Distorted")
+    ahc_legend[3] = ahc_legend[3].replace("Inertial", "Distorted")
+
+    fit_ahc_coefs_dv = -DataVector(fit_ahc_coefs)
+    fit_ahc_dt_coefs_dv = -DataVector(fit_ahc_dt_coefs)
+    fit_ahc_dt2_coefs_dv = -DataVector(fit_ahc_dt2_coefs)
     fit_ahc_coefs_to_write = Ringdown.wrap_fill_ylm_data(
         fit_ahc_coefs_dv, match_time, ahc_center, ahc_lmax)
     fit_ahc_dt_coefs_to_write = Ringdown.wrap_fill_ylm_data(
