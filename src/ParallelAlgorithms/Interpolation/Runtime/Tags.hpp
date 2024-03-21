@@ -102,6 +102,24 @@ struct Points : db::SimpleTag {
 };
 
 /*!
+ * \brief How many sets of points are stored in each quantity.
+ *
+ * \details It is possible for a target to specify multiple "sets" of its points
+ * in a single contiguous buffer (think multiple radii of a sphere all one after
+ * each other). This tag stores how many of these sets there are (i.e. how many
+ * radii for the sphere example).
+ *
+ * This is needed because compute tags typically assume there is just one "set"
+ * of points and cannot handle if there are multiple in the same buffer.
+ * Therefore, this tag is intended to be used to know how many views to create
+ * into the original buffer so we don't have to write special compute tags for
+ * the interpolation framework.
+ */
+struct NumberOfSetsOfPoints : db::SimpleTag {
+  using type = size_t;
+};
+
+/*!
  * \brief Frame of target points in `intrp2::Tags::Points`.
  */
 struct Frame : db::SimpleTag {

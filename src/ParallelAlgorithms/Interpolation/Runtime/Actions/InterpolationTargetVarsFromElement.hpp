@@ -193,36 +193,47 @@ struct ReceiveVolumeTensors {
     const std::unordered_map<std::string, std::vector<DataVector>>&
         interpolated_vars =
             db::get<Tags::InterpolatedVars<TemporalId>>(access).at(temporal_id);
-    tmpl::for_each<all_target_tensors>(
-        [&interpolated_vars, &access](auto tensor_tag_v) {
-          using TensorTag = tmpl::type_from<decltype(tensor_tag_v)>;
-          const std::string& tag_name = db::tag_name<TensorTag>();
+    const size_t number_of_sets_of_points =
+        db::get<Tags::NumberOfSetsOfPoints>(access);
+    const size_t number_of_points_in_single_set =
+        db::get<Tags::NumberOfFilledPoints<TemporalId>>(access) /
+        number_of_sets_of_points;
+    for (size_t i = 0; i < number_of_sets_of_points; i++) {
+      tmpl::for_each<all_target_tensors>([&interpolated_vars,
+                                          &access](auto tensor_tag_v) {
+        using TensorTag = tmpl::type_from<decltype(tensor_tag_v)>;
+        const std::string& tag_name = db::tag_name<TensorTag>();
 
-          // Skip this tag if it's not in the vars we received
-          if (interpolated_vars.count(tag_name) != 1) {
-            return;
-          }
+        // Skip this tag if it's not in the vars we received
+        if (not interpolated_vars.contains(tag_name)) {
+          return;
+        }
 
-          // Set the tensors in the actual access to be non-owning. Have them
-          // point to the data in the unordered map so we avoid a bunch of
-          // copies
-          const std::vector<DataVector>& all_tensor_components =
-              interpolated_vars.at(tag_name);
-          db::mutate<TensorTag>(
-              [&all_tensor_components](
-                  const gsl::not_null<typename TensorTag::type*> box_tensor) {
-                for (size_t i = 0; i < all_tensor_components.size(); i++) {
-                  box_tensor->get(i).set_data_ref(make_not_null(
-                      &const_cast<DataVector&>(all_tensor_components[i])));
-                }
-              },
-              make_not_null(&access));
-        });
+        // Set the tensors in the actual access to be non-owning. Have them
+        // point to the data in the unordered map so we avoid a bunch of
+        // copies
+        const std::vector<DataVector>& all_tensor_components =
+            interpolated_vars.at(tag_name);
+        db::mutate<TensorTag>(
+            [&all_tensor_components](
+                const gsl::not_null<typename TensorTag::type*> box_tensor) {
+              for (size_t i = 0; i < all_tensor_components.size(); i++) {
+                // NOLINTBEGIN
+                box_tensor->get(i).set_data_ref(
+                    const_cast<DataVector&>(all_tensor_components[i]).data() +
+                        i * number_of_points_in_single_set,
+                    number_of_points_in_single_set);
+                // NOLINTEND
+              }
+            },
+            make_not_null(&access));
+      });
 
-    // Now call all the callbacks
-    const auto& callbacks = db::get<Tags::Callbacks<Target>>(access);
-    for (const auto& callback : callbacks) {
-      callback->invoke(access, cache, temporal_id);
+      // Now call all the callbacks
+      const auto& callbacks = db::get<Tags::Callbacks<Target>>(access);
+      for (const auto& callback : callbacks) {
+        callback->invoke(access, cache, temporal_id);
+      }
     }
 
 // Unset the references so that we don't have dangling pointers. We only do this
@@ -236,7 +247,7 @@ struct ReceiveVolumeTensors {
           const std::string& tag_name = db::tag_name<TensorTag>();
 
           // Skip this tag if it's not in the vars we received
-          if (interpolated_vars.count(tag_name) != 1) {
+          if (not interpolated_vars.contains(tag_name)) {
             return;
           }
 
