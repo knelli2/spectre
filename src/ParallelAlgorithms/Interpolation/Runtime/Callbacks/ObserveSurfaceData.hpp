@@ -28,6 +28,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Metafunctions.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Gsl.hpp"
@@ -112,16 +113,8 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
   using volume_compute_tags = VolumeComputeTags;
 
  private:
-  template <typename ComputeTag>
-  struct get_simple_tag {
-    using type = typename ComputeTag::base;
-  };
-  using partition =
-      tmpl::partition<tags_to_observe_on_target, db::is_compute_tag<tmpl::_1>>;
-  using compute_to_simple_tags =
-      tmpl::transform<typename partition::first_type, get_simple_tag<tmpl::_1>>;
   using simple_tags_to_observe =
-      tmpl::append<typename partition::second_type, compute_to_simple_tags>;
+      metafunctions::simple_tags_from_mixed_tags<tags_to_observe_on_target>;
 
  public:
   /// \cond

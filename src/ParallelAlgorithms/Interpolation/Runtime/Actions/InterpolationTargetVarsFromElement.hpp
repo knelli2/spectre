@@ -13,6 +13,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Metafunctions.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
@@ -33,8 +34,7 @@ namespace Actions {
 template <typename Target>
 struct ReceiveVolumeTensors {
   using TemporalId = typename Target::temporal_id_tag::type;
-  // TODO: Implement metafunction to get this list given a target.
-  using all_target_tensors = tmpl::list<>;
+  using all_target_tensors = metafunctions::all_tags_to_observe<Target>;
 
   template <typename ParallelComponent, typename DbTags, typename Metavariables>
   static void apply(

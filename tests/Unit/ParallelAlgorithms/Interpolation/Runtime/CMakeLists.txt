@@ -5,6 +5,7 @@ set(LIBRARY "Test_ParallelInterpolationRuntime")
 
 set(LIBRARY_SOURCES
   Test_Protocols.cpp
+  Test_Metafunctions.cpp
   )
 
 add_subdirectory(Actions)
