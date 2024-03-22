@@ -191,6 +191,15 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
         "TimescaleTuner for smoothing horizon measurements."};
   };
 
+  // HACK: Need to make all derived classes option creatable and then register
+  // everything with factory creation. But for now, just do it by hand because
+  // we only have 4 possible states
+  struct InitialState {
+    using type = std::string;
+    static constexpr Options::String help{
+        "Name of the initial state to start in."};
+  };
+
   struct DeltaRDriftOutwardOptions {
     using type =
         Options::Auto<DeltaRDriftOutwardOptions, Options::AutoLabel::None>;
@@ -230,7 +239,7 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
 
   using options = tmpl::list<MaxNumTimesForZeroCrossingPredictor,
                              SmoothAvgTimescaleFraction, SmootherTuner,
-                             DeltaRDriftOutwardOptions>;
+                             InitialState, DeltaRDriftOutwardOptions>;
   static constexpr Options::String help{
       "Computes the control error for size control. Will also write a "
       "diagnostics file if the control systems are allowed to write data to "
@@ -251,7 +260,7 @@ struct Size : tt::ConformsTo<protocols::ControlError> {
    * is moved inside this class.
    */
   Size(const int max_times, const double smooth_avg_timescale_frac,
-       TimescaleTuner<true> smoother_tuner,
+       TimescaleTuner<true> smoother_tuner, const std::string& initial_state,
        std::optional<DeltaRDriftOutwardOptions> delta_r_drift_outward_options);
 
   /// Returns the internal `control_system::size::Info::suggested_time_scale`. A
