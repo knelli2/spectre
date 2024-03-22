@@ -2,21 +2,68 @@
 # See LICENSE.txt for details.
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Optional, Union
 
 import click
 import numpy as np
+import scipy.optimize
 import yaml
 from rich.pretty import pretty_repr
-from scipy.optimize import curve_fit as curve_fit
 
+import spectre.Evolution.Ringdown as Ringdown
 import spectre.IO.H5 as spectre_h5
 from spectre.DataStructures import DataVector
 from spectre.Domain import deserialize_functions_of_time
-import spectre.Evolution.Ringdown as Ringdown
 
 logger = logging.getLogger(__name__)
+
+
+def cubic(x, a, b, c, d):
+    return a * x**3 + b * x**2 + c * x + d
+
+
+def dt_cubic(x, a, b, c, d):
+    return 3 * a * x**2 + 2 * b * x + c
+
+
+def dt2_cubic(x, a, b, c, d):
+    return 6 * a * x + 2 * b
+
+
+# Cubic fit transformed coefs to get first and second time derivatives
+def fit_to_a_cubic(times, coefs, match_time, zero_coefs, fitter):
+    fits = []
+    fit_ahc = []
+    fit_dt_ahc = []
+    fit_dt2_ahc = []
+    for j in np.arange(0, coefs.shape[-1], 1):
+        # if coef is not large enough, just set it to zero
+        # Some coefficients are identically zero.
+        # But I notice that my fits only recover the original coefficients
+        # to ~1e-3 accuracy, so I decide to only fit coefficients bigger
+        # than that, setting the rest to zero.
+        if zero_coefs is not None and sum(np.abs(coefs[:, j])) < zero_coefs:
+            fits.append(np.zeros(4))
+            fit_ahc.append(0.0)
+            fit_dt_ahc.append(0.0)
+            fit_dt2_ahc.append(0.0)
+            continue
+        if fitter == "curve_fit":
+            fit, _ = scipy.optimize.curve_fit(cubic, times, coefs[:, j])
+        elif fitter == "polyfit":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", np.RankWarning)
+                fit = np.polyfit(times, coefs[:, j], 3)
+        else:
+            raise click.UsageError(f"Unknown fitter {fitter}")
+        fits.append(fit)
+        fit_ahc.append(cubic(match_time, *(fit)))
+        fit_dt_ahc.append(dt_cubic(match_time, *(fit)))
+        fit_dt2_ahc.append(dt2_cubic(match_time, *(fit)))
+
+    return fit_ahc, fit_dt_ahc, fit_dt2_ahc
 
 
 def compute_ahc_coefs_in_ringdown_distorted_frame(
@@ -29,6 +76,8 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     number_of_steps,
     which_obs_id,
     settling_timescale,
+    zero_coefs,
+    fitter,
 ):
     output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
     output_subfile_dt_ahc = output_subfile_prefix + "dtAhC_Ylm"
@@ -48,7 +97,7 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
     # Transform AhC coefs to ringdown distorted frame
     with spectre_h5.H5File(path_to_fot_h5, "r") as h5file:
-        volfile = h5file.get_vol(fot_subfile_path)
+        volfile = h5file.get_vol("/" + fot_subfile_path)
         obs_ids = volfile.list_observation_ids()
         fot_times = list(map(volfile.get_observation_value, obs_ids))
         functions_of_time = deserialize_functions_of_time(
@@ -98,40 +147,6 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
         print("Settling timescale: ", settling_timescale)
         print("Lmax: ", ahc_lmax)
 
-    # Cubic fit transformed coefs to get first and second time derivatives
-    def cubic(x, a, b, c, d):
-        return a * x**3 + b * x**2 + c * x + d
-
-    def dt_cubic(x, a, b, c, d):
-        return 3 * a * x**2 + 2 * b * x + c
-
-    def dt2_cubic(x, a, b, c, d):
-        return 6 * a * x + 2 * b
-
-    def fit_coefs(times, coefs):
-        fits = []
-        fit_ahc = []
-        fit_dt_ahc = []
-        fit_dt2_ahc = []
-        for j in np.arange(0, coefs.shape[-1], 1):
-            # if coef is not large enough, just set it to zero
-            # Some coefficients are identically zero.
-            # But I notice that my fits only recover the original coefficients
-            # to ~1e-3 accuracy, so I decide to only fit coefficients bigger
-            # than that, setting the rest to zero.
-            if sum(np.abs(coefs[:, j])) < 1.0e-4:
-                fits.append(np.zeros(4))
-                fit_ahc.append(0.0)
-                fit_dt_ahc.append(0.0)
-                fit_dt2_ahc.append(0.0)
-                continue
-            fit = curve_fit(cubic, times, coefs[:, j])
-            fits.append(fit[0])
-            fit_ahc.append(cubic(match_time, *(fit[0])))
-            fit_dt_ahc.append(dt_cubic(match_time, *(fit[0])))
-            fit_dt2_ahc.append(dt2_cubic(match_time, *(fit[0])))
-        return fit_ahc, fit_dt_ahc, fit_dt2_ahc
-
     # HACK: drop AhCs at times greater than the match time
     ahc_times_for_fit_list = []
     coefs_at_different_times_for_fit_list = []
@@ -150,8 +165,12 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
     print("Coef times available: " + str(coefs_at_different_times.shape))
     print("Coef times used: " + str(coefs_at_different_times_for_fit.shape))
 
-    fit_ahc_coefs, fit_ahc_dt_coefs, fit_ahc_dt2_coefs = fit_coefs(
-        ahc_times[-number_of_steps:], coefs_at_different_times
+    fit_ahc_coefs, fit_ahc_dt_coefs, fit_ahc_dt2_coefs = fit_to_a_cubic(
+        ahc_times[-number_of_steps:],
+        coefs_at_different_times,
+        match_time,
+        zero_coefs,
+        fitter,
     )
 
     # output coefs to H5
@@ -202,6 +221,8 @@ def compute_ahc_coefs_for_ringdown(
     number_of_steps: int,
     which_obs_id: int,
     settling_timescale: float,
+    zero_coefs: float,
+    fitter: str,
 ):
     """Compute and write to disk ahc coefs in ringdown distorted frame."""
     logger.warning(
@@ -218,6 +239,8 @@ def compute_ahc_coefs_for_ringdown(
         number_of_steps,
         which_obs_id,
         settling_timescale,
+        zero_coefs,
+        fitter,
     )
 
 
@@ -293,6 +316,19 @@ def compute_ahc_coefs_for_ringdown(
     "--settling_timescale",
     type=float,
     help="Damping timescale for settle to const",
+)
+@click.option(
+    "-z",
+    "--zero-coefs",
+    type=float,
+    default=None,
+    help="What value of coefs to zero below. None means don't zero any",
+)
+@click.option(
+    "--fitter",
+    type=str,
+    default="polyfit",
+    help="Which fitting algorithm to use",
 )
 def compute_ahc_coefs_for_ringdown_command(**kwargs):
     _rich_traceback_guard = True  # Hide traceback until here
