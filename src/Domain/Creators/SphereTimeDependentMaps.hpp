@@ -102,8 +102,15 @@ struct YlmsFromFile {
         "(Not sure if you need this, but adding it just in case)";
   };
 
+  struct SetL1CoefsToZero {
+    using type = bool;
+    static constexpr Options::String help =
+        "Whether to set the L=1 coefs to zero or not. This may be desirable "
+        "because L=1 is degenerate with a translation of the BH.";
+  };
+
   using options = tmpl::list<H5Filename, SubfileNames, MatchTime,
-                             MatchTimeEpsilon, Y00Coef>;
+                             MatchTimeEpsilon, Y00Coef, SetL1CoefsToZero>;
 
   static constexpr Options::String help = {
       "Strings that locate ylm coefficients for ringdown domain."};
@@ -113,6 +120,7 @@ struct YlmsFromFile {
   double match_time{};
   std::optional<double> match_time_epsilon{};
   std::optional<std::array<double, 3>> y00_coef{};
+  bool set_l1_coefs_to_zero{};
 };
 
 // Label for shape map options

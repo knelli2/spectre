@@ -24,6 +24,7 @@
 #include "Domain/FunctionsOfTime/SettleToConstant.hpp"
 #include "Domain/FunctionsOfTime/SettleToConstantQuaternion.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/SpherepackIterator.hpp"
 #include "Options/Context.hpp"
 #include "Options/ParseError.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/GeneralRelativity/KerrHorizon.hpp"
@@ -116,6 +117,9 @@ TimeDependentMapOptions::create_functions_of_time(
         const std::optional<double>& match_time_epsilon =
             files.match_time_epsilon;
         const std::optional<std::array<double, 3>>& y00_coef = files.y00_coef;
+        const bool set_l1_coefs_to_zero = files.set_l1_coefs_to_zero;
+        const size_t l_max = shape_map_options_->l_max;
+        ylm::SpherepackIterator iter{l_max, l_max};
 
         for (size_t i = 0; i < subfile_names.size(); i++) {
           // Frame doesn't matter here
@@ -131,6 +135,11 @@ TimeDependentMapOptions::create_functions_of_time(
                   file_strahlkorper.coefficients(),
                   this_strahlkorper.ylm_spherepack());
           gsl::at(shape_funcs, i)[0] = 0.0;
+          if (set_l1_coefs_to_zero) {
+            for (int m = -1; m <= 1; m++) {
+              gsl::at(shape_funcs, i)[iter.set(1_st, m)()] = 0.0;
+            }
+          }
           if (y00_coef.has_value()) {
             gsl::at(size_funcs, i)[0] = gsl::at(y00_coef.value(), i);
           }
