@@ -12,7 +12,10 @@
 
 #include "DataStructures/DataVector.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Options/Auto.hpp"
+#include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
@@ -53,6 +56,61 @@ struct KerrSchildFromBoyerLindquist {
 /// Label for shape map options
 struct Spherical {};
 
+struct YlmsFromFile {
+  struct H5Filename {
+    using type = std::string;
+    static constexpr Options::String help =
+        "Path to the data file containing the ylm coefficients and their "
+        "derivatives.";
+  };
+
+  struct SubfileNames {
+    using type = std::array<std::string, 3>;
+    static constexpr Options::String help =
+        "Subfile names for the different order derivatives of the ylm "
+        "coefficients without the preceding '/' and without the '.dat' "
+        "extension.";
+  };
+
+  struct MatchTime {
+    using type = double;
+    static constexpr Options::String help =
+        "Time in the H5File to get the coefficients at. Will likely be the "
+        "same as the initial time";
+  };
+
+  struct MatchTimeEpsilon {
+    using type = Options::Auto<double>;
+    static constexpr Options::String help =
+        "Look for times in the H5File within this epsilon of the match time. "
+        "This is to avoid having to know the exact time to all digits. Default "
+        "is 1e-12.";
+  };
+
+  struct SetL1CoefsToZero {
+    using type = bool;
+    static constexpr Options::String help =
+        "Whether to set the L=1 coefs to zero or not. This may be desirable "
+        "because L=1 is degenerate with a translation of the BH.";
+  };
+
+  using options = tmpl::list<H5Filename, SubfileNames, MatchTime,
+                             MatchTimeEpsilon, SetL1CoefsToZero>;
+
+  static constexpr Options::String help = {
+      "Read the Y_lm coefficients of a Strahlkorper from file and use those to "
+      "initialize the coefficients of a shape map. The 00 coefficients (for "
+      "all derivs) are set to zero automatically. Note that the coefficients "
+      "that are read in will be multiplied by -1 to conform with how we store "
+      "the shape map coefficients internally."};
+
+  std::string h5_filename{};
+  std::array<std::string, 3> subfile_names{};
+  double match_time{};
+  std::optional<double> match_time_epsilon{};
+  bool set_l1_coefs_to_zero{};
+};
+
 /*!
  * \brief Class to be used as an option for initializing shape map coefficients.
  *
@@ -79,7 +137,8 @@ struct ShapeMapOptions {
 
   struct InitialValues {
     using type =
-        Options::Auto<std::variant<KerrSchildFromBoyerLindquist>, Spherical>;
+        Options::Auto<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile>,
+                      Spherical>;
     static constexpr Options::String help = {
         "Initial Ylm coefficients for the shape map. Specify 'Spherical' for "
         "all coefficients to be initialized to zero."};
@@ -109,7 +168,8 @@ struct ShapeMapOptions {
                           common_options>;
 
   size_t l_max{};
-  std::optional<std::variant<KerrSchildFromBoyerLindquist>> initial_values{};
+  std::optional<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile>>
+      initial_values{};
   std::optional<std::array<double, 3>> initial_size_values{};
   bool transition_ends_at_cube{false};
 };
