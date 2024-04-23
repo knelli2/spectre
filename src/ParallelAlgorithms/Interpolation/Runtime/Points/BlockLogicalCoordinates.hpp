@@ -44,10 +44,10 @@ std::optional<BlockCoords<Metavariables::volume_dim>> block_logical_coordinates(
     const BoxType& box, const Parallel::GlobalCache<Metavariables>& cache,
     const double time, const std::string& frame, const Points& points) {
   if constexpr (detail::has_argument_tags_v<Points>) {
-    db::apply(points, box, cache, time, frame);
+    return db::apply(points, box, cache, time, frame);
   } else {
     (void)box;
-    ::block_logical_coordinates_in_frame(
+    return ::block_logical_coordinates_in_frame(
         cache, time, points.target_points_no_frame(), frame);
   }
 }

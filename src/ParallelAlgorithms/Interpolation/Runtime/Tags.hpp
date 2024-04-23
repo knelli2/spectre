@@ -140,6 +140,14 @@ struct InvalidPointsFillValue : db::SimpleTag {
   using type = double;
 };
 
+/*!
+ * \brief Indices of the invalid points
+ */
+template <typename TemporalId>
+struct InvalidIndices : db::SimpleTag {
+  using type = std::unordered_map<TemporalId, std::unordered_set<size_t>>;
+};
+
 template <typename TemporalId>
 struct NumberOfFilledPoints : db::SimpleTag {
   using type = std::unordered_map<TemporalId, size_t>;

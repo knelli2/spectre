@@ -12,11 +12,13 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Variables.hpp"
-#include "Domain/FunctionsOfTime/FunctionsOfTimeAreReady.hpp"
+#include "Domain/BlockLogicalCoordinates.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Metafunctions.hpp"
+#include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -39,11 +41,13 @@ struct ReceiveVolumeTensors {
   template <typename ParallelComponent, typename DbTags, typename Metavariables>
   static void apply(
       db::DataBox<DbTags>& box, Parallel::GlobalCache<Metavariables>& cache,
-      const std::string& array_index, const TemporalId& temporal_id,
+      const std::string& /*array_index*/, const TemporalId& temporal_id,
       const std::unordered_map<std::string, std::vector<DataVector>>&
           received_interpolated_vars,
       const std::vector<size_t>& global_offsets,
+      const bool check_for_invalid_points,
       const bool vars_have_already_been_received = false) {
+    constexpr size_t Dim = Metavariables::volume_dim;
     // Check if we already have completed interpolation at this
     // temporal_id.
     db::Access& access =
@@ -85,8 +89,8 @@ struct ReceiveVolumeTensors {
 
     const auto& current_ids =
         db::get<Tags::CurrentTemporalIds<TemporalId>>(access);
-    const auto& points =
-        db::get<Tags::Points<Metavariables::volume_dim>>(access);
+    const auto& points = db::get<Tags::Points<Dim>>(access);
+    const std::string& frame = db::get<Tags::Frame>(access);
     const size_t number_of_points = get<0>(points).size();
     // Reference in case this is a NaN
     const double& invalid_points_fill_value =
@@ -180,11 +184,43 @@ struct ReceiveVolumeTensors {
           make_not_null(&access));
     }
 
+    // Here we check which indices are invalid. This way we know how many points
+    // to receive total.
+    if (check_for_invalid_points) {
+      db::mutate<Tags::InvalidIndices<TemporalId>>(
+          [&points, &frame, &temporal_id,
+           &cache](const gsl::not_null<
+                   std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
+                       all_invalid_indices) {
+            ASSERT(not all_invalid_indices.contains(temporal_id),
+                   "Checking invalid indices of target "
+                       << pretty_type::name<Target>() << " at time "
+                       << temporal_id
+                       << " twice. This should only happen once.");
+            auto& invalid_indices = all_invalid_indices[temporal_id];
+
+            const intrp2::BlockCoords<Dim> block_logical_coordinates =
+                ::block_logical_coordinates_in_frame(cache, temporal_id, points,
+                                                     frame);
+
+            for (size_t i = 0; i < block_logical_coordinates.size(); ++i) {
+              if (not block_logical_coordinates[i].has_value()) {
+                invalid_indices.insert(i);
+              }
+            }
+          },
+          make_not_null(&access));
+    }
+
+    const auto& all_invalid_indices =
+        db::get<Tags::InvalidIndices<TemporalId>>(access);
+    size_t received_number_of_points =
+        db::get<Tags::NumberOfFilledPoints<TemporalId>>(access).at(temporal_id);
+    if (all_invalid_indices.contains(temporal_id)) {
+      received_number_of_points += all_invalid_indices.at(temporal_id).size();
+    }
     // We don't have all the points yet. Wait for more.
-    // QUESTION: What do we do if some points are invalid and we will never get
-    // data for them? How do we decide to continue on?
-    if (db::get<Tags::NumberOfFilledPoints<TemporalId>>(access).at(
-            temporal_id) != number_of_points) {
+    if (received_number_of_points != number_of_points) {
       return;
     }
 
@@ -254,7 +290,7 @@ struct ReceiveVolumeTensors {
           // Unset all references
           db::mutate<TensorTag>(
               [](const gsl::not_null<typename TensorTag::type*> box_tensor) {
-                for (size_t i = 0; i < all_tensor_components.size(); i++) {
+                for (size_t i = 0; i < box_tensor->size(); i++) {
                   box_tensor->get(i).clear();
                 }
               },
@@ -265,6 +301,7 @@ struct ReceiveVolumeTensors {
     // We are now finished with the callbacks, so clean up everything
     db::mutate<Tags::CurrentTemporalIds<TemporalId>,
                Tags::NumberOfFilledPoints<TemporalId>,
+               Tags::InvalidIndices<TemporalId>,
                Tags::CompletedTemporalIds<TemporalId>,
                Tags::InterpolatedVars<TemporalId>>(
         [&temporal_id](
@@ -272,6 +309,9 @@ struct ReceiveVolumeTensors {
                 mutable_current_ids,
             const gsl::not_null<std::unordered_map<TemporalId, size_t>*>
                 number_of_filled_points,
+            const gsl::not_null<
+                std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
+                invalid_indices,
             const gsl::not_null<std::unordered_set<TemporalId>*> completed_ids,
             const gsl::not_null<std::unordered_map<
                 TemporalId,
@@ -279,6 +319,7 @@ struct ReceiveVolumeTensors {
                 interpolated_vars) {
           mutable_current_ids->erase(temporal_id);
           number_of_filled_points->erase(temporal_id);
+          invalid_indices->erase(temporal_id);
           interpolated_vars->erase(temporal_id);
           completed_ids->emplace_front(temporal_id);
           while (completed_ids->size() > 1000) {
