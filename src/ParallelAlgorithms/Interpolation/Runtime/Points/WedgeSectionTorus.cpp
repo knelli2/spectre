@@ -179,6 +179,8 @@ WedgeSectionTorus::target_points_no_frame() const {
   return points_;
 }
 
+size_t WedgeSectionTorus::number_of_sets_of_points() const { return 1; }
+
 bool operator==(const WedgeSectionTorus& lhs, const WedgeSectionTorus& rhs) {
   return lhs.radial_bounds_ == rhs.radial_bounds_ and
          lhs.theta_bounds_ == rhs.theta_bounds_ and

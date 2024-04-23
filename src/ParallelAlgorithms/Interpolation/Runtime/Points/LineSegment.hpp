@@ -54,7 +54,7 @@ struct LineSegment : public tt::ConformsTo<protocols::Points> {
 
   /// @{
   /*!
-   * \brief Methods specific to the Sphere target that return the input
+   * \brief Methods specific to the LineSegment target that return the input
    * parameters.
    *
    * \note We don't offer the number of points because that can be easily
@@ -69,6 +69,11 @@ struct LineSegment : public tt::ConformsTo<protocols::Points> {
 
   const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
       const;
+
+  /*!
+   * \brief Number of lines that are stored in the points
+   */
+  size_t number_of_sets_of_points() const;
 
  private:
   std::array<double, Dim> begin_{};

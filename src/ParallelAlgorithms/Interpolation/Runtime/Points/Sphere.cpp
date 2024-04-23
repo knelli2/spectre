@@ -138,6 +138,8 @@ const tnsr::I<DataVector, 3, Frame::NoFrame>& Sphere::target_points_no_frame()
   return points_;
 }
 
+size_t Sphere::number_of_sets_of_points() const { return radii_.size(); }
+
 bool operator==(const Sphere& lhs, const Sphere& rhs) {
   return lhs.l_max_ == rhs.l_max_ and lhs.center_ == rhs.center_ and
          lhs.radii_ == rhs.radii_ and

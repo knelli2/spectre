@@ -38,6 +38,11 @@ SpecifiedPoints<Dim>::target_points_no_frame() const {
 }
 
 template <size_t Dim>
+size_t SpecifiedPoints<Dim>::number_of_sets_of_points() const {
+  return 1;
+}
+
+template <size_t Dim>
 bool operator==(const SpecifiedPoints<Dim>& lhs,
                 const SpecifiedPoints<Dim>& rhs) {
   return lhs.points_ == rhs.points_;

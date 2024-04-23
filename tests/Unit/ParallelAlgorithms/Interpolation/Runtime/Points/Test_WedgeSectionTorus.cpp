@@ -66,8 +66,11 @@ void test_wedge_section_torus() {
     }
   }
 
-  RuntimeIntrpTestHelpers::test_points<intrp2::points::WedgeSectionTorus>(
-      option_string, expected_points);
+  const auto torus =
+      RuntimeIntrpTestHelpers::test_points<intrp2::points::WedgeSectionTorus>(
+          option_string, expected_points);
+
+  CHECK(torus.number_of_sets_of_points() == 1);
 }
 
 void test_wedge_section_torus_errors() {

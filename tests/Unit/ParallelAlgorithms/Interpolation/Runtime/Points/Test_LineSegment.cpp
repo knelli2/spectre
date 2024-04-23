@@ -43,6 +43,7 @@ void test_line_segment() {
 
   CHECK(line_segment.begin_point() == make_array<Dim, double>(1.0));
   CHECK(line_segment.end_point() == make_array<Dim, double>(2.4));
+  CHECK(line_segment.number_of_sets_of_points() == 1);
 }
 }  // namespace
 

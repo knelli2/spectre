@@ -106,6 +106,11 @@ struct WedgeSectionTorus : public tt::ConformsTo<protocols::Points> {
 
   const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
+  /*!
+   * \brief Number of concentric wedges (only 1)
+   */
+  size_t number_of_sets_of_points() const;
+
  private:
   std::array<double, 2> radial_bounds_{};
   std::array<double, 2> theta_bounds_{};

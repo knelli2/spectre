@@ -43,9 +43,10 @@ void test_specified_points(const gsl::not_null<Generator*> gen) {
   }
   option_string += "]";
 
-  // No need to use the return value
-  RuntimeIntrpTestHelpers::test_points<intrp2::points::SpecifiedPoints<Dim>>(
-      option_string, expected_points);
+  const auto specified_points = RuntimeIntrpTestHelpers::test_points<
+      intrp2::points::SpecifiedPoints<Dim>>(option_string, expected_points);
+
+  CHECK(specified_points.number_of_sets_of_points() == 1);
 }
 }  // namespace
 

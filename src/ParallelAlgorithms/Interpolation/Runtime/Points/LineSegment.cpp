@@ -54,6 +54,11 @@ LineSegment<Dim>::target_points_no_frame() const {
 }
 
 template <size_t Dim>
+size_t LineSegment<Dim>::number_of_sets_of_points() const {
+  return 1;
+}
+
+template <size_t Dim>
 bool operator==(const LineSegment<Dim>& lhs, const LineSegment<Dim>& rhs) {
   return lhs.begin_ == rhs.begin_ and lhs.end_ == rhs.end_ and
          lhs.points_ == rhs.points_;

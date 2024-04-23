@@ -132,6 +132,7 @@ void test_sphere(const gsl::not_null<Generator*> gen,
   CHECK(sphere.center() == center);
   CHECK(sphere.radii() == radii_set);
   CHECK(sphere.angular_ordering() == angular_ordering);
+  CHECK(sphere.number_of_sets_of_points() == number_of_spheres);
 }
 
 // TODO: Still need to figure out the compute tag stuff for the Sphere points

@@ -111,6 +111,7 @@ void test_kerr_horizon(const intrp2::AngularOrdering angular_ordering) {
   CHECK(kerr_horizon.mass() == mass);
   CHECK(kerr_horizon.dimensionless_spin() == dimensionless_spin);
   CHECK(kerr_horizon.angular_ordering() == angular_ordering);
+  CHECK(kerr_horizon.number_of_sets_of_points() == 1);
 }
 
 void test_kerr_horizon_errors() {

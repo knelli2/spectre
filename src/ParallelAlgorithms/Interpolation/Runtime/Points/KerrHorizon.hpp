@@ -89,6 +89,11 @@ struct KerrHorizon : public tt::ConformsTo<protocols::Points> {
 
   const tnsr::I<DataVector, 3, Frame::NoFrame>& target_points_no_frame() const;
 
+  /*!
+   * \brief Number of concentric Kerr horizons (only 1)
+   */
+  size_t number_of_sets_of_points() const;
+
  private:
   size_t l_max_{};
   std::array<double, 3> center_{};

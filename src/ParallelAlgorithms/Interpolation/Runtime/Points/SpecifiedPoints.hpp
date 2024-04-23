@@ -47,6 +47,11 @@ struct SpecifiedPoints : public tt::ConformsTo<protocols::Points> {
   const tnsr::I<DataVector, Dim, Frame::NoFrame>& target_points_no_frame()
       const;
 
+  /*!
+   * \brief Always returns 1 since these are individual points
+   */
+  size_t number_of_sets_of_points() const;
+
  private:
   tnsr::I<DataVector, Dim, Frame::NoFrame> points_{};
 

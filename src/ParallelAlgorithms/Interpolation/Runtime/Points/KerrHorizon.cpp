@@ -89,6 +89,8 @@ KerrHorizon::target_points_no_frame() const {
   return points_;
 }
 
+size_t KerrHorizon::number_of_sets_of_points() const { return 1; }
+
 bool operator==(const KerrHorizon& lhs, const KerrHorizon& rhs) {
   return lhs.l_max_ == rhs.l_max_ and lhs.center_ == rhs.center_ and
          lhs.mass_ == rhs.mass_ and
