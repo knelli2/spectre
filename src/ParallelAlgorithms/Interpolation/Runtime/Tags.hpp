@@ -167,12 +167,12 @@ struct Callbacks : db::SimpleTag {
       std::vector<std::unique_ptr<intrp2::callbacks::Callback<Target>>>;
 };
 
-template <typename TemporalId, size_t Dim>
+template <typename Target, typename TemporalId, size_t Dim>
 using common_target_tags =
     tmpl::list<CompletedTemporalIds<TemporalId>, Points<Dim>,
                NumberOfSetsOfPoints, Frame, InterpolatedVars<TemporalId>,
                InvalidPointsFillValue, InvalidIndices<TemporalId>,
                NumberOfFilledPoints<TemporalId>, CurrentTemporalIds<TemporalId>,
-               Callbacks<TemporalId>>;
+               Callbacks<Target>>;
 }  // namespace Tags
 }  // namespace intrp2

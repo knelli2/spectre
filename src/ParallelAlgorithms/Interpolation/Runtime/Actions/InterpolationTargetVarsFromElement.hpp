@@ -13,6 +13,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Domain/BlockLogicalCoordinates.hpp"
+#include "ParallelAlgorithms/Actions/FunctionsOfTimeAreReady.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Metafunctions.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
@@ -20,6 +21,7 @@
 #include "Utilities/Gsl.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/TMPL.hpp"
+#include "Utilities/TypeTraits/IsA.hpp"
 
 /// \cond
 namespace domain::Tags {
@@ -29,6 +31,8 @@ namespace Parallel {
 template <typename Metavariables>
 class GlobalCache;
 }  // namespace Parallel
+template <typename X, typename Symm, typename IndexList>
+class Tensor;
 /// \endcond
 
 namespace intrp2 {
@@ -41,7 +45,7 @@ struct ReceiveVolumeTensors {
   template <typename ParallelComponent, typename DbTags, typename Metavariables>
   static void apply(
       db::DataBox<DbTags>& box, Parallel::GlobalCache<Metavariables>& cache,
-      const std::string& /*array_index*/, const TemporalId& temporal_id,
+      const std::string& array_index, const TemporalId& temporal_id,
       const std::unordered_map<std::string, std::vector<DataVector>>&
           received_interpolated_vars,
       const std::vector<size_t>& global_offsets,
@@ -188,17 +192,30 @@ struct ReceiveVolumeTensors {
     // Here we check which indices are invalid. This way we know how many points
     // to receive total.
     if (check_for_invalid_points) {
+      // In order to call block logical coordinates below, we have to make sure
+      // that the functions of time are up to date at this temporal id. If they
+      // aren't, we set a callback to this simple action, but with
+      // vars_have_already_been_received = true.
+      if (not domain::functions_of_time_are_ready_simple_action_callback<
+              domain::Tags::FunctionsOfTime, ReceiveVolumeTensors<Target>>(
+              cache, array_index,
+              std::add_pointer_t<ParallelComponent>{nullptr}, temporal_id,
+              std::nullopt, temporal_id, received_interpolated_vars,
+              global_offsets, check_for_invalid_points, true)) {
+        return;
+      }
+
       db::mutate<Tags::InvalidIndices<TemporalId>>(
           [&points, &frame, &temporal_id,
            &cache](const gsl::not_null<
                    std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
                        all_invalid_indices) {
-            ASSERT(not all_invalid_indices.contains(temporal_id),
+            ASSERT(not all_invalid_indices->contains(temporal_id),
                    "Checking invalid indices of target "
                        << pretty_type::name<Target>() << " at time "
                        << temporal_id
                        << " twice. This should only happen once.");
-            auto& invalid_indices = all_invalid_indices[temporal_id];
+            auto& invalid_indices = (*all_invalid_indices)[temporal_id];
 
             const intrp2::BlockCoords<Dim> block_logical_coordinates =
                 ::block_logical_coordinates_in_frame(cache, temporal_id, points,
@@ -219,6 +236,10 @@ struct ReceiveVolumeTensors {
         db::get<Tags::NumberOfFilledPoints<TemporalId>>(access).at(temporal_id);
     if (all_invalid_indices.contains(temporal_id)) {
       received_number_of_points += all_invalid_indices.at(temporal_id).size();
+    } else {
+      // We also need to wait until we check the invalid indices. If we haven't
+      // received them yet then we can' continue on.
+      return;
     }
     // We don't have all the points yet. Wait for more.
     if (received_number_of_points != number_of_points) {
@@ -233,11 +254,13 @@ struct ReceiveVolumeTensors {
     const size_t number_of_sets_of_points =
         db::get<Tags::NumberOfSetsOfPoints>(access);
     const size_t number_of_points_in_single_set =
-        db::get<Tags::NumberOfFilledPoints<TemporalId>>(access) /
+        db::get<Tags::NumberOfFilledPoints<TemporalId>>(access).at(
+            temporal_id) /
         number_of_sets_of_points;
     for (size_t i = 0; i < number_of_sets_of_points; i++) {
-      tmpl::for_each<all_target_tensors>([&interpolated_vars,
-                                          &access](auto tensor_tag_v) {
+      tmpl::for_each<all_target_tensors>([&interpolated_vars, &access,
+                                          &number_of_points_in_single_set](
+                                             auto tensor_tag_v) {
         using TensorTag = tmpl::type_from<decltype(tensor_tag_v)>;
         const std::string& tag_name = db::tag_name<TensorTag>();
 
@@ -248,22 +271,26 @@ struct ReceiveVolumeTensors {
 
         // Set the tensors in the actual access to be non-owning. Have them
         // point to the data in the unordered map so we avoid a bunch of
-        // copies
-        const std::vector<DataVector>& all_tensor_components =
-            interpolated_vars.at(tag_name);
-        db::mutate<TensorTag>(
-            [&all_tensor_components](
-                const gsl::not_null<typename TensorTag::type*> box_tensor) {
-              for (size_t i = 0; i < all_tensor_components.size(); i++) {
-                // NOLINTBEGIN
-                box_tensor->get(i).set_data_ref(
-                    const_cast<DataVector&>(all_tensor_components[i]).data() +
-                        i * number_of_points_in_single_set,
-                    number_of_points_in_single_set);
-                // NOLINTEND
-              }
-            },
-            make_not_null(&access));
+        // copies. We only do this if the tag is actually a tensor. If the tag
+        // is a double, then it wasn't sent from the elements and is a compute
+        // tag.
+        if constexpr (tt::is_a_v<Tensor, typename TensorTag::type>) {
+          const std::vector<DataVector>& all_tensor_components =
+              interpolated_vars.at(tag_name);
+          db::mutate<TensorTag>(
+              [&all_tensor_components, &number_of_points_in_single_set](
+                  const gsl::not_null<typename TensorTag::type*> box_tensor) {
+                for (size_t i = 0; i < all_tensor_components.size(); i++) {
+                  // NOLINTBEGIN
+                  (*box_tensor)[i].set_data_ref(
+                      const_cast<DataVector&>(all_tensor_components[i]).data() +
+                          i * number_of_points_in_single_set,
+                      number_of_points_in_single_set);
+                  // NOLINTEND
+                }
+              },
+              make_not_null(&access));
+        }
       });
 
       // Now call all the callbacks
@@ -289,13 +316,15 @@ struct ReceiveVolumeTensors {
           }
 
           // Unset all references
-          db::mutate<TensorTag>(
-              [](const gsl::not_null<typename TensorTag::type*> box_tensor) {
-                for (size_t i = 0; i < box_tensor->size(); i++) {
-                  box_tensor->get(i).clear();
-                }
-              },
-              make_not_null(&access));
+          if constexpr (tt::is_a_v<Tensor, typename TensorTag::type>) {
+            db::mutate<TensorTag>(
+                [](const gsl::not_null<typename TensorTag::type*> box_tensor) {
+                  for (size_t i = 0; i < box_tensor->size(); i++) {
+                    (*box_tensor)[i].clear();
+                  }
+                },
+                make_not_null(&access));
+          }
         });
 #endif
 
@@ -313,7 +342,7 @@ struct ReceiveVolumeTensors {
             const gsl::not_null<
                 std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
                 invalid_indices,
-            const gsl::not_null<std::unordered_set<TemporalId>*> completed_ids,
+            const gsl::not_null<std::deque<TemporalId>*> completed_ids,
             const gsl::not_null<std::unordered_map<
                 TemporalId,
                 std::unordered_map<std::string, std::vector<DataVector>>>*>

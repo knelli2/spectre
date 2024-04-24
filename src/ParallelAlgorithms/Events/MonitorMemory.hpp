@@ -100,6 +100,8 @@ class MonitorMemory : public Event {
         "instead."};
   };
 
+  std::string name() const override { return "MemoryMonitor"; }
+
   using options = tmpl::list<ComponentsToMonitor>;
 
   static constexpr Options::String help =

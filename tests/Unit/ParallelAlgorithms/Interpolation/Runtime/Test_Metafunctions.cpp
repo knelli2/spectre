@@ -105,7 +105,7 @@ static_assert(
 
 using ExpectedBoxType = db::compute_databox_type<
     tmpl::append<expected_tags_to_observe, expected_non_observation_tags,
-                 intrp2::Tags::common_target_tags<double, 3>,
+                 intrp2::Tags::common_target_tags<TestTarget, double, 3>,
                  tmpl::list<DataVectorComputeTag<100>, DoubleTag<100>>>>;
 using BoxType = intrp2::metafunctions::create_box_type<TestTarget, 3>;
 static_assert(check_lists<typename ExpectedBoxType::tags_list,

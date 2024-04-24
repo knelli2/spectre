@@ -56,9 +56,9 @@ using all_non_observation_tags =
         all_callbacks<Target>, detail::get_non_observation_tags<tmpl::_1>>>>;
 
 template <typename Target, size_t Dim>
-using create_box_type =
-    db::compute_databox_type<tmpl::remove_duplicates<tmpl::append<
-        all_tags_to_observe<Target>, all_non_observation_tags<Target>,
-        Tags::common_target_tags<typename Target::temporal_id_tag::type, Dim>,
-        typename Target::points::tags_on_target>>>;
+using create_box_type = db::compute_databox_type<tmpl::remove_duplicates<
+    tmpl::append<all_tags_to_observe<Target>, all_non_observation_tags<Target>,
+                 Tags::common_target_tags<
+                     Target, typename Target::temporal_id_tag::type, Dim>,
+                 typename Target::points::tags_on_target>>>;
 }  // namespace intrp2::metafunctions
