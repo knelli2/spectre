@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "Parallel/ArrayIndex.hpp"
+#include "Parallel/StringIndex.hpp"
 #include "Utilities/PrettyType.hpp"
 
 namespace PUP {
@@ -67,6 +68,13 @@ template <typename ParallelComponent, typename ArrayIndexType>
 ArrayComponentId make_array_component_id(const ArrayIndexType& array_index) {
   return ArrayComponentId{std::add_pointer_t<ParallelComponent>{nullptr},
                           Parallel::ArrayIndex<ArrayIndexType>(array_index)};
+}
+
+template <typename ParallelComponent>
+ArrayComponentId make_array_component_id(const std::string& array_index) {
+  return ArrayComponentId{
+      std::add_pointer_t<ParallelComponent>{nullptr},
+      Parallel::ArrayIndex<StringIndex>(StringIndex{array_index})};
 }
 }  // namespace Parallel
 

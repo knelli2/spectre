@@ -17,6 +17,7 @@ spectre_target_sources(
   NodeLock.cpp
   Phase.cpp
   Reduction.cpp
+  StringIndex.cpp
   )
 
 spectre_target_headers(
@@ -58,6 +59,7 @@ spectre_target_headers(
   Section.hpp
   Spinlock.hpp
   StaticSpscQueue.hpp
+  StringIndex.hpp
   TypeTraits.hpp
   )
 

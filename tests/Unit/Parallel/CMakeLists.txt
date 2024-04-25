@@ -172,6 +172,7 @@ set(LIBRARY_SOURCES
   Test_Phase.cpp
   Test_ResourceInfo.cpp
   Test_StaticSpscQueue.cpp
+  Test_StringIndex.cpp
   Test_TypeTraits.cpp
   )
 
