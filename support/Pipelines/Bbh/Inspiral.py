@@ -56,6 +56,24 @@ def _control_system_params(
     }
 
 
+def _constraint_damping_params(
+    mass_left: float,
+    mass_right: float,
+    total_mass: float,
+    initial_separation: float,
+) -> dict:
+    return {
+        "Gamma0Constant": 0.001 / total_mass,
+        "Gamma0LeftAmplitude": 4.0 / mass_left,
+        "Gamma0LeftWidth": 7.0 * mass_left,
+        "Gamma0RightAmplitude": 4.0 / mass_right,
+        "Gamma0RightWidth": 7.0 * mass_right,
+        "Gamma0OriginAmplitude": 0.075 / total_mass,
+        "Gamma0OriginWidth": 2.5 * initial_separation,
+        "Gamma1Width": 10.0 * initial_separation,
+    }
+
+
 def inspiral_parameters(
     id_input_file: dict,
     id_run_dir: Union[str, Path],
@@ -110,6 +128,8 @@ def inspiral_parameters(
     )
     total_mass = mass_left + mass_right
     mass_ratio = max(mass_left, mass_right) / min(mass_left, mass_right)
+    center_left, center_right = id_binary["XCoords"]
+    initial_separation = center_right - center_left
 
     params = {
         # Initial data files
@@ -129,6 +149,16 @@ def inspiral_parameters(
         "L": refinement_level,
         "P": polynomial_order,
     }
+
+    # Constraint damping parameters
+    params.update(
+        _constraint_damping_params(
+            mass_left=mass_left,
+            mass_right=mass_right,
+            total_mass=total_mass,
+            initial_separation=initial_separation,
+        )
+    )
 
     # Control system
     params.update(
