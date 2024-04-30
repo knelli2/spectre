@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import click
+import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
@@ -14,6 +15,45 @@ from spectre.support.Schedule import schedule, scheduler_options
 logger = logging.getLogger(__name__)
 
 INSPIRAL_INPUT_FILE_TEMPLATE = Path(__file__).parent / "Inspiral.yaml"
+
+
+# These parameters come from empirically tested values in SpEC and SpECTRE
+def _control_system_params(
+    mass_left: float,
+    mass_right: float,
+    total_mass: float,
+    mass_ratio: float,
+    spin_magnitude_left: float,
+    spin_magnitude_right: float,
+) -> dict:
+    if spin_magnitude_left > 0.9 or spin_magnitude_right > 0.9:
+        damping_time_base = 0.1
+        decrease_threshold_base = 2e-4
+        max_damping_timescale = 10.0
+    else:
+        damping_time_base = 0.2
+        decrease_threshold_base = 2e-3
+        max_damping_timescale = 20.0
+
+    kinematic_timescale = damping_time_base * total_mass
+    decrease_threshold = (
+        0.1 * decrease_threshold_base / (mass_ratio + 1.0 / mass_ratio)
+    )
+    increase_threshold_fraction = 0.25
+
+    return {
+        "MaxDampingTimescale": max_damping_timescale,
+        "KinematicTimescale": kinematic_timescale,
+        "SizeATimescale": damping_time_base * 0.2 * mass_right,
+        "SizeBTimescale": damping_time_base * 0.2 * mass_left,
+        "ShapeATimescale": 5.0 * kinematic_timescale,
+        "ShapeBTimescale": 5.0 * kinematic_timescale,
+        "SizeIncreaseThreshold": 1e-3,
+        "DecreaseThreshold": decrease_threshold,
+        "IncreaseThreshold": increase_threshold_fraction * decrease_threshold,
+        "SizeBMaxTimescale": 10 if spin_magnitude_left > 0.9 else 20,
+        "SizeAMaxTimescale": 10 if spin_magnitude_right > 0.9 else 20,
+    }
 
 
 def inspiral_parameters(
@@ -35,7 +75,43 @@ def inspiral_parameters(
     """
     id_domain_creator = id_input_file["DomainCreator"]["BinaryCompactObject"]
     id_binary = id_input_file["Background"]["Binary"]
-    return {
+    left_object = id_binary["ObjectLeft"]
+    right_object = id_binary["ObjectRight"]
+
+    assert len(left_object) == 1, "Expected only one option for 'ObjectLeft'"
+    assert len(right_object) == 1, "Expected only one option for 'ObjectRight'"
+
+    left_object_type, left_object_params = list(left_object.items())[0]
+    right_object_type, right_object_params = list(right_object.items())[0]
+
+    supported_solutions = [
+        "KerrSchild",
+        "HarmonicSchwarzschild",
+        "Schwarzschild",
+        "SphericalKerrSchild",
+    ]
+    assert left_object_type in supported_solutions, (
+        f"Unknown solution for 'ObjectLeft': '{left_object_type}'. Supported"
+        f" solutions are: {supported_solutions}"
+    )
+    assert right_object_type in supported_solutions, (
+        f"Unknown solution for 'ObjectRight': '{right_object_type}'. Supported"
+        f" solutions are: {supported_solutions}"
+    )
+
+    # ID parameters
+    mass_left = left_object_params["Mass"]
+    mass_right = right_object_params["Mass"]
+    spin_magnitude_left = np.linalg.norm(
+        left_object_params.get("Spin", [0.0, 0.0, 0.0])
+    )
+    spin_magnitude_right = np.linalg.norm(
+        right_object_params.get("Spin", [0.0, 0.0, 0.0])
+    )
+    total_mass = mass_left + mass_right
+    mass_ratio = max(mass_left, mass_right) / min(mass_left, mass_right)
+
+    params = {
         # Initial data files
         "IdFileGlob": str(
             Path(id_run_dir).resolve()
@@ -53,6 +129,20 @@ def inspiral_parameters(
         "L": refinement_level,
         "P": polynomial_order,
     }
+
+    # Control system
+    params.update(
+        _control_system_params(
+            mass_left=mass_left,
+            mass_right=mass_right,
+            total_mass=total_mass,
+            mass_ratio=mass_ratio,
+            spin_magnitude_left=spin_magnitude_left,
+            spin_magnitude_right=spin_magnitude_right,
+        )
+    )
+
+    return params
 
 
 def start_inspiral(
