@@ -13,6 +13,9 @@ from spectre.ApparentHorizonFinder import FastFlow, FlowType, Status
 from spectre.DataStructures import DataVector
 from spectre.DataStructures.Tensor import tnsr
 from spectre.IO.Exporter import interpolate_tensors_to_points
+from spectre.PointwiseFunctions.GeneralRelativity.Surfaces import (
+    horizon_quantities,
+)
 from spectre.Spectral import Basis, Quadrature
 from spectre.SphericalHarmonics import (
     Strahlkorper,
@@ -155,6 +158,43 @@ def find_horizon(
             break
         else:
             raise RuntimeError(f"Horizon finder failed with status {status}.")
+    # Compute horizon quantities
+    # TODO: maybe move this to a separate function because it's independent of
+    # the horizon find.
+    (
+        spatial_metric,
+        inv_spatial_metric,
+        extrinsic_curvature,
+        spatial_christoffel_second_kind,
+        spatial_ricci,
+    ) = interpolate_tensors_to_points(
+        h5_files,
+        subfile_name,
+        observation_id=obs_id,
+        target_points=cartesian_coords(strahlkorper),
+        tensor_names=[
+            "SpatialMetric",
+            "InverseSpatialMetric",
+            "ExtrinsicCurvature",
+            "SpatialChristoffelSecondKind",
+            "SpatialRicci",
+        ],
+        tensor_types=[
+            tnsr.ii[DataVector, 3],
+            tnsr.II[DataVector, 3],
+            tnsr.ii[DataVector, 3],
+            tnsr.Ijj[DataVector, 3],
+            tnsr.ii[DataVector, 3],
+        ],
+    )
+    quantities = horizon_quantities(
+        strahlkorper,
+        spatial_metric=spatial_metric,
+        inv_spatial_metric=inv_spatial_metric,
+        extrinsic_curvature=extrinsic_curvature,
+        spatial_christoffel_second_kind=spatial_christoffel_second_kind,
+        spatial_ricci=spatial_ricci,
+    )
     # Write the horizon to a file and return it
     if output:
         assert output_coeffs_subfile or output_coords_subfile, (
@@ -175,7 +215,7 @@ def find_horizon(
             with spectre_h5.H5File(output, "a") as output_file:
                 volfile = output_file.try_insert_vol(output_coords_subfile, 0)
                 volfile.write_volume_data(obs_id, obs_time, vol_data)
-    return strahlkorper
+    return strahlkorper, quantities
 
 
 @click.command(name="find-horizon")
@@ -233,11 +273,19 @@ def find_horizon_command(l_max, initial_radius, center, vars, **kwargs):
     initial_guess = Strahlkorper(
         l_max=l_max, m_max=l_max, radius=initial_radius, center=center
     )
-    find_horizon(
+    horizon, quantities = find_horizon(
         initial_guess=initial_guess,
         tensor_names=vars,
         **kwargs,
     )
+
+    # Output horizon quantities
+    import rich.table
+
+    table = rich.table.Table(show_header=False, box=None)
+    for name, value in quantities.items():
+        table.add_row(name, f"{value:g}")
+    rich.print(table)
 
 
 if __name__ == "__main__":
