@@ -36,6 +36,27 @@ InitialData:
       SpatialMetric: SpatialMetric
       ExtrinsicCurvature: ExtrinsicCurvature
 
+Evolution:
+  InitialTime: &InitialTime 0.0
+  InitialTimeStep: 0.0002
+  InitialSlabSize: 0.25
+  StepChoosers:
+    - Increase:
+        Factor: 2
+    - ElementSizeCfl:
+        SafetyFactor: 0.5
+    - ErrorControl:
+        AbsoluteTolerance: 1e-8
+        RelativeTolerance: 1e-6
+        MaxFactor: 2
+        MinFactor: 0.25
+        SafetyFactor: 0.95
+  # Found that order 4 offers a significant speedup compared to order 5
+  TimeStepper:
+    AdamsBashforth:
+      Order: 4
+
+
 DomainCreator:
   BinaryCompactObject:
     ObjectA:
@@ -85,7 +106,7 @@ DomainCreator:
       Envelope:       [{{ P + 3 }}, {{ P + 3 }}, {{ P + 5 }}]
       OuterShell:     [{{ P + 2 }}, {{ P + 2 }}, {{ P + 4 }}]
     TimeDependentMaps:
-      InitialTime: 0.0
+      InitialTime: *InitialTime
       ExpansionMap:
         InitialValues: [1.0, {{ RadialExpansionVelocity }}]
         AsymptoticVelocityOuterBoundary: -1.0e-6
@@ -96,34 +117,26 @@ DomainCreator:
         InitialValues: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
       ShapeMapA:
         LMax: &LMax 10
-        InitialValues: Spherical
+        InitialValues:
+          YlmsFromFile:
+            H5Filename: {{ "ShapeCoefficientFilename" }}
+            SubfileNames: [{{ ShapeACoefficientSubfileName }}]
+            MatchTime: *InitialTime
+            MatchTimeEpsilon: Auto
+            SetL1CoefsToZero: false
         SizeInitialValues: [0.0, 0.0, 0.0]
         TransitionEndsAtCube: true
       ShapeMapB:
         LMax: *LMax
-        InitialValues: Spherical
+        InitialValues:
+          YlmsFromFile:
+            H5Filename: {{ "ShapeCoefficientFilename" }}
+            SubfileNames: [{{ ShapeBCoefficientSubfileName }}]
+            MatchTime: *InitialTime
+            MatchTimeEpsilon: Auto
+            SetL1CoefsToZero: false
         SizeInitialValues: [0.0, 0.0, 0.0]
         TransitionEndsAtCube: true
-
-Evolution:
-  InitialTime: 0.0
-  InitialTimeStep: 0.0002
-  InitialSlabSize: 0.25
-  StepChoosers:
-    - Increase:
-        Factor: 2
-    - ElementSizeCfl:
-        SafetyFactor: 0.5
-    - ErrorControl:
-        AbsoluteTolerance: 1e-8
-        RelativeTolerance: 1e-6
-        MaxFactor: 2
-        MinFactor: 0.25
-        SafetyFactor: 0.95
-  # Found that order 4 offers a significant speedup compared to order 5
-  TimeStepper:
-    AdamsBashforth:
-      Order: 4
 
 # Set gauge and constraint damping parameters.
 # The values here are chosen empirically based on values that proved

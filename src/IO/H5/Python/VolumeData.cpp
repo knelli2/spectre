@@ -32,6 +32,8 @@ void bind_h5vol(py::module& m) {
            py::arg("contiguous_tensor_data"),
            py::arg("overwrite_existing") = false)
       .def("list_observation_ids", &h5::VolumeData::list_observation_ids)
+      .def("find_observation_id", &h5::VolumeData::find_observation_id,
+           py::arg("observation_value"))
       .def("get_observation_value", &h5::VolumeData::get_observation_value,
            py::arg("observation_id"))
       .def("get_grid_names", &h5::VolumeData::get_grid_names,

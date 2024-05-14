@@ -1,7 +1,9 @@
 # Distributed under the MIT License.
 # See LICENSE.txt for details.
 
+import glob
 import logging
+import os
 from pathlib import Path
 from typing import Optional, Union
 
@@ -10,7 +12,11 @@ import numpy as np
 import yaml
 from rich.pretty import pretty_repr
 
+from spectre.IO.H5 import H5File
+from spectre.Pipelines.Bbh.FindHorizon import find_horizon
+from spectre.SphericalHarmonics import Strahlkorper
 from spectre.support.Schedule import schedule, scheduler_options
+from spectre.Visualization.ReadH5 import select_observation
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +27,13 @@ INSPIRAL_INPUT_FILE_TEMPLATE = Path(__file__).parent / "Inspiral.yaml"
 def _control_system_params(
     mass_left: float,
     mass_right: float,
-    total_mass: float,
-    mass_ratio: float,
     spin_magnitude_left: float,
     spin_magnitude_right: float,
 ) -> dict:
+    total_mass = mass_left + mass_right
+    if total_mass != 1.0:
+        raise ValueError(f"Total mass must always equal 1, not {total_mass}")
+    mass_ratio = max(mass_right, mass_right) / min(mass_left, mass_right)
     if spin_magnitude_left > 0.9 or spin_magnitude_right > 0.9:
         damping_time_base = 0.1
         decrease_threshold_base = 2e-4
@@ -59,9 +67,11 @@ def _control_system_params(
 def _constraint_damping_params(
     mass_left: float,
     mass_right: float,
-    total_mass: float,
     initial_separation: float,
 ) -> dict:
+    total_mass = mass_left + mass_right
+    if total_mass != 1.0:
+        raise ValueError(f"Total mass must always equal 1, not {total_mass}")
     return {
         "Gamma0Constant": 0.001 / total_mass,
         "Gamma0LeftAmplitude": 4.0 / mass_left,
@@ -72,6 +82,114 @@ def _constraint_damping_params(
         "Gamma0OriginWidth": 2.5 * initial_separation,
         "Gamma1Width": 10.0 * initial_separation,
     }
+
+
+def _conformal_parameters(id_input_file: dict, object_label: str):
+    id_binary = id_input_file["Background"]["Binary"]
+    object = id_binary[f"Object{object_label}"]
+
+    assert (
+        len(object) == 1
+    ), f"Expected only one option for 'Object{object_label}'"
+
+    object_type, object_params = list(object.items())[0]
+
+    supported_solutions = [
+        "KerrSchild",
+        "HarmonicSchwarzschild",
+        "Schwarzschild",
+        "SphericalKerrSchild",
+    ]
+    assert object_type in supported_solutions, (
+        f"Unknown solution for 'Object{object_label}': '{object_type}'."
+        f" Supported solutions are: {supported_solutions}"
+    )
+
+    return {
+        "Mass": object_params["Mass"],
+        "GridCenterX": id_binary["XCoords"][0 if object_label == "Left" else 1],
+    }
+
+
+def _find_horizon(
+    id_input_file: dict, id_run_dir: Union[str, Path], object_label=str
+):
+    id_domain_creator = id_input_file["DomainCreator"]["BinaryCompactObject"]
+    id_volume_file_prefix = id_input_file["Observers"]["VolumeFileName"]
+    id_volume_files = glob.glob(
+        os.path.join(id_run_dir, id_volume_file_prefix + "*.h5")
+    )
+
+    time_dep_maps = id_domain_creator["TimeDependentMaps"]
+    initial_time = (
+        0.0 if time_dep_maps == "None" else time_dep_maps["InitialTime"]
+    )
+
+    def find_vol_subfile_name():
+        """
+        Find the first 'ObserveFields' event in 'EventsAndTriggers' and get the
+        'SubfileName' for the volume data subfile
+        """
+        events_and_triggers = id_input_file["EventsAndTriggers"]
+        for trigger_and_events in events_and_triggers:
+            events = trigger_and_events["Events"]
+            for event in events:
+                if "ObserveFields" in event:
+                    return event["ObserveFields"]["SubfileName"]
+
+        raise ValueError(
+            "Could not find an 'ObserveFields' event in the 'EventsAndTriggers'"
+            " section of the input file. This is needed to get the volume h5"
+            " files that have the ID."
+        )
+
+    with H5File(id_volume_files[0], "r") as first_h5_file:
+        volume_subfile_name = find_vol_subfile_name()
+        volume_subfile = first_h5_file.get_vol(volume_subfile_name)
+        # We select the last step in the ID volume file because this corresponds
+        # to the converged solution. Previous data are just iterations
+        observation_id, observation_value = select_observation(
+            volfiles=volume_subfile, step=-1
+        )
+
+    conformal_params = _conformal_parameters(
+        id_input_file=id_input_file, object_label=object_label
+    )
+    # TODO: What to choose here?
+    l_max = 10
+    #  r = 2 x M just because?
+    initial_strahlkorper = Strahlkorper(
+        l_max,
+        l_max,
+        2.0 * conformal_params["Mass"],
+        [conformal_params["GridCenterX"], 0.0, 0.0],
+    )
+
+    name_map = {"Left": "B", "Right": "A"}
+    output_filename = f"ID_ShapeCoefficients.h5"
+    output_subfile_name = f"Shape{name_map[object_label]}Coefficients"
+
+    _, quantities = find_horizon(
+        h5_files=id_volume_files,
+        subfile_name=volume_subfile_name,
+        obs_id=observation_id,
+        obs_time=observation_value,
+        initial_guess=initial_strahlkorper,
+        output=output_filename,
+        output_coeffs_subfile=output_subfile_name,
+    )
+    logger.info(
+        f"Horizon{name_map[object_label]} final quantities:\n{quantities}"
+    )
+    quantities.update(
+        {
+            "GridCenterX": conformal_params["GridCenterX"],
+            "ShapeCoefficientFilename": output_filename,
+            "ShapeCoefficientSubfileName": output_subfile_name,
+        }
+    )
+
+    return quantities
 
 
 def inspiral_parameters(
@@ -93,43 +211,18 @@ def inspiral_parameters(
     """
     id_domain_creator = id_input_file["DomainCreator"]["BinaryCompactObject"]
     id_binary = id_input_file["Background"]["Binary"]
-    left_object = id_binary["ObjectLeft"]
-    right_object = id_binary["ObjectRight"]
-
-    assert len(left_object) == 1, "Expected only one option for 'ObjectLeft'"
-    assert len(right_object) == 1, "Expected only one option for 'ObjectRight'"
-
-    left_object_type, left_object_params = list(left_object.items())[0]
-    right_object_type, right_object_params = list(right_object.items())[0]
-
-    supported_solutions = [
-        "KerrSchild",
-        "HarmonicSchwarzschild",
-        "Schwarzschild",
-        "SphericalKerrSchild",
-    ]
-    assert left_object_type in supported_solutions, (
-        f"Unknown solution for 'ObjectLeft': '{left_object_type}'. Supported"
-        f" solutions are: {supported_solutions}"
+    id_quantities = {
+        object_label: _find_horizon(
+            id_input_file=id_input_file,
+            id_run_dir=id_run_dir,
+            object_label=object_label,
+        )
+        for object_label in ["Left", "Right"]
+    }
+    initial_separation = (
+        id_quantities["Right"]["GridCenterX"]
+        - id_quantities["Left"]["GridCenterX"]
     )
-    assert right_object_type in supported_solutions, (
-        f"Unknown solution for 'ObjectRight': '{right_object_type}'. Supported"
-        f" solutions are: {supported_solutions}"
-    )
-
-    # ID parameters
-    mass_left = left_object_params["Mass"]
-    mass_right = right_object_params["Mass"]
-    spin_magnitude_left = np.linalg.norm(
-        left_object_params.get("Spin", [0.0, 0.0, 0.0])
-    )
-    spin_magnitude_right = np.linalg.norm(
-        right_object_params.get("Spin", [0.0, 0.0, 0.0])
-    )
-    total_mass = mass_left + mass_right
-    mass_ratio = max(mass_left, mass_right) / min(mass_left, mass_right)
-    center_left, center_right = id_binary["XCoords"]
-    initial_separation = center_right - center_left
 
     params = {
         # Initial data files
@@ -144,7 +237,16 @@ def inspiral_parameters(
         "XCoordB": id_domain_creator["ObjectB"]["XCoord"],
         # Initial functions of time
         "InitialAngularVelocity": id_binary["AngularVelocity"],
-        "RadialExpansionVelocity": float(id_binary["Expansion"]),
+        "RadialExpansionVelocity": id_binary["Expansion"],
+        "ShapeCoefficientFilename": id_quantities["Left"][
+            "ShapeCoefficientFilename"
+        ],
+        "ShapeACoefficientSubfileName": id_quantities["Right"][
+            "ShapeCoefficientSubfileName"
+        ],
+        "ShapeBCoefficientSubfileName": id_quantities["Left"][
+            "ShapeCoefficientSubfileName"
+        ],
         # Resolution
         "L": refinement_level,
         "P": polynomial_order,
@@ -153,9 +255,8 @@ def inspiral_parameters(
     # Constraint damping parameters
     params.update(
         _constraint_damping_params(
-            mass_left=mass_left,
-            mass_right=mass_right,
-            total_mass=total_mass,
+            mass_left=id_quantities["Left"]["ChristodoulouMass"],
+            mass_right=id_quantities["Right"]["ChristodoulouMass"],
             initial_separation=initial_separation,
         )
     )
@@ -163,12 +264,14 @@ def inspiral_parameters(
     # Control system
     params.update(
         _control_system_params(
-            mass_left=mass_left,
-            mass_right=mass_right,
-            total_mass=total_mass,
-            mass_ratio=mass_ratio,
-            spin_magnitude_left=spin_magnitude_left,
-            spin_magnitude_right=spin_magnitude_right,
+            mass_left=id_quantities["Left"]["ChristodoulouMass"],
+            mass_right=id_quantities["Right"]["ChristodoulouMass"],
+            spin_magnitude_left=id_quantities["Left"][
+                "DimensionlessSpinMagnitude"
+            ],
+            spin_magnitude_right=id_quantities["Right"][
+                "DimensionlessSpinMagnitude"
+            ],
         )
     )
 
