@@ -24,6 +24,8 @@ struct LinkedMessageId {
   Id id;
   std::optional<Id> previous;
 
+  explicit operator double() const { return static_cast<double>(id); }
+
   // NOLINTNEXTLINE(google-runtime-references)
   void pup(PUP::er& p) {
     p | id;

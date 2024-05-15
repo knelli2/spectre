@@ -25,6 +25,10 @@ void test_id() {
   CHECK(id_one_nothing != id_two_nothing);
   CHECK(get_output(id_one_two) == "1 (2)");
 
+  CHECK(static_cast<double>(id_one_nothing) == 1.0);
+  CHECK(static_cast<double>(id_one_two) == 1.0);
+  CHECK(static_cast<double>(id_two_nothing) == 2.0);
+
   const LinkedMessageId<double> time_and_previous{0.123, 0.1012};
   test_serialization(time_and_previous);
   const LinkedMessageId<double> same{0.123, 0.1012};
