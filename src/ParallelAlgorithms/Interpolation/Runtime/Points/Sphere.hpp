@@ -10,8 +10,11 @@
 #include <variant>
 #include <vector>
 
+#include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/ObservationBox.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
+#include "Domain/Block.hpp"
 #include "Domain/BlockLogicalCoordinates.hpp"
 #include "Domain/Structure/Element.hpp"
 #include "Options/Context.hpp"
@@ -19,6 +22,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/AngularOrdering.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Points.hpp"
+#include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -52,6 +56,8 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
  private:
   using BlockCoords = std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, 3, ::Frame::BlockLogical>>>>;
+  using IdPair =
+      ::IdPair<domain::BlockId, tnsr::I<double, 3, ::Frame::BlockLogical>>;
 
  public:
   using tags_on_target = tmpl::list<>;
@@ -87,26 +93,14 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
 
   Sphere() = default;
 
-  // TODO: In order to avoid this, ask for the ObservationBox instead. Then in
-  // the operator() convert it to an access. Then based on which frame we are
-  // using, we get the specific coordinates tag from the access, not the box, so
-  // it doesn't trigger a compile time error. It is of course still somebody
-  // elses responsibility for making sure the tags are actually in the
-  // box/access, but that can be left to the observation box.
   using argument_tags =
-      tmpl::list<domain::Tags::Element<3>,
-                 domain::Tags::Coordinates<3, Frame::Grid>,
-                 domain::Tags::Coordinates<3, Frame::Distorted>,
-                 domain::Tags::Coordinates<3, Frame::Inertial>>;
+      tmpl::list<domain::Tags::Element<3>, ::Tags::ObservationBox>;
 
-  template <typename Metavariables>
+  template <typename Metavariables, typename DbTags, typename ComputeTags>
   std::optional<BlockCoords> operator()(
       const Parallel::GlobalCache<Metavariables>& cache, const double time,
       const std::string& frame, const Element<3>& element,
-      const tnsr::I<DataVector, 3, Frame::Grid> grid_coordinates,
-      const tnsr::I<DataVector, 3, Frame::Distorted> distorted_coordinates,
-      const tnsr::I<DataVector, 3, Frame::Inertial> inertial_coordinates)
-      const {
+      const ObservationBox<DbTags, ComputeTags>& observation_box) const {
     BlockCoords block_logical_coords{};
     // Too big, but we'll shrink later
     block_logical_coords.reserve(get<0>(points_).size());
@@ -115,20 +109,30 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
     std::array<std::pair<double, double>, 4> min_max_coordinates{};
 
     const tnsr::I<DataVector, 3, Frame::NoFrame> coordinates{};
-    for (size_t i = 0; i < 3; i++) {
-      if (frame == "Grid") {
-        make_const_view(make_not_null(&coordinates.get(i)),
-                        grid_coordinates.get(i), 0,
-                        grid_coordinates.get(i).size());
-      } else if (frame == "Distorted") {
-        make_const_view(make_not_null(&coordinates.get(i)),
-                        distorted_coordinates.get(i), 0,
-                        distorted_coordinates.get(i).size());
-      } else {
-        make_const_view(make_not_null(&coordinates.get(i)),
-                        inertial_coordinates.get(i), 0,
-                        inertial_coordinates.get(i).size());
-      }
+    const auto make_const_view_for_coordinates =
+        [&coordinates, &observation_box]<typename LocalFrame>() {
+          if constexpr (db::tag_is_retrievable_v<
+                            domain::Tags::Coordinates<3, LocalFrame>,
+                            ObservationBox<DbTags, ComputeTags>>) {
+            const auto& box_coordinates =
+                get<domain::Tags::Coordinates<3, LocalFrame>>(observation_box);
+            for (size_t i = 0; i < 3; i++) {
+              make_const_view(make_not_null(&coordinates.get(i)),
+                              box_coordinates.get(i), 0,
+                              box_coordinates.get(i).size());
+            }
+          } else {
+            ERROR("Could not find a coordinates tag in the box for the "
+                  << pretty_type::name<LocalFrame>() << " frame.");
+          }
+        };
+
+    if (frame == "Grid") {
+      make_const_view_for_coordinates.template operator()<Frame::Grid>();
+    } else if (frame == "Distorted") {
+      make_const_view_for_coordinates.template operator()<Frame::Distorted>();
+    } else {
+      make_const_view_for_coordinates.template operator()<Frame::Inertial>();
     }
 
     // Calculate r^2 from center of sphere because sqrt is expensive
@@ -246,8 +250,8 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
         // Get index into vector of all grid points of the target. This is
         // just the offset + index
         block_logical_coords.emplace_back(
-            domain::BlockId(element.id().block_id()),
-            std::move(block_coords_of_target_point.value()));
+            IdPair{domain::BlockId(block.id()),
+                   std::move(block_coords_of_target_point.value())});
       }
     }
 

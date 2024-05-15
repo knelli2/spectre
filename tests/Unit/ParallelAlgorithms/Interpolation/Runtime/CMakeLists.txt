@@ -20,11 +20,11 @@ target_link_libraries(
   PRIVATE
   # Boost::boost
   # ControlSystem
-  # CoordinateMaps
+  CoordinateMaps
   DataStructures
-  # Domain
-  # DomainCreators
-  # DomainStructure
+  Domain
+  DomainCreators
+  DomainStructure
   # Events
   # GeneralRelativitySolutions
   GrSurfaces

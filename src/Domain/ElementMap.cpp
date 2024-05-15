@@ -5,6 +5,8 @@
 
 #include "Domain/CoordinateMaps/Composition.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
+#include "Domain/CoordinateMaps/CoordinateMap.tpp"
+#include "Domain/CoordinateMaps/Identity.hpp"
 #include "Domain/Structure/Side.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
@@ -65,6 +67,36 @@ ElementMap<Dim, TargetFrame>::ElementMap(const ElementId<Dim>& element_id,
               } else {
                 return block.stationary_map().get_to_grid_frame();
               }
+            } else if constexpr (std::is_same_v<TargetFrame,
+                                                Frame::Distorted>) {
+              using CompositionType = domain::CoordinateMaps::Composition<
+                  tmpl::list<Frame::BlockLogical, Frame::Grid,
+                             Frame::Distorted>,
+                  Dim>;
+              if (block.is_time_dependent()) {
+                if (block.has_distorted_frame()) {
+                  return std::make_unique<CompositionType>(
+                      block.moving_mesh_logical_to_grid_map().get_clone(),
+                      block.moving_mesh_grid_to_distorted_map().get_clone());
+                } else {
+                  // QUESTION: What to do here? ERROR? nullptr?
+                  return nullptr;
+                  // ERROR(
+                  //     "No Distorted frame, but requesting ElementMap to the "
+                  //     "Distorted frame".);
+                }
+              } else {
+                using IdentityMap = domain::CoordinateMaps::Identity<Dim>;
+                std::unique_ptr<domain::CoordinateMapBase<
+                    Frame::Grid, Frame::Distorted, Dim>>
+                    grid_to_distorted_map =
+                        std::make_unique<domain::CoordinateMap<
+                            Frame::Grid, Frame::Distorted, IdentityMap>>(
+                            IdentityMap{});
+                return std::make_unique<CompositionType>(
+                    block.stationary_map().get_to_grid_frame(),
+                    std::move(grid_to_distorted_map));
+              }
             }
           }()) {
   ASSERT(element_id.block_id() == block.id(),
@@ -86,7 +118,7 @@ void ElementMap<Dim, TargetFrame>::pup(PUP::er& p) {
   template class ElementMap<GET_DIM(data), GET_FRAME(data)>;
 
 GENERATE_INSTANTIATIONS(INSTANTIATION, (1, 2, 3),
-                        (Frame::Inertial, Frame::Grid))
+                        (Frame::Inertial, Frame::Grid, Frame::Distorted))
 
 #undef GET_DIM
 #undef GET_FRAME

@@ -138,7 +138,7 @@ std::optional<tnsr::I<double, Dim, ::Frame::BlockLogical>>
 block_logical_coordinates_single_point_in_frame(
     const tnsr::I<double, Dim, ::Frame::NoFrame>& input_point,
     const std::string& frame, const Block<Dim>& block, double time,
-    const functions_of_time_type& functions_of_time) {
+    const domain::FunctionsOfTimeMap& functions_of_time) {
   const auto transform_point = [&](const auto frame_v) {
     using frame = std::decay_t<decltype(frame_v)>;
     tnsr::I<double, Dim, frame> input_point_with_frame{};
@@ -211,5 +211,16 @@ GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3),
                         (::Frame::Grid, ::Frame::Distorted, ::Frame::Inertial))
 
 #undef FRAME
+#undef INSTANTIATE
+
+#define INSTANTIATE(_, data)                                                \
+  template std::optional<tnsr::I<double, DIM(data), ::Frame::BlockLogical>> \
+  block_logical_coordinates_single_point_in_frame(                          \
+      const tnsr::I<double, DIM(data), ::Frame::NoFrame>& input_point,      \
+      const std::string& frame, const Block<DIM(data)>& block, double time, \
+      const domain::FunctionsOfTimeMap& functions_of_time);
+
+GENERATE_INSTANTIATIONS(INSTANTIATE, (1, 2, 3))
+
 #undef DIM
 #undef INSTANTIATE
