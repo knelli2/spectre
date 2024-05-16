@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -49,8 +50,7 @@ struct ObserveDataOnStrahlkorper;
 }  // namespace intrp2::callbacks
 /// \endcond
 
-namespace intrp2 {
-namespace callbacks {
+namespace intrp2::callbacks {
 namespace detail {
 // Fills the legend and row of spherical harmonic data to write to disk
 //
@@ -155,6 +155,12 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
     }
   }
 
+  std::unique_ptr<Callback<Target>> get_clone() const override {
+    return std::make_unique<ObserveDataOnStrahlkorper>(
+        subfile_name_, std::vector<std::string>{values_to_observe_.begin(),
+                                                values_to_observe_.end()});
+  }
+
   void pup(PUP::er& p) override {
     p | subfile_name_;
     p | values_to_observe_;
@@ -171,12 +177,12 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
 
     const std::string& frame = db::get<intrp2::Tags::Frame>(access);
     const auto& coords_in_frame = db::get<intrp2::Tags::Points<3>>(access);
-    tensor_components.push_back(
-        {frame + "Coordinates_x"s, get<0>(coords_in_frame)});
-    tensor_components.push_back(
-        {frame + "Coordinates_y"s, get<1>(coords_in_frame)});
-    tensor_components.push_back(
-        {frame + "Coordinates_z"s, get<2>(coords_in_frame)});
+    tensor_components.emplace_back(frame + "Coordinates_x"s,
+                                   get<0>(coords_in_frame));
+    tensor_components.emplace_back(frame + "Coordinates_y"s,
+                                   get<1>(coords_in_frame));
+    tensor_components.emplace_back(frame + "Coordinates_z"s,
+                                   get<2>(coords_in_frame));
 
     if (frame != "Inertial") {
       tnsr::I<DataVector, 3, Frame::Inertial> inertial_coords{};
@@ -204,12 +210,12 @@ struct ObserveDataOnStrahlkorper<Target, tmpl::list<TagsToObserve...>,
                                                functions_of_time, time);
       }
 
-      tensor_components.push_back(
-          {"InertialCoordinates_x"s, get<0>(inertial_coords)});
-      tensor_components.push_back(
-          {"InertialCoordinates_y"s, get<1>(inertial_coords)});
-      tensor_components.push_back(
-          {"InertialCoordinates_z"s, get<2>(inertial_coords)});
+      tensor_components.emplace_back("InertialCoordinates_x"s,
+                                     get<0>(inertial_coords));
+      tensor_components.emplace_back("InertialCoordinates_y"s,
+                                     get<1>(inertial_coords));
+      tensor_components.emplace_back("InertialCoordinates_z"s,
+                                     get<2>(inertial_coords));
     }
 
     // Output each tag if it is a scalar. Otherwise, throw a compile-time
@@ -296,5 +302,4 @@ PUP::able::PUP_ID ObserveDataOnStrahlkorper<
     VolumeComputeTags>::my_PUP_ID = 0;
 // NOLINTEND
 /// \endcond
-}  // namespace callbacks
-}  // namespace intrp2
+}  // namespace intrp2::callbacks

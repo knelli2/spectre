@@ -13,7 +13,6 @@
 
 #include "DataStructures/DataBox/Access.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
-#include "DataStructures/DataBox/TagTraits.hpp"
 #include "DataStructures/DataBox/ValidateSelection.hpp"
 #include "IO/Observer/ReductionActions.hpp"
 #include "Options/Context.hpp"
@@ -23,7 +22,6 @@
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Metafunctions.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Callback.hpp"
-#include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
@@ -35,8 +33,7 @@ struct ObserverWriter;
 }  // namespace observers
 /// \endcond
 
-namespace intrp2 {
-namespace callbacks {
+namespace intrp2::callbacks {
 /// \cond
 template <typename Target, typename TagsToObserve, typename NonObservationTags,
           typename VolumeComputeTags>
@@ -111,6 +108,12 @@ struct ObserveTimeSeriesOnSurface<Target, tmpl::list<TagsToObserve...>,
     }
   }
 
+  std::unique_ptr<Callback<Target>> get_clone() const override {
+    return std::make_unique<ObserveTimeSeriesOnSurface>(
+        subfile_name_, std::vector<std::string>{values_to_observe_.begin(),
+                                                values_to_observe_.end()});
+  }
+
   void pup(PUP::er& p) override {
     p | subfile_name_;
     p | values_to_observe_;
@@ -169,5 +172,4 @@ PUP::able::PUP_ID ObserveTimeSeriesOnSurface<
     VolumeComputeTags>::my_PUP_ID = 0;
 // NOLINTEND
 /// \endcond
-}  // namespace callbacks
-}  // namespace intrp2
+}  // namespace intrp2::callbacks

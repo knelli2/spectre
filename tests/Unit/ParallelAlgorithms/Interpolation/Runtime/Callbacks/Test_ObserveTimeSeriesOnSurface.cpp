@@ -134,6 +134,9 @@ void test_option_parsing() {
   CHECK(expected_observables == callback_ptr->observables());
   const auto serialized_callback_ptr = serialize_and_deserialize(callback_ptr);
   CHECK(expected_observables == serialized_callback_ptr->observables());
+
+  const auto cloned_ptr = callback_ptr->get_clone();
+  CHECK(expected_observables == cloned_ptr->observables());
 }
 
 void test_callback() {

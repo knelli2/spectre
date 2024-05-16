@@ -110,6 +110,12 @@ struct MockCallback : public intrp2::callbacks::Callback<Target>,
   using options = tmpl::list<>;
   static constexpr Options::String help = {"halp"};
 
+  std::unique_ptr<intrp2::callbacks::Callback<Target>> get_clone()
+      const override {
+    return std::make_unique<MockCallback>(values_to_observe_,
+                                          expected_num_points_);
+  }
+
   void pup(PUP::er& p) override { p | values_to_observe_; }
 
   const std::unordered_set<std::string>& observables() const override {

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <memory>
 #include <pup.h>
 
 #include "DataStructures/DataBox/Access.hpp"
@@ -24,9 +25,11 @@ class Callback : public PUP::able {
   Callback(Callback&&) = default;
   Callback& operator=(const Callback&) = default;
   Callback& operator=(Callback&&) = default;
+  ~Callback() override = default;
   /// \endcond
 
-  // ~Callback() override = default;
+  virtual std::unique_ptr<Callback<Target>> get_clone() const = 0;
+
   explicit Callback(CkMigrateMessage* msg) : PUP::able(msg) {}
   WRAPPED_PUPable_abstract(Callback);  // NOLINT
 
