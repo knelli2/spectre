@@ -11,6 +11,7 @@ set(LIBRARY_SOURCES
 
 add_subdirectory(Actions)
 add_subdirectory(Callbacks)
+add_subdirectory(Events)
 add_subdirectory(Points)
 
 add_test_library(${LIBRARY} "${LIBRARY_SOURCES}")

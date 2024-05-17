@@ -48,7 +48,7 @@ class Event : public PUP::able {
     double value = std::numeric_limits<double>::signaling_NaN();
   };
 
-  virtual bool is_interpolation() { return false; }
+  virtual bool is_interpolation() const { return false; }
 
   virtual std::string name() const = 0;
 

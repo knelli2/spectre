@@ -30,7 +30,7 @@ struct AccessWrapper : public PUP::able {
 
   virtual db::Access& access() = 0;
 
-  void pup(PUP::er& p) { this->pup_typed_box(p); }
+  void pup(PUP::er& p) override { this->pup_typed_box(p); }
 
  private:
   virtual void pup_typed_box(PUP::er& p) = 0;
@@ -48,6 +48,7 @@ struct TargetAccessWrapper : public AccessWrapper {
   WRAPPED_PUPable_decl_template(TargetAccessWrapper);  // NOLINT
   /// \endcond
 
+  // NOLINTNEXTLINE
   TargetAccessWrapper(BoxType box) : box_(std::move(box)) {}
 
   db::Access& access() override { return db::as_access(box_); }

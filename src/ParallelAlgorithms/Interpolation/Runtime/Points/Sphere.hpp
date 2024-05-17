@@ -17,6 +17,7 @@
 #include "Domain/Block.hpp"
 #include "Domain/BlockLogicalCoordinates.hpp"
 #include "Domain/Structure/Element.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Tags.hpp"
 #include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
@@ -60,7 +61,9 @@ struct Sphere : public tt::ConformsTo<protocols::Points> {
       ::IdPair<domain::BlockId, tnsr::I<double, 3, ::Frame::BlockLogical>>;
 
  public:
-  using tags_on_target = tmpl::list<>;
+  using tags_on_target =
+      tmpl::push_front<typename ylm::Tags::compute_items_tags<Frame::NoFrame>,
+                       ylm::Tags::Strahlkorper<Frame::NoFrame>>;
   using points_volume_compute_tags = tmpl::list<>;
 
   struct LMax {

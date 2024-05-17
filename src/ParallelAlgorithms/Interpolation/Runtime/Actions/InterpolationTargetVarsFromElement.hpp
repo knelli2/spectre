@@ -35,8 +35,7 @@ template <typename X, typename Symm, typename IndexList>
 class Tensor;
 /// \endcond
 
-namespace intrp2 {
-namespace Actions {
+namespace intrp2::Actions {
 template <typename Target>
 struct ReceiveVolumeTensors {
   using TemporalId = typename Target::temporal_id_tag::type;
@@ -199,9 +198,10 @@ struct ReceiveVolumeTensors {
       if (not domain::functions_of_time_are_ready_simple_action_callback<
               domain::Tags::FunctionsOfTime, ReceiveVolumeTensors<Target>>(
               cache, array_index,
-              std::add_pointer_t<ParallelComponent>{nullptr}, temporal_id,
-              std::nullopt, temporal_id, received_interpolated_vars,
-              global_offsets, check_for_invalid_points, true)) {
+              std::add_pointer_t<ParallelComponent>{nullptr},
+              static_cast<double>(temporal_id), std::nullopt, temporal_id,
+              received_interpolated_vars, global_offsets,
+              check_for_invalid_points, true)) {
         return;
       }
 
@@ -218,8 +218,8 @@ struct ReceiveVolumeTensors {
             auto& invalid_indices = (*all_invalid_indices)[temporal_id];
 
             const intrp2::BlockCoords<Dim> block_logical_coordinates =
-                ::block_logical_coordinates_in_frame(cache, temporal_id, points,
-                                                     frame);
+                ::block_logical_coordinates_in_frame(
+                    cache, static_cast<double>(temporal_id), points, frame);
 
             for (size_t i = 0; i < block_logical_coordinates.size(); ++i) {
               if (not block_logical_coordinates[i].has_value()) {
@@ -359,5 +359,4 @@ struct ReceiveVolumeTensors {
         make_not_null(&access));
   }
 };
-}  // namespace Actions
-}  // namespace intrp2
+}  // namespace intrp2::Actions

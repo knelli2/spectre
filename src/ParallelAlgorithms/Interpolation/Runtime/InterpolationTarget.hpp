@@ -8,9 +8,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "DataStructures/DataBox/DataBox.hpp"
-#include "Parallel/Algorithms/AlgorithmSingleton.hpp"
-#include "Parallel/Algorithms/AlgortihmArray.hpp"
+#include "Parallel/Algorithms/AlgorithmArray.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
 #include "Parallel/Local.hpp"
@@ -23,11 +21,9 @@
 #include "ParallelAlgorithms/EventsAndTriggers/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Actions/InitializeInterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Protocols/Metavariables.hpp"
-#include "Utilities/PrettyType.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
-#include "Utilities/TypeTraits.hpp"
 
 namespace intrp2 {
 struct EventsAndTriggersAllocator
@@ -82,7 +78,7 @@ struct EventsAndTriggersAllocator
 };
 
 template <class Metavariables>
-struct InterpolationTarget {
+struct InterpolationTargets {
   using metavariables = Metavariables;
   using IntrpMetavars = typename Metavariables::intrp;
   static_assert(tt::assert_conforms_to_v<IntrpMetavars,
@@ -104,7 +100,7 @@ struct InterpolationTarget {
 
   using array_allocation_tags =
       typename ElementsAllocator::template array_allocation_tags<
-          InterpolationTarget>;
+          InterpolationTargets>;
 
   static void allocate_array(
       Parallel::CProxy_GlobalCache<Metavariables>& global_cache,
@@ -113,7 +109,7 @@ struct InterpolationTarget {
       const tuples::tagged_tuple_from_typelist<array_allocation_tags>&
           array_allocation_items = {},
       const std::unordered_set<size_t>& procs_to_ignore = {}) {
-    ElementsAllocator::template apply<InterpolationTarget>(
+    ElementsAllocator::template apply<InterpolationTargets>(
         global_cache, initialization_items, array_allocation_items,
         procs_to_ignore);
   }
@@ -122,7 +118,7 @@ struct InterpolationTarget {
       Parallel::Phase next_phase,
       Parallel::CProxy_GlobalCache<metavariables>& global_cache) {
     auto& local_cache = *Parallel::local_branch(global_cache);
-    Parallel::get_parallel_component<InterpolationTarget2>(local_cache)
+    Parallel::get_parallel_component<InterpolationTargets>(local_cache)
         .start_phase(next_phase);
   };
 };

@@ -3,16 +3,15 @@
 
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <pup.h>
-#include <set>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -30,18 +29,16 @@
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
 #include "Options/Auto.hpp"
 #include "Options/Context.hpp"
-#include "Options/ParseError.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
-#include "Parallel/ParallelComponentHelpers.hpp"
+#include "ParallelAlgorithms/EventsAndTriggers/Event.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/AccessWrapper.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Callbacks/Callback.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Events/MarkAsInterpolation.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Points/BlockLogicalCoordinates.hpp"
 #include "ParallelAlgorithms/Interpolation/Runtime/Tags.hpp"
 #include "Time/Tags/Time.hpp"
-#include "Utilities/OptionalHelpers.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
@@ -53,8 +50,9 @@ struct ObserverMesh;
 }  // namespace Events::Tags
 namespace intrp2 {
 template <class Metavariables>
-struct InterpolationTarget;
+struct InterpolationTargets;
 namespace Actions {
+template <typename Target>
 struct ReceiveVolumeTensors;
 }  // namespace Actions
 }  // namespace intrp2
@@ -101,7 +99,7 @@ struct ExampleCallback {
  * `block_logical_coordinates` for it's own points.
  */
 template <typename Target, size_t Dim>
-class InterpolateToPoints : public Event, public MarkAsInterpolation {
+class InterpolateToPoints : public ::Event, public MarkAsInterpolation {
   using temporal_id_tag = typename Target::temporal_id_tag;
   using TemporalId = typename temporal_id_tag::type;
   using PointsType = typename Target::points;
@@ -142,7 +140,7 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
   WRAPPED_PUPable_decl_template(InterpolateToPoints);  // NOLINT
   /// \endcond
 
-  static std::string name() { return Target::name(); }
+  std::string name() const override { return pretty_type::name<Target>(); }
 
   struct InputFrame {
     using type = std::string;
@@ -244,7 +242,7 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
                   const TemporalId& temporal_id, const Mesh<Dim>& mesh,
                   Parallel::GlobalCache<Metavariables>& cache,
                   const ElementId<Dim>& array_index,
-                  const ParallelComponent* const /*meta*/,
+                  const ParallelComponent* /*meta*/,
                   const ObservationValue& /*observation_value*/) const;
 
   using is_ready_argument_tags = tmpl::list<>;
@@ -259,13 +257,33 @@ class InterpolateToPoints : public Event, public MarkAsInterpolation {
   // This will be used to initialize the Accesses that correspond to the
   // individual targets
   void initialize_target_element_box(
-      const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*>
-          access_wrapper) const override;
+      gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*> access_wrapper)
+      const override;
+
+  bool is_interpolation() const override { return true; }
 
   // NOLINTNEXTLINE
-  void pup(PUP::er& p);
+  void pup(PUP::er& p) override;
 
   bool needs_evolved_variables() const override { return true; }
+
+  const std::unordered_set<std::string>& tensors_to_observe() const {
+    return tensors_to_observe_;
+  }
+  const std::unordered_set<std::string>& volume_tensors_to_send() const {
+    return volume_tensors_to_send_;
+  }
+  const std::unordered_set<std::string>& all_points_tags() const {
+    return all_points_tags_;
+  }
+  const std::unordered_map<std::string, std::vector<std::string>>&
+  non_obs_tags_to_volume_tags() const {
+    return non_obs_tags_to_volume_tags_;
+  }
+  const std::unordered_map<std::string, std::vector<std::string>>&
+  observation_tags_to_volume_tags() const {
+    return observation_tags_to_volume_tags_;
+  }
 
  private:
   std::string frame_{};
@@ -337,19 +355,19 @@ void InterpolateToPoints<Target, Dim>::compute_tensor_maps() {
 
       // Go through all arguments of the compute tag. If an argument tag is in
       // the points tags, then don't add it to the map.
-      for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
+      for_compute_tag_arguments<Tag>([this, &tag_name](auto argument_tag_v) {
         using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
 
         std::string argument_tag_name = db::tag_name<ArgumentTag>();
 
-        if (all_points_tags_.count(argument_tag_name) == 0) {
+        if (not all_points_tags_.contains(argument_tag_name)) {
           non_obs_tags_to_volume_tags_.at(tag_name).emplace_back(
               std::move(argument_tag_name));
         }
       });
 
       // QUESTION: Shouldn't happen?
-      if (non_obs_tags_to_volume_tags_.at(tag_name).size() == 0) {
+      if (not non_obs_tags_to_volume_tags_.at(tag_name).empty()) {
         non_obs_tags_to_volume_tags_.erase(tag_name);
       }
     }
@@ -357,6 +375,10 @@ void InterpolateToPoints<Target, Dim>::compute_tensor_maps() {
 
   // Create the actual map that goes from the tags users can specify in the
   // input file to volume variables that need to be interpolated to the target.
+  // TODO: This is wrong. For each argument (simple) tag of a compute tag, we
+  // need to check if the argument tag actually has a compute tag in this or the
+  // non-obs tag list so we can then get those tags as well. This needs to be
+  // recursive...
   tmpl::for_each<all_target_tensors_to_observe>([this](auto tag_v) {
     using Tag = tmpl::type_from<decltype(tag_v)>;
 
@@ -372,7 +394,7 @@ void InterpolateToPoints<Target, Dim>::compute_tensor_maps() {
 
       // Go through all arguments of the compute tag. If an argument tag is in
       // the points tags, then don't add it to the map.
-      for_compute_tag_arguments<Tag>([this](auto argument_tag_v) {
+      for_compute_tag_arguments<Tag>([this, &tag_name](auto argument_tag_v) {
         using ArgumentTag = tmpl::type_from<decltype(argument_tag_v)>;
 
         std::string argument_tag_name = db::tag_name<ArgumentTag>();
@@ -408,39 +430,40 @@ void InterpolateToPoints<Target, Dim>::operator()(
     Parallel::GlobalCache<Metavariables>& cache,
     const ElementId<Dim>& array_index, const ParallelComponent* const /*meta*/,
     const ObservationValue& /*observation_value*/) const {
-  // TODO: Write simple action and call it only on the zeroth element that sends
-  // the points/frame to the target element. Then on the target element, it
-  // checks if any points are invalid and stores that information. We only need
-  // to do this once and we don't want to do the actual calculation on the
-  // element (because it may be slow) so we only have one element send the
-  // message and then do the calculation on the target (also because the target
-  // is what actually needs to know about the invalid points)
+  auto& receiver_proxy =
+      Parallel::get_parallel_component<InterpolationTargets<Metavariables>>(
+          cache)[name()];
 
-  // TODO: Fix the time argument here. Need something like
-  // InterpolationTarget_detail::get_temporal_id_value
-  const double time = 0.0;
   const std::vector<std::optional<
       IdPair<domain::BlockId, tnsr::I<double, Dim, ::Frame::BlockLogical>>>>
-      block_logical_coords =
-          intrp2::block_logical_coordinates(box, cache, time, frame_, points_);
+      block_logical_coords = intrp2::block_logical_coordinates(
+          box, cache, static_cast<double>(temporal_id), frame_, points_);
 
   const std::vector<ElementId<Dim>> element_ids{{array_index}};
   const auto element_coord_holders =
       element_logical_coordinates(element_ids, block_logical_coords);
 
+  // string is the name of the tensor, std::vector is for each component of the
+  // tensor, and the DataVector is the actual data
+  std::unordered_map<std::string, std::vector<DataVector>> interpolated_vars{};
+
   if (element_coord_holders.count(array_index) == 0) {
-    // There are no target points in this element, so we don't need
-    // to do anything.
+    // There are no target points in this element. If we are the zeroth element,
+    // then we still send a message to the target so it can check for invalid
+    // points. We also send `vars_have_already_been_received = true` so that the
+    // target doesn't try to actually use the empty vars that we sent
+    if (is_zeroth_element(array_index)) {
+      Parallel::simple_action<intrp2::Actions::ReceiveVolumeTensors<Target>>(
+          receiver_proxy, temporal_id, std::move(interpolated_vars),
+          std::vector<size_t>{}, true, true);
+    }
+
     return;
   }
 
   // There are points in this element, so interpolate to them and
   // send the interpolated data to the target.
   const auto& element_coord_holder = element_coord_holders.at(array_index);
-
-  // string is the name of the tensor, std::vector is for each component of the
-  // tensor, and the DataVector is the actual data
-  std::unordered_map<std::string, std::vector<DataVector>> interpolated_vars{};
 
   // 2. Set up interpolator
   intrp::Irregular<Dim> interpolator(
@@ -472,43 +495,41 @@ void InterpolateToPoints<Target, Dim>::operator()(
 
         for (size_t i = 0; i < num_tensor_indices; i++) {
           interpolator.interpolate(
-              make_not_null(&interpolated_vars.at(tag_name)[i]), tensor.get(i));
+              make_not_null(&interpolated_vars.at(tag_name)[i]), tensor[i]);
         }
       });
 
-  auto& receiver_proxy =
-      Parallel::get_parallel_component<InterpolationTarget<Metavariables>>(
-          cache)[name()];
   Parallel::simple_action<intrp2::Actions::ReceiveVolumeTensors>(
       receiver_proxy, temporal_id, std::move(interpolated_vars),
-      element_coord_holder.offsets);
+      element_coord_holder.offsets, is_zeroth_element(array_index));
 }
 
 template <typename Target, size_t Dim>
-InterpolateToPoints<Target, Dim>::initialize_target_element_box(
+void InterpolateToPoints<Target, Dim>::initialize_target_element_box(
     const gsl::not_null<std::unique_ptr<intrp2::AccessWrapper>*> access_wrapper)
     const {
-  *access_wrapper = std::make_unique<intrp2::TargetAccessType<Target, Dim>>();
+  *access_wrapper =
+      std::make_unique<intrp2::TargetAccessWrapper<Target, Dim>>();
   auto& access = (*access_wrapper)->access();
 
   db::mutate<intrp2::Tags::Frame, intrp2::Tags::Points<Dim>,
-             intrp2::Tags::VarsToObserve, intrp2::Tags::InvalidPointsFillValue,
+             intrp2::Tags::InvalidPointsFillValue,
              intrp2::Tags::Callbacks<Target>>(
       [this](const gsl::not_null<std::string*> frame,
              const gsl::not_null<tnsr::I<DataVector, Dim, ::Frame::NoFrame>*>
                  points,
-             // const gsl::not_null<std::unordered_set<std::string>*>
-             // vars_to_observe,
              const gsl::not_null<double*> invalid_points_fill_value,
              const gsl::not_null<std::vector<
                  std::unique_ptr<intrp2::callbacks::Callback<Target>>>*>
                  callbacks) {
         *frame = frame_;
-        *points = points_->target_points_no_frame();
-        // *vars_to_observe = tensors_to_observe_;
+        *points = points_.target_points_no_frame();
         *invalid_points_fill_value = invalid_fill_value_.value_or(
             std::numeric_limits<double>::quiet_NaN());
-        *callbacks = std::move(callbacks);
+        callbacks->resize(callbacks_.size());
+        for (size_t i = 0; i < callbacks_.size(); i++) {
+          (*callbacks)[i] = callbacks_[i]->get_clone();
+        }
       },
       make_not_null(&access));
 }
@@ -520,6 +541,10 @@ void InterpolateToPoints<Target, Dim>::pup(PUP::er& p) {
   p | points_;
   p | callbacks_;
   p | tensors_to_observe_;
+  p | volume_tensors_to_send_;
+  p | all_points_tags_;
+  p | non_obs_tags_to_volume_tags_;
+  p | observation_tags_to_volume_tags_;
 }
 
 /// \cond
