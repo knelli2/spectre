@@ -148,11 +148,15 @@ ARG TARGETPLATFORM
 ARG PARALLEL_MAKE_ARG=-j2
 # Install build dependencies for the host system
 RUN apt-get update -y \
-    && apt-get install -y cmake clang lld wget
+    && apt-get install -y software-properties-common \
+    && add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN apt-get update -y \
+    && apt-get install -y cmake clang lld wget gcc-9 g++-9 gfortran-9
 # Install build dependencies for the target architecture
 RUN xx-apt-get update -y \
     && xx-apt-get install -y --no-install-recommends \
-    libc6-dev bison flex
+    libc6-dev bison flex libstdc++6 libc++-dev
+    # libstdc++6
  # libstdc++-10-dev
 
 RUN wget -O cmake-install.sh \
@@ -166,25 +170,27 @@ RUN wget https://github.com/ccache/ccache/releases/download/v4.8.2/ccache-4.8.2.
     && cd ccache \
     && mkdir build && cd build \
     && cmake \
+        -D CMAKE_C_COMPILER=gcc-9 \
+        -D CMAKE_CXX_COMPILER=g++-9 \
         -D HAVE_ASM_SSE2=OFF -D HAVE_ASM_SSE41=OFF \
         -D HAVE_ASM_AVX2=OFF -D HAVE_ASM_AVX512=OFF \
         -D CMAKE_BUILD_TYPE=Release .. \
     && make $PARALLEL_MAKE_ARG
 # - Doxygen
-RUN wget https://github.com/doxygen/doxygen/archive/Release_1_9_3.tar.gz -O doxygen.tar.gz \
-    && tar -xzf doxygen.tar.gz \
-    && mv doxygen-* doxygen \
-    && cd doxygen \
-    && mkdir build && cd build \
-    && cmake $(xx-clang --print-cmake-defines) \
-        -D CMAKE_BUILD_TYPE=Release .. \
-    && make $PARALLEL_MAKE_ARG
+# RUN wget https://github.com/doxygen/doxygen/archive/Release_1_9_3.tar.gz -O doxygen.tar.gz \
+#     && tar -xzf doxygen.tar.gz \
+#     && mv doxygen-* doxygen \
+#     && cd doxygen \
+#     && mkdir build && cd build \
+#     && cmake $(xx-clang --print-cmake-defines) \
+#         -D CMAKE_BUILD_TYPE=Release .. \
+#     && make $PARALLEL_MAKE_ARG
 
 FROM base AS xbuild-test
 COPY --from=xbuild /root/ccache/build/ccache /usr/local/bin
 RUN ccache --version
-COPY --from=xbuild /root/doxygen/build/bin/doxygen /usr/local/bin
-RUN doxygen --version
+# COPY --from=xbuild /root/doxygen/build/bin/doxygen /usr/local/bin
+# RUN doxygen --version
 
 
 # Install software that we can't install through apt. We have to distinguish
@@ -202,6 +208,10 @@ ARG TARGETARCH
 
 ARG PARALLEL_MAKE_ARG=-j2
 ARG DEBIAN_FRONTEND=noninteractive
+
+RUN wget -O cmake-install.sh \
+    "https://github.com/Kitware/CMake/releases/download/v3.28.1/cmake-3.28.1-linux-x86_64.sh" \
+    && chmod +x ./cmake-install.sh && ./cmake-install.sh --skip-license --prefix=/usr/local && rm cmake-install.sh
 
 # We install dependencies not available through apt manually rather than using
 # Spack since Spack ends up building a lot of dependencies from scratch
@@ -229,8 +239,8 @@ RUN wget https://github.com/catchorg/Catch2/archive/refs/tags/v3.4.0.tar.gz -O c
     && cd ../.. && rm -rf Catch2
 # - Ccache
 COPY --from=xbuild /root/ccache/build/ccache /usr/local/bin
-# - Doxygen
-COPY --from=xbuild /root/doxygen/build/bin/doxygen /usr/local/bin
+# # - Doxygen
+# COPY --from=xbuild /root/doxygen/build/bin/doxygen /usr/local/bin
 # - Libbacktrace
 RUN git clone https://github.com/ianlancetaylor/libbacktrace \
     && cd libbacktrace \
@@ -298,6 +308,8 @@ WORKDIR /work
 # easier for people, and build with O2 to reduce build size.
 RUN wget https://raw.githubusercontent.com/sxs-collaboration/spectre/develop/support/Charm/v7.0.0.patch
 
+RUN ln -s /usr/bin/g++-9 /usr/bin/g++
+
 RUN git clone --single-branch --branch v7.0.0 --depth 1 \
         https://github.com/UIUC-PPL/charm charm_7_0_0 \
     && cd /work/charm_7_0_0 \
@@ -361,6 +373,8 @@ RUN apt-get install -y libopenmpi-dev
 
 # We build an mpi version of charm (with clang) because many of our production
 # environments have charm built with mpi and we should test that.
+RUN ln -s /usr/bin/gfortran-9 /usr/bin/gfortran
+
 RUN cd /work/charm_7_0_0 \
     && ./build LIBS mpi-linux-${CHARM_ARCH}-smp clang \
         ${PARALLEL_MAKE_ARG} -g -O2 --build-shared --with-production
