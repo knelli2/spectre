@@ -58,7 +58,7 @@
 #
 #   docker push sxscollaboration/spectre:demo
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:18.04 AS base
 
 # See
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
@@ -67,7 +67,9 @@ ARG TARGETARCH
 
 # Install add-apt-repository and basic tools
 RUN apt-get update -y \
-    && apt-get install -y software-properties-common wget git
+    && apt-get install -y software-properties-common wget git \
+    && add-apt-repository ppa:ubuntu-toolchain-r/test
+
 
 # Add LLVM apt repository for newer versions of clang
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
@@ -78,7 +80,7 @@ RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
 # Install compilers and build tools
 RUN apt-get update -y \
     && apt-get install -y \
-        gcc g++ gfortran \
+        gcc-9 g++-9 gfortran-9 \
         clang clang-format clang-tidy lld \
         bison flex libncurses-dev \
         gdb cmake autoconf automake ninja-build lcov
@@ -95,7 +97,6 @@ RUN apt-get update -y \
     && apt-get install -y \
         libopenblas-dev liblapack-dev \
         libgsl-dev \
-        libjemalloc2 libjemalloc-dev \
         libboost-dev libboost-program-options-dev \
         libboost-thread-dev libboost-tools-dev libssl-dev \
         libhdf5-dev hdf5-tools \
@@ -112,11 +113,19 @@ RUN apt-get update -y \
 #   scripts use `/usr/bin/env python` to find python so restore it.
 COPY support/Python/requirements.txt requirements.txt
 COPY support/Python/dev_requirements.txt dev_requirements.txt
+ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update -y \
-    && apt-get install -y python3-pip python-is-python3 \
-    && pip3 --no-cache-dir install pybind11~=2.6.1 \
-    && pip3 --no-cache-dir install -r requirements.txt -r dev_requirements.txt \
+    && apt-get install -y zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
+RUN wget https://www.python.org/ftp/python/3.10.1/Python-3.10.1.tgz \
+    && tar -xf Python-3.10.1.tgz && cd Python-3.10.1 \
+    && ./configure --enable-optimizations && make -j 20 \
+    && make altinstall
+RUN rm -rf Python-3.10.1.tgz Python-3.10.1
+RUN pip3.10 --no-cache-dir install pybind11~=2.6.1 \
+    && pip3.10 --no-cache-dir install -r requirements.txt -r dev_requirements.txt \
     && rm requirements.txt dev_requirements.txt
+
+
 
 # Enable bash-completion by installing it and then adding it to the .bashrc file
 RUN apt-get update -y \
@@ -130,7 +139,7 @@ RUN apt-get update -y \
 # the same architecture as the host. It compiles the packages for the target
 # architecture. Then we can copy the compiled packages into the `base` image.
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS xbuild
+FROM --platform=$BUILDPLATFORM ubuntu:18.04 AS xbuild
 WORKDIR /root
 COPY --from=xx / /
 ARG TARGETPLATFORM
