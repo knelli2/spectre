@@ -28,6 +28,9 @@ spectre_run_cmake() {
     fi
     spectre_load_modules
 
+    export SPEC_ROOT=/groups/sxs/knelli/libraries/spec-exporter/spec-skylake-2024-05
+    export OPENBLAS_NUM_THREADS=1
+
     # Notes:
     # - Choosing the memory allocator to be JEMALLOC is important. When using
     #   the SYSTEM allocator, during BBH runs dumping volume data too often
