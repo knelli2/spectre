@@ -140,13 +140,34 @@ def plot_size_control_command(
 
     # State, and delta R
     axes[1].plot(times, data["StateNumber"], label="State")
-    axes[1].plot(times, data["MinDeltaR"], label="Min Delta R")
-    axes[1].plot(times, data["AvgDeltaR"], label="Average Delta R")
+    axes[1].set_ylim(0, 5)
 
     # Relative delta R
-    axes[2].plot(times, data["MinRelativeDeltaR"], label="Min relative Delta R")
     axes[2].plot(
-        times, data["AvgRelativeDeltaR"], label="Average relative Delta R"
+        times,
+        data["MinRelativeDeltaR"],
+        label="Min relative Delta R",
+        color="C0",
+    )
+    axes[2].plot(
+        times,
+        data["AvgRelativeDeltaR"],
+        label="Average relative Delta R",
+        color="C1",
+    )
+    axes[2].plot(
+        times,
+        data["MinDeltaR"],
+        label="Min Delta R",
+        color="C0",
+        linestyle="dashed",
+    )
+    axes[2].plot(
+        times,
+        data["AvgDeltaR"],
+        label="Average Delta R",
+        color="C1",
+        linestyle="dashed",
     )
 
     # Char speeds
