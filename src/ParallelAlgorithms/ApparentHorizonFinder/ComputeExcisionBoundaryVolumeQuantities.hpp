@@ -75,6 +75,8 @@ struct ComputeExcisionBoundaryVolumeQuantities
           jac_logical_to_target,
       const InverseJacobian<DataVector, 3, Frame::ElementLogical, TargetFrame>&
           invjac_logical_to_target,
+      const InverseJacobian<DataVector, 3, Frame::Grid, TargetFrame>&
+          invjac_grid_to_target,
       const tnsr::I<DataVector, 3, Frame::Inertial>& inertial_mesh_velocity,
       const tnsr::I<DataVector, 3, TargetFrame>&
           grid_to_target_frame_mesh_velocity);
@@ -97,7 +99,8 @@ struct ComputeExcisionBoundaryVolumeQuantities
       gr::Tags::Shift<DataVector, 3, TargetFrame>,
       ::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
                     tmpl::size_t<3>, TargetFrame>,
-      gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>>;
+      gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>,
+      ::domain::Tags::InverseJacobian<3, Frame::Grid, TargetFrame>>;
 
   template <typename TargetFrame>
   using allowed_dest_tags = tmpl::remove_duplicates<

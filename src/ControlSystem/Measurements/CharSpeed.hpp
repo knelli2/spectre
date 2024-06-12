@@ -84,7 +84,8 @@ struct CharSpeed : tt::ConformsTo<protocols::Measurement> {
           ::Tags::deriv<gr::Tags::Shift<DataVector, 3, Frame::Distorted>,
                         tmpl::size_t<3>, Frame::Distorted>,
           gr::Tags::ShiftyQuantity<DataVector, 3, Frame::Distorted>,
-          gr::Tags::SpatialMetric<DataVector, 3, Frame::Distorted>>;
+          gr::Tags::SpatialMetric<DataVector, 3, Frame::Distorted>,
+          ::domain::Tags::InverseJacobian<3, Frame::Grid, Frame::Distorted>>;
       using compute_vars_to_interpolate =
           ah::ComputeExcisionBoundaryVolumeQuantities;
       using compute_items_on_source =

@@ -150,6 +150,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
     /*jac_logical_to_target*/,
     const InverseJacobian<DataVector, 3, Frame::ElementLogical, TargetFrame>&
         invjac_logical_to_target,
+    const InverseJacobian<DataVector, 3, Frame::Grid, TargetFrame>&
+        invjac_grid_to_target,
     const tnsr::I<DataVector, 3, Frame::Inertial>& inertial_mesh_velocity,
     const tnsr::I<DataVector, 3, TargetFrame>&
         grid_to_target_frame_mesh_velocity) {
@@ -236,6 +238,12 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
       *(get<inv_spatial_metric_tag>(target_vars, make_not_null(&buffer)));
 
   // Actual computation starts here
+
+  using invjac_grid_to_target_tag =
+      domain::Tags::InverseJacobian<3, Frame::Grid, TargetFrame>;
+  if constexpr (tmpl::list_contains_v<DestTagList, invjac_grid_to_target_tag>) {
+    get<invjac_grid_to_target_tag>(*target_vars) = invjac_grid_to_target;
+  }
 
   gr::spatial_metric(make_not_null(&inertial_spatial_metric), spacetime_metric);
   // put determinant of 3-metric temporarily into lapse to save memory.
