@@ -100,7 +100,8 @@ struct ComputeExcisionBoundaryVolumeQuantities
       ::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
                     tmpl::size_t<3>, TargetFrame>,
       gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>,
-      ::domain::Tags::InverseJacobian<3, Frame::Grid, TargetFrame>>;
+      ::domain::Tags::InverseJacobian<3, Frame::Grid, TargetFrame>,
+      gr::Tags::SpatialChristoffelSecondKind<DataVector, 3, TargetFrame>>;
 
   template <typename TargetFrame>
   using allowed_dest_tags = tmpl::remove_duplicates<

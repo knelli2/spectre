@@ -23,6 +23,7 @@
 #include "PointwiseFunctions/GeneralRelativity/Christoffel.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/Christoffel.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/ExtrinsicCurvature.hpp"
+#include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/Phi.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/Ricci.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/SpatialDerivOfLapse.hpp"
 #include "PointwiseFunctions/GeneralRelativity/GeneralizedHarmonic/SpatialDerivOfShift.hpp"
@@ -77,6 +78,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
   using shift_tag = gr::Tags::Shift<DataVector, 3>;
   using deriv_shift_tag =
       ::Tags::deriv<shift_tag, tmpl::size_t<3>, Frame::Inertial>;
+  using spatial_christoffel_tag =
+      gr::Tags::SpatialChristoffelSecondKind<DataVector, 3>;
   // Needed for an intermediate computation
   using spacetime_normal_vector_tag =
       gr::Tags::SpacetimeNormalVector<DataVector, 3>;
@@ -88,8 +91,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
   using full_temp_tags_list =
       tmpl::list<spacetime_metric_tag, spatial_metric_tag,
                  inv_spatial_metric_tag, lapse_tag, deriv_lapse_tag, shift_tag,
-                 deriv_shift_tag, spacetime_normal_vector_tag,
-                 inv_spacetime_metric_tag>;
+                 deriv_shift_tag, spatial_christoffel_tag,
+                 spacetime_normal_vector_tag, inv_spacetime_metric_tag>;
 
   // temp tags without variables that are already in DestTagList.
   using temp_tags_list =
@@ -113,6 +116,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
       *(get<spacetime_normal_vector_tag>(target_vars, make_not_null(&buffer)));
   auto& inv_spacetime_metric =
       *(get<inv_spacetime_metric_tag>(target_vars, make_not_null(&buffer)));
+  auto& spatial_christoffel =
+      *(get<spatial_christoffel_tag>(target_vars, make_not_null(&buffer)));
 
   // Actual computation starts here
   const auto& src_spacetime_metric =
@@ -135,6 +140,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
   gh::spatial_deriv_of_shift(make_not_null(&deriv_shift), lapse,
                              inv_spacetime_metric, spacetime_normal_vector,
                              phi);
+  gh::christoffel_second_kind(make_not_null(&spatial_christoffel), phi,
+                              inv_spatial_metric);
 }
 
 /// Dual frame case
@@ -197,11 +204,17 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
   using inertial_shift_tag = gr::Tags::Shift<DataVector, 3>;
   using shifty_quantity_tag =
       gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>;
+  using spatial_christoffel_tag =
+      gr::Tags::SpatialChristoffelSecondKind<DataVector, 3, TargetFrame>;
 
   // Additional temporary tags used for multiple frames
   using inertial_spatial_metric_tag = gr::Tags::SpatialMetric<DataVector, 3>;
   using inertial_inv_spatial_metric_tag =
       gr::Tags::InverseSpatialMetric<DataVector, 3>;
+  using deriv_spatial_metric_tag =
+      ::Tags::deriv<gr::Tags::SpatialMetric<DataVector, 3, TargetFrame>,
+                    tmpl::size_t<3>, TargetFrame>;
+  using target_phi_tag = gh::Tags::Phi<DataVector, 3, TargetFrame>;
 
   // All of the temporary tags, including some that may be repeated
   // in the target_variables (for now).
@@ -209,7 +222,9 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
       tmpl::list<spatial_metric_tag, inv_spatial_metric_tag, lapse_tag,
                  deriv_lapse_tag, shift_tag, deriv_shift_tag,
                  inertial_shift_tag, shifty_quantity_tag,
-                 inertial_spatial_metric_tag, inertial_inv_spatial_metric_tag>;
+                 spatial_christoffel_tag, inertial_spatial_metric_tag,
+                 inertial_inv_spatial_metric_tag, deriv_spatial_metric_tag,
+                 target_phi_tag>;
 
   // temp tags without variables that are already in DestTagList.
   using temp_tags_list =
@@ -228,6 +243,8 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
       *(get<inertial_shift_tag>(target_vars, make_not_null(&buffer)));
   auto& shifty_quantity =
       *(get<shifty_quantity_tag>(target_vars, make_not_null(&buffer)));
+  auto& spatial_christoffel =
+      *(get<spatial_christoffel_tag>(target_vars, make_not_null(&buffer)));
   auto& inertial_spatial_metric =
       *(get<inertial_spatial_metric_tag>(target_vars, make_not_null(&buffer)));
   auto& inertial_inv_spatial_metric = *(get<inertial_inv_spatial_metric_tag>(
@@ -236,6 +253,10 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
       *(get<spatial_metric_tag>(target_vars, make_not_null(&buffer)));
   auto& inv_spatial_metric =
       *(get<inv_spatial_metric_tag>(target_vars, make_not_null(&buffer)));
+  auto& deriv_spatial_metric =
+      *(get<deriv_spatial_metric_tag>(target_vars, make_not_null(&buffer)));
+  auto& target_phi =
+      *(get<target_phi_tag>(target_vars, make_not_null(&buffer)));
 
   // Actual computation starts here
 
@@ -288,6 +309,13 @@ void ComputeExcisionBoundaryVolumeQuantities::apply(
   tenex::evaluate<ti::I>(
       make_not_null(&shifty_quantity),
       shift(ti::I) + grid_to_target_frame_mesh_velocity(ti::I));
+
+  partial_derivative(make_not_null(&deriv_spatial_metric), spatial_metric, mesh,
+                     invjac_logical_to_target);
+  gh::phi(make_not_null(&target_phi), lapse, deriv_lapse, shift, deriv_shift,
+          spatial_metric, deriv_spatial_metric);
+  gh::christoffel_second_kind(make_not_null(&spatial_christoffel), target_phi,
+                              inv_spatial_metric);
 }
 
 }  // namespace ah
