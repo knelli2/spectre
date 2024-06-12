@@ -5,7 +5,9 @@
 
 #include <cstddef>
 
+#include "DataStructures/Tensor/IndexType.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
+#include "Domain/Tags.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/ConstraintDamping/Tags.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/Protocols/ComputeVarsToInterpolate.hpp"
@@ -87,12 +89,15 @@ struct ComputeExcisionBoundaryVolumeQuantities
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>>;
 
   template <typename TargetFrame>
-  using allowed_dest_tags_target_frame =
-      tmpl::list<gr::Tags::SpatialMetric<DataVector, 3, TargetFrame>,
-                 gr::Tags::SpacetimeMetric<DataVector, 3, TargetFrame>,
-                 gr::Tags::Lapse<DataVector>,
-                 gr::Tags::Shift<DataVector, 3, TargetFrame>,
-                 gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>>;
+  using allowed_dest_tags_target_frame = tmpl::list<
+      gr::Tags::SpatialMetric<DataVector, 3, TargetFrame>,
+      gr::Tags::SpacetimeMetric<DataVector, 3, TargetFrame>,
+      gr::Tags::Lapse<DataVector>,
+      ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>, TargetFrame>,
+      gr::Tags::Shift<DataVector, 3, TargetFrame>,
+      ::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
+                    tmpl::size_t<3>, TargetFrame>,
+      gr::Tags::ShiftyQuantity<DataVector, 3, TargetFrame>>;
 
   template <typename TargetFrame>
   using allowed_dest_tags = tmpl::remove_duplicates<

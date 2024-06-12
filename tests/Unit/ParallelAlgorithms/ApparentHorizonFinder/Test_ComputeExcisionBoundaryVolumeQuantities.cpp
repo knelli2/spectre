@@ -1,6 +1,8 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
+#include "DataStructures/Tensor/IndexType.hpp"
+#include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
 #include "Framework/TestingFramework.hpp"
 
 #include <array>
@@ -42,6 +44,8 @@ void test_compute_excision_boundary_volume_quantities() {
   CAPTURE(is_time_dependent);
   CAPTURE(target_frame);
   const size_t number_of_grid_points = 8;
+  // Because we are taking numerical derivatives and have low resolution
+  Approx deriv_approx = Approx::custom().epsilon(1.0e-8).scale(1.0);
 
   // slab and temporal_id used only in the TimeDependent version.
   Slab slab(0.0, 1.0);
@@ -186,8 +190,15 @@ void test_compute_excision_boundary_volume_quantities() {
       typename gr::Solutions::KerrSchild::tags<DataVector, TargetFrame>{});
   const auto& lapse =
       get<gr::Tags::Lapse<DataVector>>(solution_vars_target_frame);
+  const auto& deriv_lapse = get<
+      ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>, TargetFrame>>(
+      solution_vars_target_frame);
   const auto& shift = get<gr::Tags::Shift<DataVector, 3, TargetFrame>>(
       solution_vars_target_frame);
+  const auto& deriv_shift =
+      get<::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
+                        tmpl::size_t<3>, TargetFrame>>(
+          solution_vars_target_frame);
   const auto& spatial_metric =
       get<gr::Tags::SpatialMetric<DataVector, 3, TargetFrame>>(
           solution_vars_target_frame);
@@ -218,6 +229,13 @@ void test_compute_excision_boundary_volume_quantities() {
 
     get<::gr::Tags::SpacetimeMetric<DataVector, 3, TargetFrame>>(src_vars) =
         gr::spacetime_metric(lapse, shift, spatial_metric);
+    const auto& deriv_spatial_metric =
+        get<::Tags::deriv<gr::Tags::SpatialMetric<DataVector, 3, TargetFrame>,
+                          tmpl::size_t<3>, TargetFrame>>(
+            solution_vars_target_frame);
+    get<::gh::Tags::Phi<DataVector, 3>>(src_vars) =
+        gh::phi(lapse, deriv_lapse, shift, deriv_shift, spatial_metric,
+                deriv_spatial_metric);
   } else if constexpr (std::is_same_v<TargetFrame, Frame::Distorted>) {
     // First figure out jacobians
     const auto coords_frame_velocity_jacobians =
@@ -363,10 +381,31 @@ void test_compute_excision_boundary_volume_quantities() {
   }
 
   if constexpr (tmpl::list_contains_v<
+                    DestTags, ::Tags::deriv<gr::Tags::Lapse<DataVector>,
+                                            tmpl::size_t<3>, TargetFrame>>) {
+    const auto& numerical_deriv_lapse =
+        get<::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>,
+                          TargetFrame>>(dest_vars);
+    CHECK_ITERABLE_CUSTOM_APPROX(deriv_lapse, numerical_deriv_lapse,
+                                 deriv_approx);
+  }
+
+  if constexpr (tmpl::list_contains_v<
                     DestTags, gr::Tags::Shift<DataVector, 3, TargetFrame>>) {
     const auto& numerical_shift =
         get<gr::Tags::Shift<DataVector, 3, TargetFrame>>(dest_vars);
     CHECK_ITERABLE_APPROX(shift, numerical_shift);
+  }
+
+  if constexpr (tmpl::list_contains_v<
+                    DestTags,
+                    ::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
+                                  tmpl::size_t<3>, TargetFrame>>) {
+    const auto& numerical_deriv_shift =
+        get<::Tags::deriv<gr::Tags::Shift<DataVector, 3, TargetFrame>,
+                          tmpl::size_t<3>, TargetFrame>>(dest_vars);
+    CHECK_ITERABLE_CUSTOM_APPROX(deriv_shift, numerical_deriv_shift,
+                                 deriv_approx);
   }
 
   if constexpr (tmpl::list_contains_v<
@@ -417,6 +456,7 @@ void test_compute_excision_boundary_volume_quantities() {
   }
 }
 
+// [[Timeout, 20]]
 SPECTRE_TEST_CASE(
     "Unit.ApparentHorizonFinder.ComputeExcisionBoundaryVolumeQuantities",
     "[ApparentHorizonFinder][Unit]") {
@@ -434,7 +474,11 @@ SPECTRE_TEST_CASE(
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
                  gr::Tags::SpatialMetric<DataVector, 3>,
                  gr::Tags::Lapse<DataVector>,
-                 gr::Tags::Shift<DataVector, 3>>>();
+                 ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>,
+                               Frame::Inertial>,
+                 gr::Tags::Shift<DataVector, 3>,
+                 ::Tags::deriv<gr::Tags::Shift<DataVector, 3, Frame::Inertial>,
+                               tmpl::size_t<3>, Frame::Inertial>>>();
 
   // Leave out a few tags.
   test_compute_excision_boundary_volume_quantities<
@@ -443,7 +487,9 @@ SPECTRE_TEST_CASE(
                  gh::Tags::Pi<DataVector, 3>, gh::Tags::Phi<DataVector, 3>>,
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
                  gr::Tags::SpatialMetric<DataVector, 3>,
-                 gr::Tags::Lapse<DataVector>>>();
+                 gr::Tags::Lapse<DataVector>,
+                 ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>,
+                               Frame::Inertial>>>();
 
   test_compute_excision_boundary_volume_quantities<
       std::false_type, Frame::Inertial,
@@ -451,7 +497,9 @@ SPECTRE_TEST_CASE(
                  gh::Tags::Pi<DataVector, 3>, gh::Tags::Phi<DataVector, 3>>,
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
                  gr::Tags::SpatialMetric<DataVector, 3>,
-                 gr::Tags::Shift<DataVector, 3>>>();
+                 gr::Tags::Shift<DataVector, 3>,
+                 ::Tags::deriv<gr::Tags::Shift<DataVector, 3, Frame::Inertial>,
+                               tmpl::size_t<3>, Frame::Inertial>>>();
 
   // time-dependent.
   // All possible tags.
@@ -463,8 +511,13 @@ SPECTRE_TEST_CASE(
                              Frame::Inertial>>,
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
                  gr::Tags::SpatialMetric<DataVector, 3>,
-                 gr::Tags::Lapse<DataVector>, gr::Tags::Shift<DataVector, 3>,
-                 gr::Tags::Shift<DataVector, 3, Frame::Grid>>>();
+                 gr::Tags::Lapse<DataVector>,
+                 ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>,
+                               Frame::Grid>,
+                 gr::Tags::Shift<DataVector, 3>,
+                 gr::Tags::Shift<DataVector, 3, Frame::Grid>,
+                 ::Tags::deriv<gr::Tags::Shift<DataVector, 3, Frame::Grid>,
+                               tmpl::size_t<3>, Frame::Grid>>>();
 
   // Distorted frame.
   test_compute_excision_boundary_volume_quantities<
@@ -476,8 +529,12 @@ SPECTRE_TEST_CASE(
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3, Frame::Distorted>,
                  gr::Tags::SpatialMetric<DataVector, 3, Frame::Distorted>,
                  gr::Tags::Lapse<DataVector>,
+                 ::Tags::deriv<gr::Tags::Lapse<DataVector>, tmpl::size_t<3>,
+                               Frame::Distorted>,
                  gr::Tags::ShiftyQuantity<DataVector, 3, Frame::Distorted>,
-                 gr::Tags::Shift<DataVector, 3, Frame::Distorted>>>();
+                 gr::Tags::Shift<DataVector, 3, Frame::Distorted>,
+                 ::Tags::deriv<gr::Tags::Shift<DataVector, 3, Frame::Distorted>,
+                               tmpl::size_t<3>, Frame::Distorted>>>();
 
   // Leave out a few tags.
   test_compute_excision_boundary_volume_quantities<
