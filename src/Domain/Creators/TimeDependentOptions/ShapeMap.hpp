@@ -121,6 +121,50 @@ struct YlmsFromFile {
   bool check_frame{true};
 };
 
+struct YlmsFromSpEC {
+  struct DatFilename {
+    using type = std::string;
+    static constexpr Options::String help =
+        "Name of the SpEC dat file holding the coefficients. Note that this "
+        "isn't a Dat file within an H5 file. This must be an actual '.dat' "
+        "file on disk.";
+  };
+
+  struct MatchTime {
+    using type = double;
+    static constexpr Options::String help =
+        "Time in the H5File to get the coefficients at. Will likely be the "
+        "same as the initial time";
+  };
+
+  struct MatchTimeEpsilon {
+    using type = Options::Auto<double>;
+    static constexpr Options::String help =
+        "Look for times in the H5File within this epsilon of the match time. "
+        "This is to avoid having to know the exact time to all digits. Default "
+        "is 1e-12.";
+  };
+
+  struct SetL1CoefsToZero {
+    using type = bool;
+    static constexpr Options::String help =
+        "Whether to set the L=1 coefs to zero or not. This may be desirable "
+        "because L=1 is degenerate with a translation of the BH.";
+  };
+
+  using options =
+      tmpl::list<DatFilename, MatchTime, MatchTimeEpsilon, SetL1CoefsToZero>;
+
+  static constexpr Options::String help = {
+      "Read the Y_lm coefficients of a Strahlkorper from file and use those to "
+      "initialize the coefficients of a shape map."};
+
+  std::string dat_filename{};
+  double match_time{};
+  std::optional<double> match_time_epsilon{};
+  bool set_l1_coefs_to_zero{};
+};
+
 /*!
  * \brief Class to be used as an option for initializing shape map coefficients.
  *
@@ -146,9 +190,9 @@ struct ShapeMapOptions {
   };
 
   struct InitialValues {
-    using type =
-        Options::Auto<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile>,
-                      Spherical>;
+    using type = Options::Auto<
+        std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile, YlmsFromSpEC>,
+        Spherical>;
     static constexpr Options::String help = {
         "Initial Ylm coefficients for the shape map. Specify 'Spherical' for "
         "all coefficients to be initialized to zero."};
@@ -178,7 +222,8 @@ struct ShapeMapOptions {
                           common_options>;
 
   size_t l_max{};
-  std::optional<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile>>
+  std::optional<
+      std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile, YlmsFromSpEC>>
       initial_values{};
   std::optional<std::array<double, 3>> initial_size_values{};
   bool transition_ends_at_cube{false};
