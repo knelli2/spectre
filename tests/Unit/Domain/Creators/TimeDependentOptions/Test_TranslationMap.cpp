@@ -48,8 +48,10 @@ void test_translation_map_options() {
   {
     const auto translation_map_options = TestHelpers::test_creation<
         domain::creators::time_dependent_options::TranslationMapOptions<Dim>>(
-        "InitialValues: [" + make_array_str<Dim>(1.0) + "," +
-        make_array_str<Dim>(2.0) + "," + make_array_str<Dim>(3.0) + "]");
+        "InitialValues:\n"
+        "  Explicit: [" +
+        make_array_str<Dim>(1.0) + "," + make_array_str<Dim>(2.0) + "," +
+        make_array_str<Dim>(3.0) + "]");
     CHECK(translation_map_options.name() == "TranslationMap");
     CHECK(translation_map_options.initial_values ==
           std::array{DataVector{Dim, 1.0}, DataVector{Dim, 2.0},
@@ -90,8 +92,9 @@ void test_translation_map_options() {
     const auto translation_map_options = TestHelpers::test_creation<
         domain::creators::time_dependent_options::TranslationMapOptions<Dim>>(
         "InitialValues:\n"
-        "  H5Filename: " +
-        filename + "\n  SubfileName: " + subfile_name + "\n  Time: 0.0");
+        "  FromVolFil:\n"
+        "    H5Filename: " +
+        filename + "\n    SubfileName: " + subfile_name + "\n    Time: 0.0");
     CHECK(translation_map_options.name() == "TranslationMap");
     CHECK(translation_map_options.initial_values ==
           std::array{DataVector{Dim, 1.0}, DataVector{Dim, 2.0},
