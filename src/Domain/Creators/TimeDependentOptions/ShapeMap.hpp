@@ -11,6 +11,7 @@
 #include <variant>
 
 #include "DataStructures/DataVector.hpp"
+#include "Domain/Creators/TimeDependentOptions/FromVolumeFile.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/IO/ReadSurfaceYlm.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
@@ -191,7 +192,8 @@ struct ShapeMapOptions {
 
   struct InitialValues {
     using type = Options::Auto<
-        std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile, YlmsFromSpEC>,
+        std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile, YlmsFromSpEC,
+                     FromVolumeFileShapeSize<Object>>,
         Spherical>;
     static constexpr Options::String help = {
         "Initial Ylm coefficients for the shape map. Specify 'Spherical' for "
@@ -222,8 +224,8 @@ struct ShapeMapOptions {
                           common_options>;
 
   size_t l_max{};
-  std::optional<
-      std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile, YlmsFromSpEC>>
+  std::optional<std::variant<KerrSchildFromBoyerLindquist, YlmsFromFile,
+                             YlmsFromSpEC, FromVolumeFileShapeSize<Object>>>
       initial_values{};
   std::optional<std::array<double, 3>> initial_size_values{};
   bool transition_ends_at_cube{false};
