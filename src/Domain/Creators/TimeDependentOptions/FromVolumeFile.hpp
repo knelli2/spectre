@@ -10,6 +10,7 @@
 #include "DataStructures/DataVector.hpp"
 #include "Options/Auto.hpp"
 #include "Options/Context.hpp"
+#include "Domain/Structure/ObjectLabel.hpp"
 #include "Options/String.hpp"
 #include "Utilities/TMPL.hpp"
 
@@ -117,10 +118,10 @@ struct FromVolumeFile<names::Rotation> : public detail::FromVolumeFileBase {
   std::array<DataVector, 3> angle_values{};
 };
 
-template <>
-struct FromVolumeFile<names::ShapeSize> : public detail::FromVolumeFileBase {
-  FromVolumeFile() = default;
-  FromVolumeFile(const std::string& h5_filename,
+template <ObjectLabel Object>
+struct FromVolumeFileShapeSize : public detail::FromVolumeFileBase {
+  FromVolumeFileShapeSize() = default;
+  FromVolumeFileShapeSize(const std::string& h5_filename,
                  const std::string& subfile_name, double time,
                  const Options::Context& context = {});
 

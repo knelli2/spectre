@@ -15,6 +15,7 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/QuaternionHelpers.hpp"
+#include "Domain/Structure/ObjectLabel.hpp"
 #include "IO/H5/AccessType.hpp"
 #include "IO/H5/File.hpp"
 #include "IO/H5/VolumeData.hpp"
@@ -68,6 +69,7 @@ std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime> get_function_of_time(
   const std::array<double, 2> time_bounds = function_of_time->time_bounds();
 
   if (time < time_bounds[0] or time > time_bounds[1]) {
+    using ::operator<<;
     PARSE_ERROR(context, function_of_time_name
                              << ": The requested time " << time
                              << " is out of the range of the function of time "
@@ -170,11 +172,13 @@ FromVolumeFile<names::Rotation>::FromVolumeFile(
   }
 }
 
-FromVolumeFile<names::ShapeSize>::FromVolumeFile(
+template <ObjectLabel Object>
+FromVolumeFileShapeSize<Object>::FromVolumeFileShapeSize(
     const std::string& h5_filename, const std::string& subfile_name,
     const double time, const Options::Context& context) {
-  const std::string shape_function_of_time_name{"Shape"};
-  const std::string size_function_of_time_name{"Size"};
+  const std::string object = domain::name(Object);
+  const std::string shape_function_of_time_name{"Shape" + object};
+  const std::string size_function_of_time_name{"Size" + object};
 
   const auto shape_function_of_time = get_function_of_time(
       shape_function_of_time_name, h5_filename, subfile_name, time, context);
@@ -186,4 +190,7 @@ FromVolumeFile<names::ShapeSize>::FromVolumeFile(
 }
 
 template struct FromVolumeFile<names::Translation>;
+template struct FromVolumeFileShapeSize<ObjectLabel::A>;
+template struct FromVolumeFileShapeSize<ObjectLabel::B>;
+template struct FromVolumeFileShapeSize<ObjectLabel::None>;
 }  // namespace domain::creators::time_dependent_options
