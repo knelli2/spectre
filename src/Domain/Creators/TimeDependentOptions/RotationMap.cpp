@@ -66,6 +66,8 @@ RotationMapOptions<NumDerivs>::RotationMapOptions(
 
     for (size_t i = 0; i < values_from_file.quaternions.size(); i++) {
       gsl::at(quaternions, i) = gsl::at(values_from_file.quaternions, i);
+    }
+    for (size_t i = 0; i < values_from_file.angle_values.size(); i++) {
       gsl::at(angles, i) = gsl::at(values_from_file.angle_values, i);
     }
 

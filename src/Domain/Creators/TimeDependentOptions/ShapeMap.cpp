@@ -194,9 +194,7 @@ initial_shape_and_size_funcs(
               shape_options.initial_values.value());
 
       shape_funcs = volume_file_options.shape_values;
-      for (size_t i = 0; i < volume_file_options.size_values.size(); i++) {
-        gsl::at(size_funcs, i) = gsl::at(volume_file_options.size_values, i);
-      }
+      size_funcs = volume_file_options.size_values;
     }
   }
 

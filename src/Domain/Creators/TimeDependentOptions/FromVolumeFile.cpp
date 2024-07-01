@@ -123,15 +123,26 @@ FromVolumeFile<names::Rotation>::FromVolumeFile(
 
   if (is_quat_fot) {
     bool filled_values = false;
-    const auto set_values = [this, &function_of_time, &time,
-                             &filled_values]<size_t N>() {
+    const auto set_values = [this, &function_of_time, &time, &filled_values,
+                             &context]<size_t N>() {
       const auto* const quat_function_of_time =
           dynamic_cast<domain::FunctionsOfTime::QuaternionFunctionOfTime<N>*>(
               function_of_time.get());
 
       if (quat_function_of_time != nullptr) {
         quaternions = quat_function_of_time->quat_func_and_2_derivs(time);
-        angle_values = quat_function_of_time->angle_func_and_2_derivs(time);
+        auto all_angle_values =
+            quat_function_of_time->angle_func_and_all_derivs(time);
+        if (all_angle_values.size() > angle_values.size()) {
+          PARSE_ERROR(context,
+                      "FromVolumeFile bad size of angle values (needed "
+                          << angle_values.size() << ", got "
+                          << all_angle_values.size() << ")");
+        }
+        angle_values = make_array<4>(DataVector{3, 0.0});
+        for (size_t i = 0; i < all_angle_values.size(); i++) {
+          gsl::at(angle_values, i) = std::move(all_angle_values[i]);
+        }
         filled_values = true;
       }
     };
@@ -186,7 +197,16 @@ FromVolumeFileShapeSize<Object>::FromVolumeFileShapeSize(
       size_function_of_time_name, h5_filename, subfile_name, time, context);
 
   shape_values = shape_function_of_time->func_and_2_derivs(time);
-  size_values = size_function_of_time->func_and_2_derivs(time);
+  auto all_size_values = size_function_of_time->func_and_all_derivs(time);
+  if (all_size_values.size() > size_values.size()) {
+    PARSE_ERROR(context, "FromVolumeFile bad size of Size values (needed "
+                             << size_values.size() << ", got "
+                             << all_size_values.size() << ")");
+  }
+  size_values = make_array<4>(DataVector{0.0});
+  for (size_t i = 0; i < all_size_values.size(); i++) {
+    gsl::at(size_values, i) = std::move(all_size_values[i]);
+  }
 }
 
 template struct FromVolumeFile<names::Translation>;

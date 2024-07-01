@@ -115,7 +115,7 @@ struct FromVolumeFile<names::Rotation> : public detail::FromVolumeFileBase {
                  const Options::Context& context = {});
 
   std::array<DataVector, 3> quaternions{};
-  std::array<DataVector, 3> angle_values{};
+  std::array<DataVector, 4> angle_values{};
 };
 
 template <ObjectLabel Object>
@@ -126,7 +126,7 @@ struct FromVolumeFileShapeSize : public detail::FromVolumeFileBase {
                  const Options::Context& context = {});
 
   std::array<DataVector, 3> shape_values{};
-  std::array<DataVector, 3> size_values{};
+  std::array<DataVector, 4> size_values{};
 };
 /// @}
 }  // namespace domain::creators::time_dependent_options
