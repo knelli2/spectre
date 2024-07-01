@@ -9,6 +9,7 @@
 #include <variant>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/DataBox/Tag.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "Domain/Structure/ElementId.hpp"
@@ -103,16 +104,22 @@ class NumericInitialData : public evolution::initial_data::InitialData {
 
   // - Generalized harmonic variables
   using gh_vars = tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
-                             Tags::Pi<DataVector, 3>>;
+                             Tags::Pi<DataVector, 3>, Tags::Phi<DataVector, 3>>;
   struct GhVars
       : tuples::tagged_tuple_from_typelist<db::wrap_tags_in<VarName, gh_vars>> {
     static constexpr Options::String help =
-        "GH variables: 'SpacetimeMetric' and 'Pi'. These variables are "
-        "used to set the initial data directly; Phi is then set to the "
-        "numerical derivative of SpacetimeMetric, to enforce the 3-index "
-        "constraint.";
+        "GH variables: 'SpacetimeMetric', 'Pi', and 'Phi'. These variables are "
+        "used to set the initial data directly; If the option "
+        "'SetPhiFromDerivatives' is true, Phi is then set to the numerical "
+        "derivative of SpacetimeMetric, to enforce the 3-index constraint. "
+        "Otherwise, it's read in from the numeric ID.";
     using options = tags_list;
     using TaggedTuple::TaggedTuple;
+  };
+
+  struct SetPiPhiFromConstraints {
+    using type = bool;
+    static constexpr Options::String help = "Does what it says.";
   };
 
   // Collect all variables that we support loading from volume data files.
@@ -130,11 +137,11 @@ class NumericInitialData : public evolution::initial_data::InitialData {
         "system variables are computed.";
   };
 
-  using options =
-      tmpl::list<importers::OptionTags::FileGlob,
-                 importers::OptionTags::Subgroup,
-                 importers::OptionTags::ObservationValue,
-                 importers::OptionTags::EnableInterpolation, Variables>;
+  using options = tmpl::list<importers::OptionTags::FileGlob,
+                             importers::OptionTags::Subgroup,
+                             importers::OptionTags::ObservationValue,
+                             importers::OptionTags::EnableInterpolation,
+                             SetPiPhiFromConstraints, Variables>;
 
   static constexpr Options::String help =
       "Numeric initial data loaded from volume data files";
@@ -160,7 +167,7 @@ class NumericInitialData : public evolution::initial_data::InitialData {
   NumericInitialData(
       std::string file_glob, std::string subfile_name,
       std::variant<double, importers::ObservationSelector> observation_value,
-      bool enable_interpolation,
+      bool enable_interpolation, bool set_pi_phi_from_constraints,
       std::variant<AdmVars, GhVars> selected_variables);
 
   const importers::ImporterOptions& importer_options() const {
@@ -169,6 +176,10 @@ class NumericInitialData : public evolution::initial_data::InitialData {
 
   const std::variant<AdmVars, GhVars>& selected_variables() const {
     return selected_variables_;
+  }
+
+  bool set_pi_phi_from_constraints() const {
+    return set_pi_phi_from_constraints_;
   }
 
   /*!
@@ -234,8 +245,12 @@ class NumericInitialData : public evolution::initial_data::InitialData {
       *spacetime_metric = std::move(
           get<gr::Tags::SpacetimeMetric<DataVector, 3>>(*numeric_data));
       *pi = std::move(get<Tags::Pi<DataVector, 3>>(*numeric_data));
-      // Set Phi to the numerical spatial derivative of spacetime_metric
-      partial_derivative(phi, *spacetime_metric, mesh, inv_jacobian);
+      if (set_pi_phi_from_constraints_) {
+        // Set Phi to the numerical spatial derivative of spacetime_metric
+        partial_derivative(phi, *spacetime_metric, mesh, inv_jacobian);
+      } else {
+        *phi = get<Tags::Phi<DataVector, 3>>(*numeric_data);
+      }
     } else if (std::holds_alternative<NumericInitialData::AdmVars>(
                    selected_variables_)) {
       // We have loaded ADM variables from the file. Convert to GH variables.
@@ -262,9 +277,16 @@ class NumericInitialData : public evolution::initial_data::InitialData {
                          const NumericInitialData& rhs);
 
  private:
+  bool set_pi_phi_from_constraints_{};
   importers::ImporterOptions importer_options_;
   std::variant<AdmVars, GhVars> selected_variables_{};
 };
+
+namespace Tags {
+struct SetPiPhiFromConstraints : db::SimpleTag {
+  using type = bool;
+};
+}  // namespace Tags
 
 namespace Actions {
 
@@ -280,6 +302,7 @@ namespace Actions {
  * phase.
  */
 struct SetInitialData {
+  using simple_tags = tmpl::list<Tags::SetPiPhiFromConstraints>;
   using const_global_cache_tags =
       tmpl::list<evolution::initial_data::Tags::InitialData>;
 
@@ -310,10 +333,17 @@ struct SetInitialData {
   template <typename DbTagsList, typename Metavariables,
             typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
-      const gsl::not_null<db::DataBox<DbTagsList>*> /*box*/,
+      const gsl::not_null<db::DataBox<DbTagsList>*> box,
       const NumericInitialData& initial_data,
       Parallel::GlobalCache<Metavariables>& cache,
       const ParallelComponent* const /*meta*/) {
+    db::mutate<Tags::SetPiPhiFromConstraints>(
+        [&initial_data](
+            const gsl::not_null<bool*> set_pi_phi_from_constraints) {
+          *set_pi_phi_from_constraints =
+              initial_data.set_pi_phi_from_constraints();
+        },
+        box);
     // Select the subset of the available variables that we want to read from
     // the volume data file
     tuples::tagged_tuple_from_typelist<db::wrap_tags_in<

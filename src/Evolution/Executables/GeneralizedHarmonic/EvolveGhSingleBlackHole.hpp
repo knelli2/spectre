@@ -284,6 +284,7 @@ struct EvolutionMetavars : public GeneralizedHarmonicTemplateBase<3, UseLts> {
             typename control_system::Actions::InitializeMeasurements<
                 control_systems>::simple_tags,
             intrp::Tags::InterpPointInfo<EvolutionMetavars>,
+            gh::Tags::SetPiPhiFromConstraints,
             Tags::ChangeSlabSize::NumberOfExpectedMessages,
             Tags::ChangeSlabSize::NewSlabSize>>>;
   };

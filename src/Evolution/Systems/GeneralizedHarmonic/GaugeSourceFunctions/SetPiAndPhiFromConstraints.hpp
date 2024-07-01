@@ -19,6 +19,7 @@
 #include "Domain/Tags.hpp"
 #include "Domain/TagsTimeDependent.hpp"
 #include "Evolution/Initialization/Tags.hpp"
+#include "Evolution/Systems/GeneralizedHarmonic/Actions/SetInitialData.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/GaugeSourceFunctions/Tags/GaugeCondition.hpp"
 #include "Evolution/Systems/GeneralizedHarmonic/Tags.hpp"
 #include "Utilities/TMPL.hpp"
@@ -27,6 +28,9 @@
 namespace Tags {
 struct Time;
 }  // namespace Tags
+namespace gh::Tags {
+struct SetPiPhiFromConstraints;
+}  // namespace gh::Tags
 /// \endcond
 
 namespace gh::gauges {
@@ -50,7 +54,8 @@ struct SetPiAndPhiFromConstraints {
                  domain::Tags::FunctionsOfTime,
                  domain::Tags::Coordinates<Dim, Frame::ElementLogical>,
                  gr::Tags::SpacetimeMetric<DataVector, Dim>,
-                 gh::gauges::Tags::GaugeCondition>;
+                 gh::gauges::Tags::GaugeCondition,
+                 gh::Tags::SetPiPhiFromConstraints>;
 
   using const_global_cache_tags = tmpl::list<gh::gauges::Tags::GaugeCondition>;
 
@@ -68,6 +73,7 @@ struct SetPiAndPhiFromConstraints {
       const tnsr::I<DataVector, Dim, Frame::ElementLogical>&
           logical_coordinates,
       const tnsr::aa<DataVector, Dim, Frame::Inertial>& spacetime_metric,
-      const gauges::GaugeCondition& gauge_condition);
+      const gauges::GaugeCondition& gauge_condition,
+      bool set_pi_phi_from_constraints);
 };
 }  // namespace gh::gauges

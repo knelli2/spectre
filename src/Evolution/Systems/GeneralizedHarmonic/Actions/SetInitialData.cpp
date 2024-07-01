@@ -3,6 +3,7 @@
 
 #include "Evolution/Systems/GeneralizedHarmonic/Actions/SetInitialData.hpp"
 
+#include <boost/container_hash/hash_fwd.hpp>
 #include <boost/functional/hash.hpp>
 #include <cstddef>
 
@@ -33,8 +34,8 @@ void initial_gh_variables_from_adm(
   // Assemble spacetime metric from 3+1 vars
   gr::spacetime_metric(spacetime_metric, lapse, shift, spatial_metric);
 
-  // Compute Phi from numerical derivative of the spacetime metric so it
-  // satisfies the 3-index constraint
+  // Have to compute Phi from numerical derivative of the spacetime metric.
+  // Other formulas are ugly and I'm lazy
   partial_derivative(phi, *spacetime_metric, mesh, inv_jacobian);
 
   // Compute Pi by choosing dt_lapse = 0 and dt_shift = 0 (for now).
@@ -54,8 +55,10 @@ void initial_gh_variables_from_adm(
 NumericInitialData::NumericInitialData(
     std::string file_glob, std::string subfile_name,
     std::variant<double, importers::ObservationSelector> observation_value,
-    bool enable_interpolation, std::variant<AdmVars, GhVars> selected_variables)
-    : importer_options_(std::move(file_glob), std::move(subfile_name),
+    const bool enable_interpolation, const bool set_pi_phi_from_constraints,
+    std::variant<AdmVars, GhVars> selected_variables)
+    : set_pi_phi_from_constraints_(set_pi_phi_from_constraints),
+      importer_options_(std::move(file_glob), std::move(subfile_name),
                         observation_value, enable_interpolation),
       selected_variables_(std::move(selected_variables)) {}
 
@@ -67,6 +70,7 @@ PUP::able::PUP_ID NumericInitialData::my_PUP_ID = 0;
 size_t NumericInitialData::volume_data_id() const {
   size_t hash = 0;
   boost::hash_combine(hash, pretty_type::get_name<NumericInitialData>());
+  boost::hash_combine(hash, set_pi_phi_from_constraints_);
   boost::hash_combine(hash,
                       get<importers::OptionTags::FileGlob>(importer_options_));
   boost::hash_combine(hash,
@@ -75,12 +79,15 @@ size_t NumericInitialData::volume_data_id() const {
 }
 
 void NumericInitialData::pup(PUP::er& p) {
+  p | set_pi_phi_from_constraints_;
   p | importer_options_;
   p | selected_variables_;
 }
 
 bool operator==(const NumericInitialData& lhs, const NumericInitialData& rhs) {
-  return lhs.importer_options_ == rhs.importer_options_ and
+  return lhs.set_pi_phi_from_constraints_ ==
+             rhs.set_pi_phi_from_constraints_ and
+         lhs.importer_options_ == rhs.importer_options_ and
          lhs.selected_variables_ == rhs.selected_variables_;
 }
 
