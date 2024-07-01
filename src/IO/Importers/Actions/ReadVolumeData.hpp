@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -162,6 +163,7 @@ void verify_inertial_coordinates(
     const tnsr::I<DataVector, Dim, Frame::Inertial>& source_inertial_coords,
     const tnsr::I<DataVector, Dim, Frame::Inertial>& target_inertial_coords,
     const std::string& grid_name) {
+  Parallel::printf("Verifying inertial coordinates on element %s\n", grid_name);
   for (size_t d = 0; d < Dim; ++d) {
     const DataVector& source_coord = source_inertial_coords[d];
     const DataVector& target_coord = target_inertial_coords[d];
