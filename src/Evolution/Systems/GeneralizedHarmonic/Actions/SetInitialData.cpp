@@ -55,9 +55,9 @@ void initial_gh_variables_from_adm(
 NumericInitialData::NumericInitialData(
     std::string file_glob, std::string subfile_name,
     std::variant<double, importers::ObservationSelector> observation_value,
-    const bool enable_interpolation, const bool set_phi_from_derivatives,
+    const bool enable_interpolation, const bool set_pi_phi_from_constraints,
     std::variant<AdmVars, GhVars> selected_variables)
-    : set_phi_from_derivatives_(set_phi_from_derivatives),
+    : set_pi_phi_from_constraints_(set_pi_phi_from_constraints),
       importer_options_(std::move(file_glob), std::move(subfile_name),
                         observation_value, enable_interpolation),
       selected_variables_(std::move(selected_variables)) {}
@@ -70,7 +70,7 @@ PUP::able::PUP_ID NumericInitialData::my_PUP_ID = 0;
 size_t NumericInitialData::volume_data_id() const {
   size_t hash = 0;
   boost::hash_combine(hash, pretty_type::get_name<NumericInitialData>());
-  boost::hash_combine(hash, set_phi_from_derivatives_);
+  boost::hash_combine(hash, set_pi_phi_from_constraints_);
   boost::hash_combine(hash,
                       get<importers::OptionTags::FileGlob>(importer_options_));
   boost::hash_combine(hash,
@@ -79,13 +79,14 @@ size_t NumericInitialData::volume_data_id() const {
 }
 
 void NumericInitialData::pup(PUP::er& p) {
-  p | set_phi_from_derivatives_;
+  p | set_pi_phi_from_constraints_;
   p | importer_options_;
   p | selected_variables_;
 }
 
 bool operator==(const NumericInitialData& lhs, const NumericInitialData& rhs) {
-  return lhs.set_phi_from_derivatives_ == rhs.set_phi_from_derivatives_ and
+  return lhs.set_pi_phi_from_constraints_ ==
+             rhs.set_pi_phi_from_constraints_ and
          lhs.importer_options_ == rhs.importer_options_ and
          lhs.selected_variables_ == rhs.selected_variables_;
 }
