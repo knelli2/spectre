@@ -60,6 +60,8 @@ struct CompletedTemporalIds;
 template <typename TemporalId>
 struct PendingTemporalIds;
 template <typename TemporalId>
+struct SentPoints;
+template <typename TemporalId>
 struct TemporalIds;
 }  // namespace Tags
 namespace TargetPoints {
@@ -263,12 +265,14 @@ void clean_up_interpolation_target(
   // clean up data associated with it.
   db::mutate<Tags::TemporalIds<TemporalId>,
              Tags::CompletedTemporalIds<TemporalId>,
+             Tags::SentPoints<TemporalId>,
              Tags::IndicesOfFilledInterpPoints<TemporalId>,
              Tags::IndicesOfInvalidInterpPoints<TemporalId>,
              Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>>(
       [&temporal_id](
           const gsl::not_null<std::deque<TemporalId>*> ids,
           const gsl::not_null<std::deque<TemporalId>*> completed_ids,
+          const gsl::not_null<std::unordered_set<TemporalId>*> sent_points,
           const gsl::not_null<
               std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
               indices_of_filled,
@@ -294,6 +298,7 @@ void clean_up_interpolation_target(
         if (completed_ids->size() > 1000) {
           completed_ids->pop_front();
         }
+        sent_points->erase(temporal_id);
         indices_of_filled->erase(temporal_id);
         indices_of_invalid->erase(temporal_id);
         interpolated_vars->erase(temporal_id);
@@ -396,9 +401,8 @@ std::vector<TemporalId> flag_temporal_ids_for_interpolation(
 /// Currently one Action calls flag_temporal_ids_as_pending:
 /// - AddTemporalIdsToInterpolationTarget (called by Events::Interpolate)
 template <typename InterpolationTargetTag, typename DbTags, typename TemporalId>
-std::vector<TemporalId> flag_temporal_ids_as_pending(
-    const gsl::not_null<db::DataBox<DbTags>*> box,
-    const std::vector<TemporalId>& temporal_ids) {
+void flag_temporal_id_as_pending(const gsl::not_null<db::DataBox<DbTags>*> box,
+                                 const TemporalId& temporal_id) {
   // We allow this function to be called multiple times with the same
   // temporal_ids (e.g. from each element, or from each node of a
   // NodeGroup ParallelComponent such as Interpolator). If multiple
@@ -412,29 +416,28 @@ std::vector<TemporalId> flag_temporal_ids_as_pending(
   // temporal_ids that we have already completed interpolation on.  So
   // here we do not add any temporal_ids that are already present in
   // `ids` or `completed_ids`.
-  std::vector<TemporalId> new_temporal_ids{};
 
   db::mutate_apply<tmpl::list<Tags::PendingTemporalIds<TemporalId>>,
                    tmpl::list<Tags::TemporalIds<TemporalId>,
                               Tags::CompletedTemporalIds<TemporalId>>>(
-      [&temporal_ids, &new_temporal_ids](
-          const gsl::not_null<std::deque<TemporalId>*> pending_ids,
-          const std::deque<TemporalId>& ids,
-          const std::deque<TemporalId>& completed_ids) {
-        for (auto& id : temporal_ids) {
-          if (std::find(completed_ids.begin(), completed_ids.end(), id) ==
-                  completed_ids.end() and
-              std::find(ids.begin(), ids.end(), id) == ids.end() and
-              std::find(pending_ids->begin(), pending_ids->end(), id) ==
-                  pending_ids->end()) {
-            pending_ids->push_back(id);
-            new_temporal_ids.push_back(id);
-          }
+      [&temporal_id](const gsl::not_null<std::deque<TemporalId>*> pending_ids,
+                     const std::deque<TemporalId>& ids,
+                     const std::deque<TemporalId>& completed_ids) {
+        if (std::find(completed_ids.begin(), completed_ids.end(),
+                      temporal_id) == completed_ids.end() and
+            std::find(ids.begin(), ids.end(), temporal_id) == ids.end() and
+            std::find(pending_ids->begin(), pending_ids->end(), temporal_id) ==
+                pending_ids->end()) {
+          pending_ids->push_back(temporal_id);
+        }
+
+        // If there are multiple pending IDs, we always want the "oldest" one
+        // first because that is what will need to be checked first.
+        if constexpr (std::is_same_v<TemporalId, LinkedMessageId<double>>) {
+          alg::sort(*pending_ids);
         }
       },
       box);
-
-  return new_temporal_ids;
 }
 
 /// Adds the supplied interpolated variables and offsets to the
@@ -616,7 +619,8 @@ void set_up_interpolation(
     const std::vector<BlockLogicalCoords<VolumeDim>>& block_logical_coords) {
   db::mutate<Tags::IndicesOfFilledInterpPoints<TemporalId>,
              Tags::IndicesOfInvalidInterpPoints<TemporalId>,
-             Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>>(
+             Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>,
+             Tags::SentPoints<TemporalId>>(
       [&block_logical_coords, &temporal_id](
           const gsl::not_null<
               std::unordered_map<TemporalId, std::unordered_set<size_t>>*>
@@ -627,7 +631,9 @@ void set_up_interpolation(
           const gsl::not_null<std::unordered_map<
               TemporalId, Variables<typename InterpolationTargetTag::
                                         vars_to_interpolate_to_target>>*>
-              vars_dest_all_times) {
+              vars_dest_all_times,
+          const gsl::not_null<std::unordered_set<TemporalId>*> sent_points) {
+        sent_points->insert(temporal_id);
         // Because we are sending new points to the interpolator,
         // we know that none of these points have been interpolated to,
         // so clear the list.

@@ -94,6 +94,11 @@ struct PendingTemporalIds : db::SimpleTag {
   using type = std::deque<TemporalId>;
 };
 
+template <typename TemporalId>
+struct SentPoints : db::SimpleTag {
+  using type = std::unordered_set<TemporalId>;
+};
+
 /// `temporal_id`s on which to interpolate.
 template <typename TemporalId>
 struct TemporalIds : db::SimpleTag {

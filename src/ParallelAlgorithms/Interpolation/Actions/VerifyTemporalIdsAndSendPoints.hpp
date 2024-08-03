@@ -212,23 +212,32 @@ void verify_temporal_ids_and_send_points_time_dependent(
   if (InterpolationTargetTag::compute_target_points::is_sequential::value) {
     // Sequential: start interpolation only for the first new_temporal_id.
     if (not new_temporal_ids.empty()) {
-      auto& my_proxy =
-          Parallel::get_parallel_component<ParallelComponent>(cache);
-      Parallel::simple_action<
-          Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
-          my_proxy, new_temporal_ids.front());
+      // auto& my_proxy =
+      //     Parallel::get_parallel_component<ParallelComponent>(cache);
+
+      // Just call directly
+      Actions::SendPointsToInterpolator<InterpolationTargetTag>::template apply<
+          ParallelComponent>(*box, cache, array_index,
+                             new_temporal_ids.front());
+      // Parallel::simple_action<
+      //     Actions::SendPointsToInterpolator<InterpolationTargetTag>>(
+      //     my_proxy, new_temporal_ids.front());
     }
   } else {
     // Non-sequential: start interpolation for all new_temporal_ids.
     auto& my_proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
     for (const auto& id : new_temporal_ids) {
-      Parallel::simple_action<
-          Actions::SendPointsToInterpolator<InterpolationTargetTag>>(my_proxy,
-                                                                     id);
+      // Parallel::simple_action<
+      //   Actions::SendPointsToInterpolator<InterpolationTargetTag>>(my_proxy,
+      //                                                                id);
+      // Just call directly
+      Actions::SendPointsToInterpolator<InterpolationTargetTag>::template apply<
+          ParallelComponent>(*box, cache, array_index, id);
     }
     // If there are still pending temporal_ids, call
     // VerifyTemporalIdsAndSendPoints again, so that those pending
     // temporal_ids can be waited for.
+    // This must be an async call
     if (not db::get<Tags::PendingTemporalIds<TemporalId>>(*box).empty()) {
       Parallel::simple_action<
           VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>>(my_proxy);

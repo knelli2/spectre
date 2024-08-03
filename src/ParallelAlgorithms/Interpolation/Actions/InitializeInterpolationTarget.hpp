@@ -71,7 +71,7 @@ struct InitializeInterpolationTarget {
       Tags::IndicesOfFilledInterpPoints<TemporalId>,
       Tags::IndicesOfInvalidInterpPoints<TemporalId>,
       Tags::PendingTemporalIds<TemporalId>, Tags::TemporalIds<TemporalId>,
-      Tags::CompletedTemporalIds<TemporalId>,
+      Tags::SentPoints<TemporalId>, Tags::CompletedTemporalIds<TemporalId>,
       Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>,
       ::Tags::Variables<
           typename InterpolationTargetTag::vars_to_interpolate_to_target>>;
