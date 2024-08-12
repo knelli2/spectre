@@ -147,6 +147,19 @@ struct WriteDataToDisk {
 
 /// \ingroup OptionTagsGroup
 /// \ingroup ControlSystemGroup
+/// Option tag specifying if we should apply a time offset to the control error
+/// and its derivatives to the expiration time if `true` or to the time the
+/// update was calculated `false`
+struct OffsetToExpirationTime {
+  using type = bool;
+  static constexpr Options::String help = {
+      "Apply a time offset for control error and derivs to the expiration time "
+      "(true) or time update was calculated (false)"};
+  using group = ControlSystemGroup;
+};
+
+/// \ingroup OptionTagsGroup
+/// \ingroup ControlSystemGroup
 /// Option tag that determines how many measurements will occur per control
 /// system update.
 struct MeasurementsPerUpdate {
