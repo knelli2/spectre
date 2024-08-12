@@ -207,7 +207,10 @@ struct UpdateControlSystem {
 
     // Begin step 6
     const double time_offset =
-        averager.last_time_updated() - averager.average_time(time);
+        (Parallel::get<control_system::Tags::OffsetToExpirationTime>(cache)
+             ? function_of_time->time_bounds()[1]
+             : averager.last_time_updated()) -
+        averager.average_time(time);
     const double time_offset_0th =
         averager.using_average_0th_deriv_of_q() ? time_offset : 0.0;
 

@@ -46,6 +46,7 @@ struct get_center_tags<domain::object_list<>> {
  * - Uses:
  *   - `control_system::Tags::MeasurementTimescales`
  *   - `control_system::Tags::WriteDataToDisk`
+ *   - `control_system::Tags::OffsetToExpirationTime`
  *   - `control_system::Tags::ObserveCenters`
  *   - `control_system::Tags::Verbosity`
  *   - `control_system::Tags::IsActiveMap`
@@ -87,6 +88,7 @@ struct Initialize {
       control_system::Tags::SystemToCombinedNames,
       control_system::Tags::MeasurementsPerUpdate,
       control_system::Tags::WriteDataToDisk,
+      control_system::Tags::OffsetToExpirationTime,
       control_system::Tags::ObserveCenters, control_system::Tags::Verbosity,
       control_system::Tags::IsActiveMap,
       typename detail::get_center_tags<
