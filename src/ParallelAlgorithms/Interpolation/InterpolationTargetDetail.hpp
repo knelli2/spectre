@@ -431,34 +431,53 @@ void flag_temporal_id_as_pending(const gsl::not_null<db::DataBox<DbTags>*> box,
               // Do nothing
               return;
             } else {
+              const auto print_pending = [&](const std::string& pending_str) {
+                Parallel::printf(
+                    "%s: Adding %s to %s\n"
+                    " Pending: %s\n"
+                    " Pending pending: %s\n",
+                    pretty_type::name<InterpolationTargetTag>(), temporal_id,
+                    pending_str, *pending_ids, *pending_pending_ids);
+              };
               // Cases:
-              // 1. Completed ids is empty, this id is the first. -> 1p
-              // 2. Completed ids is empty, this id is not first. -> 2p
-              // 3. Completed ids is not empty, this id is next. -> 1p
-              // 4. Completed ids is not empty, this id is not next -> 2p
-              if ((completed_ids.empty() and
-                   not temporal_id.previous.has_value()) or
-                  (not completed_ids.empty() and
-                   temporal_id.previous.value() == completed_ids.back().id)) {
-                pending_ids->push_back(temporal_id);
-                Parallel::printf(
-                    "%s: Adding %s to pending\n"
-                    " Pending: %s\n"
-                    " Pending pending: %s\n",
-                    pretty_type::name<InterpolationTargetTag>(), temporal_id,
-                    *pending_ids, *pending_pending_ids);
-              } else if ((completed_ids.empty() and
-                          temporal_id.previous.has_value()) or
-                         (not completed_ids.empty() and
-                          temporal_id.previous.value() !=
-                              completed_ids.back().id)) {
-                pending_pending_ids->push_back(temporal_id);
-                Parallel::printf(
-                    "%s: Adding %s to pending pending\n"
-                    " Pending: %s\n"
-                    " Pending pending: %s\n",
-                    pretty_type::name<InterpolationTargetTag>(), temporal_id,
-                    *pending_ids, *pending_pending_ids);
+              // a) Pending ids not empty (this is not the first id)
+              //  1. This id is next -> 1p
+              //  2. This id is not next -> 2p
+              //
+              // b) Pending ids empty
+              //  1. Completed ids is empty, this id is the first. -> 1p
+              //  2. Completed ids is empty, this id is not first. -> 2p
+              //  3. Completed ids is not empty, this id is next. -> 1p
+              //  4. Completed ids is not empty, this id is not next -> 2p
+              //
+              // Check a) first, then b) so we only use pending pending if we
+              // need to
+              if (pending_ids->empty()) {
+                if ((completed_ids.empty() and
+                     not temporal_id.previous.has_value()) or
+                    (not completed_ids.empty() and
+                     temporal_id.previous.value() == completed_ids.back().id)) {
+                  pending_ids->push_back(temporal_id);
+                  print_pending("pending (pending empty)");
+                } else if ((completed_ids.empty() and
+                            temporal_id.previous.has_value()) or
+                           (not completed_ids.empty() and
+                            temporal_id.previous.value() !=
+                                completed_ids.back().id)) {
+                  pending_pending_ids->push_back(temporal_id);
+                  print_pending("pending pending (pending empty)");
+                }
+              } else {
+                ASSERT(temporal_id.previous.has_value(),
+                       "If pending ids isn't empty, then this can't be the "
+                       "first id.");
+                if (temporal_id.previous.value() == pending_ids->back().id) {
+                  pending_ids->push_back(temporal_id);
+                  print_pending("pending (pending not empty)");
+                } else {
+                  pending_pending_ids->push_back(temporal_id);
+                  print_pending("pending pending (pending not empty)");
+                }
               }
             }
           } else {
