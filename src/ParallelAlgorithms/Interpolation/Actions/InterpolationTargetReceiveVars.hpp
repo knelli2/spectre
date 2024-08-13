@@ -6,11 +6,13 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "DataStructures/DataBox/DataBox.hpp"
+#include "DataStructures/LinkedMessageId.hpp"
 #include "DataStructures/VariablesTag.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
@@ -18,6 +20,7 @@
 #include "ParallelAlgorithms/Interpolation/Actions/SendPointsToInterpolator.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/VerifyTemporalIdsAndSendPoints.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Literals.hpp"
 #include "Utilities/Requires.hpp"
@@ -181,6 +184,40 @@ struct InterpolationTargetReceiveVars {
             // Call directly
             Actions::VerifyTemporalIdsAndSendPoints<InterpolationTargetTag>::
                 template apply<ParallelComponent>(box, cache, array_index);
+          } else if (not db::get<Tags::PendingPendingTemporalIds<TemporalId>>(
+                             box)
+                             .empty()) {
+            if constexpr (std::is_same_v<TemporalId, LinkedMessageId<double>>) {
+              bool send_points = false;
+              db::mutate<Tags::PendingTemporalIds<TemporalId>,
+                         Tags::PendingPendingTemporalIds<TemporalId>>(
+                  [&](const gsl::not_null<std::deque<TemporalId>*> pending_ids,
+                      const gsl::not_null<std::deque<TemporalId>*>
+                          pending_pending_ids) {
+                    const auto& most_recent_completed_id = completed_ids.back();
+                    const auto& next_pending_pending_id =
+                        pending_pending_ids->front();
+
+                    if (next_pending_pending_id.previous.value() ==
+                        most_recent_completed_id.id) {
+                      Parallel::printf(
+                          "%s: Moving %s from pending pending to pending and "
+                          "sending points\n",
+                          pretty_type::name<InterpolationTargetTag>(),
+                          next_pending_pending_id);
+                      send_points = true;
+                      pending_ids->push_back(next_pending_pending_id);
+                      pending_pending_ids->pop_front();
+                    }
+                  },
+                  make_not_null(&box));
+
+              if (send_points) {
+                Actions::VerifyTemporalIdsAndSendPoints<
+                    InterpolationTargetTag>::
+                    template apply<ParallelComponent>(box, cache, array_index);
+              }
+            }
           }
         }
       }

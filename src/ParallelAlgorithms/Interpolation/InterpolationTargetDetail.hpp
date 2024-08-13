@@ -22,6 +22,7 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "ParallelAlgorithms/Interpolation/TagsMetafunctions.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
@@ -411,19 +412,62 @@ void flag_temporal_id_as_pending(const gsl::not_null<db::DataBox<DbTags>*> box,
   // temporal_ids that we have already completed interpolation on.  So
   // here we do not add any temporal_ids that are already present in
   // `ids` or `completed_ids`.
-  db::mutate_apply<tmpl::list<Tags::PendingTemporalIds<TemporalId>>,
+  db::mutate_apply<tmpl::list<Tags::PendingTemporalIds<TemporalId>,
+                              Tags::PendingPendingTemporalIds<TemporalId>>,
                    tmpl::list<Tags::TemporalIds<TemporalId>,
                               Tags::CompletedTemporalIds<TemporalId>>>(
-      [&temporal_id](const gsl::not_null<std::deque<TemporalId>*> pending_ids,
-                     const std::deque<TemporalId>& ids,
-                     const std::deque<TemporalId>& completed_ids) {
+      [&temporal_id](
+          const gsl::not_null<std::deque<TemporalId>*> pending_ids,
+          const gsl::not_null<std::deque<TemporalId>*> pending_pending_ids,
+          const std::deque<TemporalId>& ids,
+          const std::deque<TemporalId>& completed_ids) {
         if (std::find(completed_ids.begin(), completed_ids.end(),
                       temporal_id) == completed_ids.end() and
             std::find(ids.begin(), ids.end(), temporal_id) == ids.end() and
             std::find(pending_ids->begin(), pending_ids->end(), temporal_id) ==
                 pending_ids->end()) {
-          pending_ids->push_back(temporal_id);
+          if constexpr (std::is_same_v<TemporalId, LinkedMessageId<double>>) {
+            if (alg::found(*pending_pending_ids, temporal_id)) {
+              // Do nothing
+              return;
+            } else {
+              // Cases:
+              // 1. Completed ids is empty, this id is the first. -> 1p
+              // 2. Completed ids is empty, this id is not first. -> 2p
+              // 3. Completed ids is not empty, this id is next. -> 1p
+              // 4. Completed ids is not empty, this id is not next -> 2p
+              if ((completed_ids.empty() and
+                   not temporal_id.previous.has_value()) or
+                  (not completed_ids.empty() and
+                   temporal_id.previous.value() == completed_ids.back().id)) {
+                pending_ids->push_back(temporal_id);
+                Parallel::printf(
+                    "%s: Adding %s to pending\n"
+                    " Pending: %s\n"
+                    " Pending pending: %s\n",
+                    pretty_type::name<InterpolationTargetTag>(), temporal_id,
+                    *pending_ids, *pending_pending_ids);
+              } else if ((completed_ids.empty() and
+                          temporal_id.previous.has_value()) or
+                         (not completed_ids.empty() and
+                          temporal_id.previous.value() !=
+                              completed_ids.back().id)) {
+                pending_pending_ids->push_back(temporal_id);
+                Parallel::printf(
+                    "%s: Adding %s to pending pending\n"
+                    " Pending: %s\n"
+                    " Pending pending: %s\n",
+                    pretty_type::name<InterpolationTargetTag>(), temporal_id,
+                    *pending_ids, *pending_pending_ids);
+              }
+            }
+          } else {
+            pending_ids->push_back(temporal_id);
+          }
         }
+
+        alg::sort(*pending_ids);
+        alg::sort(*pending_pending_ids);
       },
       box);
 }
