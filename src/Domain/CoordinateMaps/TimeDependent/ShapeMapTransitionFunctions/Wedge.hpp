@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <pup.h>
 
 #include "DataStructures/DataVector.hpp"
@@ -121,21 +122,38 @@ namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
  */
 class Wedge final : public ShapeMapTransitionFunction {
   struct Surface {
+    std::array<double, 3> center{};
     double radius{};
     double sphericity{};
+    double half_cube_length{};
 
-    // This is the distance from the center (assumed to be 0,0,0) to this
-    // surface in the same direction as coords. The calculation is cheaper if
-    // you know the axis ahead of time
-    template <typename T>
-    T distance(const std::array<T, 3>& coords,
-               const std::optional<size_t>& axis = std::nullopt) const;
+    Surface() = default;
+    Surface(const std::array<double, 3>& center_in, double radius_in,
+            double sphericity_in);
 
     void pup(PUP::er& p);
-
-    bool operator==(const Surface& other) const;
-    bool operator!=(const Surface& other) const;
   };
+
+ public:
+  /*!
+   * \brief Class to represent the direction of the wedge relative to the outer
+   * center.
+   */
+  enum class Axis : int {
+    PlusZ = 3,
+    MinusZ = -3,
+    PlusY = 2,
+    MinusY = -2,
+    PlusX = 1,
+    MinusX = -1,
+    None = 0
+  };
+
+  friend std::ostream& operator<<(std::ostream& os, Axis axis);
+
+ private:
+  static size_t axis_index(Axis axis);
+  static double axis_sgn(Axis axis);
 
  public:
   explicit Wedge() = default;
@@ -147,15 +165,20 @@ class Wedge final : public ShapeMapTransitionFunction {
    * the inner boundary of the innermost wedge, to 0 at the outer boundary of
    * the outermost wedge.
    *
+   * \note If \p inner_center and \p outer_center are different, then
+   * \p inner_sphericity must be 1.0.
+   *
+   * \param inner_center Center of the inner surface
    * \param inner_radius Inner radius of innermost wedge
-   * \param outer_radius Outermost radius of outermost wedge
    * \param inner_sphericity Sphericity of innermost surface of innermost wedge
+   * \param outer_center Center of the outer surface
+   * \param outer_radius Outermost radius of outermost wedge
    * \param outer_sphericity Sphericity of outermost surface of outermost wedge
-   * \param axis The direction that this wedge is in. Both the positive and
-   * negative direction get the same axis.
+   * \param axis The direction that this wedge is in.
    */
-  Wedge(double inner_radius, double outer_radius, double inner_sphericity,
-        double outer_sphericity, size_t axis);
+  Wedge(const std::array<double, 3>& inner_center, double inner_radius,
+        double inner_sphericity, const std::array<double, 3>& outer_center,
+        double outer_radius, double outer_sphericity, Axis axis);
 
   double operator()(const std::array<double, 3>& source_coords) const override;
   DataVector operator()(
@@ -188,12 +211,50 @@ class Wedge final : public ShapeMapTransitionFunction {
   template <typename T>
   std::array<T, 3> gradient_impl(const std::array<T, 3>& source_coords) const;
 
+  // This is x_0 - P in the docs
   template <typename T>
-  void check_distances(const std::array<T, 3>& coords) const;
+  std::array<T, 3> compute_inner_surface_vector(
+      const std::array<T, 3>& centered_coords,
+      const T& centered_coords_magnitude,
+      const std::optional<Axis>& potential_axis) const;
+
+  // This is x_1 - P in the docs
+  template <typename T>
+  std::array<T, 3> compute_outer_surface_vector(
+      const std::array<T, 3>& centered_coords, const T& lambda) const;
+
+  template <typename T>
+  T lambda_cube(const std::array<T, 3>& centered_coords,
+                const std::optional<Axis>& potential_axis) const;
+
+  template <typename T>
+  T lambda_sphere(const std::array<T, 3>& centered_coords,
+                  const T& centered_coords_magnitude) const;
+
+  template <typename T>
+  T compute_lambda(const std::array<T, 3>& centered_coords,
+                   const T& centered_coords_magnitude,
+                   const std::optional<Axis>& potential_axis) const;
+
+  template <typename T>
+  std::array<T, 3> lambda_cube_gradient(
+      const T& lambda_cube, const std::array<T, 3>& centered_coords) const;
+
+  template <typename T>
+  std::array<T, 3> lambda_sphere_gradient(
+      const T& lambda_sphere, const std::array<T, 3>& centered_coords,
+      const T& centered_coords_magnitude) const;
+
+  template <typename T>
+  std::array<T, 3> compute_lambda_gradient(
+      const std::array<T, 3>& centered_coords,
+      const T& centered_coords_magnitude) const;
 
   Surface inner_surface_{};
   Surface outer_surface_{};
-  size_t axis_{};
+  std::array<double, 3> projection_center_{};
+  Axis axis_{};
+
   static constexpr double eps_ = std::numeric_limits<double>::epsilon() * 100;
 };
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions
