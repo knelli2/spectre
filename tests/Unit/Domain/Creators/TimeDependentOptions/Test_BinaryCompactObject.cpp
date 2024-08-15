@@ -325,9 +325,10 @@ void test(const bool include_expansion, const bool include_rotation,
     const auto build_maps = [&time_dep_options, &centers, &inner_outer_radii_A,
                              &inner_outer_radii_B, &domain_envelope_radius,
                              &domain_outer_radius]() {
-      time_dep_options.build_maps(centers, inner_outer_radii_A,
-                                  inner_outer_radii_B, domain_envelope_radius,
-                                  domain_outer_radius);
+      // TODO: Update the nullopts to be offset centers
+      time_dep_options.build_maps(centers, std::nullopt, std::nullopt,
+                                  inner_outer_radii_A, inner_outer_radii_B,
+                                  domain_envelope_radius, domain_outer_radius);
     };
 
     // If we have excision info, but didn't specify shape map options, we
@@ -583,7 +584,7 @@ void test_errors() {
             ShapeMapBOptions<IsCylindrical>{8, {}}};
         time_dep_opts.build_maps(
             std::array{std::array{0.0, 0.0, 0.0}, std::array{0.0, 0.0, 0.0}},
-            radii, std::nullopt, 25.0, 100.0);
+            std::nullopt, std::nullopt, radii, std::nullopt, 25.0, 100.0);
       }()),
       Catch::Matchers::ContainsSubstring(
           "Trying to build the shape map for object " +
@@ -599,7 +600,7 @@ void test_errors() {
             std::nullopt};
         time_dep_opts.build_maps(
             std::array{std::array{0.0, 0.0, 0.0}, std::array{0.0, 0.0, 0.0}},
-            radii, radii, 25.0, 100.0);
+            std::nullopt, std::nullopt, radii, radii, 25.0, 100.0);
       }()),
       Catch::Matchers::ContainsSubstring(
           "Trying to build the shape map for object " +

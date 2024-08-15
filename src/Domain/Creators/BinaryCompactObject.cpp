@@ -351,10 +351,21 @@ BinaryCompactObject::BinaryCompactObject(
   }
 
   if (time_dependent_options_.has_value()) {
+    // The reason we don't just always use half the inner cube length is to
+    // avoid potential roundoff issues if there is no offset
+    const std::optional<std::array<double, 3>> cube_A_center =
+        length_inner_cube_ == x_coord_a_ - x_coord_b_
+            ? std::optional<std::array<double, 3>>{}
+            : std::array{0.5 * length_inner_cube_, 0.0, 0.0};
+    const std::optional<std::array<double, 3>> cube_B_center =
+        length_inner_cube_ == x_coord_a_ - x_coord_b_
+            ? std::optional<std::array<double, 3>>{}
+            : std::array{-0.5 * length_inner_cube_, 0.0, 0.0};
     time_dependent_options_->build_maps(
         std::array{std::array{x_coord_a_ + offset_x_coord_a_, 0.0, 0.0},
                    std::array{x_coord_b_ + offset_x_coord_b_, 0.0, 0.0}},
-        radii_A, radii_B, envelope_radius_, outer_radius_);
+        cube_A_center, cube_B_center, radii_A, radii_B, envelope_radius_,
+        outer_radius_);
   }
 }
 
