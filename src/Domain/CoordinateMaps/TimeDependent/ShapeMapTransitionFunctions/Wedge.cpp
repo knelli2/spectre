@@ -139,9 +139,21 @@ T Wedge::lambda_cube(const std::array<T, 3>& centered_coords,
                      const std::optional<Axis>& potential_axis) const {
   const auto lambda_axis = [&centered_coords, this](const Axis axis) -> T {
     const size_t axis_idx = axis_index(axis);
-    const T result = (axis_sgn(axis) * outer_surface_.half_cube_length -
-                      gsl::at(projection_center_, axis_idx)) /
-                     gsl::at(centered_coords, axis_idx);
+    const double factor = (axis_sgn(axis) * outer_surface_.half_cube_length -
+                           gsl::at(projection_center_, axis_idx));
+    // Avoid dividing by zero. If a coordinate is zero, then that point can't
+    // exist in the wedge whose coordinate is zero. Since we take the min of all
+    // positive lambdas to find the correct one, we overwrite this lambda with
+    // -max so it'll never be chosen
+    T result = make_with_value<T>(centered_coords[0], 0.0);
+    for (size_t i = 0; i < get_size(result); i++) {
+      if (get_element(gsl::at(centered_coords, axis_idx), i) == 0.0) {
+        get_element(result, i) = -std::numeric_limits<double>::max();
+      } else {
+        get_element(result, i) =
+            factor / get_element(gsl::at(centered_coords, axis_idx), i);
+      }
+    }
     // Parallel::printf(
     //     "lambda cube:\n"
     //     " axis: %s\n"
