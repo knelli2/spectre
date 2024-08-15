@@ -362,8 +362,8 @@ BinaryCompactObject::BinaryCompactObject(
             ? std::optional<std::array<double, 3>>{}
             : std::array{-0.5 * length_inner_cube_, 0.0, 0.0};
     time_dependent_options_->build_maps(
-        std::array{std::array{x_coord_a_ + offset_x_coord_a_, 0.0, 0.0},
-                   std::array{x_coord_b_ + offset_x_coord_b_, 0.0, 0.0}},
+        std::array{std::array{x_coord_a_, 0.0, 0.0},
+                   std::array{x_coord_b_, 0.0, 0.0}},
         cube_A_center, cube_B_center, radii_A, radii_B, envelope_radius_,
         outer_radius_);
   }
