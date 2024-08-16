@@ -253,12 +253,14 @@ struct UpdateControlSystem {
     // Calculate the next expiration times for both the functions of time and
     // the measurement timescales based on the current time. Then, actually
     // update the functions of time and measurement timescales
+    const double fraction =
+        db::get<Tags::AskKyleAboutThisFraction<ControlSystem>>(*box);
     const double new_fot_expiration_time = function_of_time_expiration_time(
-        time, old_measurement_timescale, new_measurement_timescale,
+        time, fraction, old_measurement_timescale, new_measurement_timescale,
         measurements_per_update);
 
     const double new_measurement_expiration_time = measurement_expiration_time(
-        time, old_measurement_timescale, new_measurement_timescale,
+        time, fraction, old_measurement_timescale, new_measurement_timescale,
         measurements_per_update);
 
     if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
