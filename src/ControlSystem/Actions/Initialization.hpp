@@ -75,6 +75,7 @@ struct Initialize {
 
   using simple_tags_from_options =
       tmpl::list<control_system::Tags::Averager<ControlSystem>,
+                 control_system::Tags::AskKyleAboutThisFraction<ControlSystem>,
                  control_system::Tags::Controller<ControlSystem>,
                  control_system::Tags::TimescaleTuner<ControlSystem>,
                  control_system::Tags::ControlError<ControlSystem>>;

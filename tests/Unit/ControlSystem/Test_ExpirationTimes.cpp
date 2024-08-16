@@ -75,11 +75,11 @@ void test_expiration_time_construction() {
   const Controller<2> controller(update_fraction);
   const control_system::TestHelpers::ControlError<1> control_error{};
 
-  OptionHolder<1> option_holder1(true, averager, controller, tuner1,
+  OptionHolder<1> option_holder1(true, 1.0, averager, controller, tuner1,
                                  control_error);
-  OptionHolder<2> option_holder2(true, averager, controller, tuner2,
+  OptionHolder<2> option_holder2(true, 1.0, averager, controller, tuner2,
                                  control_error);
-  OptionHolder<3> option_holder3(false, averager, controller, tuner1,
+  OptionHolder<3> option_holder3(false, 1.0, averager, controller, tuner1,
                                  control_error);
 
   using FakeCreator = control_system::TestHelpers::FakeCreator;
@@ -118,7 +118,7 @@ void test_expiration_time_construction() {
             {FakeControlSystem<1>::name(),
              // This is ok to use here because we test it below
              control_system::function_of_time_expiration_time(
-                 initial_time, DataVector{0.0},
+                 initial_time, 1.0, DataVector{0.0},
                  control_system::calculate_measurement_timescales(
                      controller, tuner1, measurements_per_update),
                  measurements_per_update)}};
@@ -140,7 +140,7 @@ void test_expiration_time_construction() {
                      controller, tuner2, measurements_per_update)));
     const double min_expiration_time =
         control_system::function_of_time_expiration_time(
-            initial_time, DataVector{0.0},
+            initial_time, 1.0, DataVector{0.0},
             DataVector{min_measurement_timescale}, measurements_per_update);
 
     const std::unordered_map<std::string, double>
@@ -163,7 +163,7 @@ void test_fot_measurement_expr_time() {
   const int measurements_per_update = 3;
 
   const double fot_expr_time = control_system::function_of_time_expiration_time(
-      time, old_measurement_timescales, new_measurement_timescales,
+      time, 1.0, old_measurement_timescales, new_measurement_timescales,
       measurements_per_update);
   const double expected_fot_expr_time =
       time + min(old_measurement_timescales) +
@@ -173,7 +173,7 @@ void test_fot_measurement_expr_time() {
 
   const double measurement_expr_time =
       control_system::measurement_expiration_time(
-          time, old_measurement_timescales, new_measurement_timescales,
+          time, 1.0, old_measurement_timescales, new_measurement_timescales,
           measurements_per_update);
   const double expected_measurement_expr_time =
       time + min(old_measurement_timescales) +

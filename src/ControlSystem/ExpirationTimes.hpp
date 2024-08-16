@@ -51,7 +51,8 @@ namespace control_system {
  * functions of time have been updated.
  */
 double function_of_time_expiration_time(
-    const double time, const DataVector& old_measurement_timescales,
+    const double time, double fraction,
+    const DataVector& old_measurement_timescales,
     const DataVector& new_measurement_timescales,
     const int measurements_per_update);
 
@@ -84,7 +85,7 @@ double function_of_time_expiration_time(
  * just to guarantee we are more than epsilon before the function of time
  * expiration time and more than epsilon after the update measurement.
  */
-double measurement_expiration_time(const double time,
+double measurement_expiration_time(const double time, double fraction,
                                    const DataVector& old_measurement_timescales,
                                    const DataVector& new_measurement_timescales,
                                    const int measurements_per_update);
@@ -164,7 +165,7 @@ std::unordered_map<std::string, double> initial_expiration_times(
         const double min_measurement_timescale = min(measurement_timescales);
 
         double initial_expiration_time = function_of_time_expiration_time(
-            initial_time, DataVector{1, 0.0},
+            initial_time, option_holder.fraction, DataVector{1, 0.0},
             DataVector{1, min_measurement_timescale}, measurements_per_update);
         initial_expiration_time = option_holder.is_active
                                       ? initial_expiration_time

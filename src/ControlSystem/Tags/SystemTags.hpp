@@ -89,6 +89,19 @@ struct ObserveCenters : ::ah::Tags::ObserveCentersBase, db::SimpleTag {
   static type create_from_options(const type& option) { return option; }
 };
 
+template <typename ControlSystem>
+struct AskKyleAboutThisFraction : db::SimpleTag {
+  using type = double;
+
+  using option_tags =
+      tmpl::list<OptionTags::ControlSystemInputs<ControlSystem>>;
+  static constexpr bool pass_metavariables = false;
+  static type create_from_options(
+      const control_system::OptionHolder<ControlSystem>& option_holder) {
+    return option_holder.fraction;
+  }
+};
+
 /// \ingroup DataBoxTagsGroup
 /// \ingroup ControlSystemGroup
 /// DataBox tag for the averager

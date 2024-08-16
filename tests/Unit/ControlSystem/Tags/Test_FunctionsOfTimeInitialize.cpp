@@ -217,11 +217,11 @@ void test_functions_of_time_tag() {
   const Controller<2> controller(update_fraction);
   const control_system::TestHelpers::ControlError<1> control_error{};
 
-  OptionHolder<1> option_holder1(false, averager, controller, tuner1,
+  OptionHolder<1> option_holder1(false, 1.0, averager, controller, tuner1,
                                  control_error);
-  OptionHolder<2> option_holder2(true, averager, controller, tuner1,
+  OptionHolder<2> option_holder2(true, 1.0, averager, controller, tuner1,
                                  control_error);
-  OptionHolder<3> option_holder3(true, averager, controller, tuner2,
+  OptionHolder<3> option_holder3(true, 1.0, averager, controller, tuner2,
                                  control_error);
 
   // First test construction with only control systems
@@ -288,13 +288,13 @@ void not_controlling(const bool is_active) {
   const Controller<2> controller(update_fraction);
   const control_system::TestHelpers::ControlError<1> control_error{};
 
-  OptionHolder<1> option_holder1(is_active, averager, controller, tuner,
+  OptionHolder<1> option_holder1(is_active, 1.0, averager, controller, tuner,
                                  control_error);
-  OptionHolder<2> option_holder2(is_active, averager, controller, tuner,
+  OptionHolder<2> option_holder2(is_active, 1.0, averager, controller, tuner,
                                  control_error);
-  OptionHolder<3> option_holder3(is_active, averager, controller, tuner,
+  OptionHolder<3> option_holder3(is_active, 1.0, averager, controller, tuner,
                                  control_error);
-  OptionHolder<4> option_holder4(is_active, averager, controller, tuner,
+  OptionHolder<4> option_holder4(is_active, 1.0, averager, controller, tuner,
                                  control_error);
 
   [[maybe_unused]] fot_tag::type functions_of_time =
@@ -313,11 +313,11 @@ void incompatible(const bool is_active) {
   const Controller<2> controller(update_fraction);
   const control_system::TestHelpers::ControlError<1> control_error{};
 
-  OptionHolder<1> option_holder1(is_active, averager, controller, tuner,
+  OptionHolder<1> option_holder1(is_active, 1.0, averager, controller, tuner,
                                  control_error);
-  OptionHolder<2> option_holder2(is_active, averager, controller, tuner,
+  OptionHolder<2> option_holder2(is_active, 1.0, averager, controller, tuner,
                                  control_error);
-  OptionHolder<3> option_holder3(is_active, averager, controller, tuner,
+  OptionHolder<3> option_holder3(is_active, 1.0, averager, controller, tuner,
                                  control_error);
 
   [[maybe_unused]] fot_tag::type functions_of_time =

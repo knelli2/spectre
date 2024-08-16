@@ -42,6 +42,15 @@ struct OptionHolder {
         "will never expire."};
   };
 
+  struct AskKyleAboutThisFraction {
+    using type = double;
+    static constexpr Options::String help = {
+        "The expiration time of a function of time is this fraction of a "
+        "measurement after the time the update is calculated."};
+    static double lower_bound() { return 0.0; }
+    static double upper_bound() { return 1.0; }
+  };
+
   struct Averager {
     using type = ::Averager<deriv_order - 1>;
     static constexpr Options::String help = {
@@ -70,16 +79,17 @@ struct OptionHolder {
         "in the simulation."};
   };
 
-  using options =
-      tmpl::list<IsActive, Averager, Controller, TimescaleTuner, ControlError>;
+  using options = tmpl::list<IsActive, AskKyleAboutThisFraction, Averager,
+                             Controller, TimescaleTuner, ControlError>;
   static constexpr Options::String help = {"Options for a control system."};
 
-  OptionHolder(const bool input_is_active,
+  OptionHolder(const bool input_is_active, const double input_fraction,
                ::Averager<deriv_order - 1> input_averager,
                ::Controller<deriv_order> input_controller,
                ::TimescaleTuner<not is_size> input_tuner,
                typename ControlSystem::control_error input_control_error)
       : is_active(input_is_active),
+        fraction(input_fraction),
         averager(std::move(input_averager)),
         controller(std::move(input_controller)),
         tuner(std::move(input_tuner)),
@@ -104,6 +114,7 @@ struct OptionHolder {
   // These members are specifically made public for easy access during
   // initialization
   bool is_active{true};
+  double fraction{};
   ::Averager<deriv_order - 1> averager{};
   ::Controller<deriv_order> controller{};
   ::TimescaleTuner<not is_size> tuner{};

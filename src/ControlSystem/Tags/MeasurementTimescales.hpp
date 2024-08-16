@@ -149,7 +149,7 @@ struct MeasurementTimescales : db::SimpleTag {
           if (min_measurement_timescales[combined_name] !=
               std::numeric_limits<double>::infinity()) {
             const double expiration_time = measurement_expiration_time(
-                initial_time, DataVector{1_st, 0.0},
+                initial_time, option_holder.fraction, DataVector{1_st, 0.0},
                 DataVector{1_st, min_measurement_timescales[combined_name]},
                 measurements_per_update);
             expiration_times[combined_name] =
