@@ -11,10 +11,9 @@ double function_of_time_expiration_time(
     const DataVector& old_measurement_timescales,
     const DataVector& new_measurement_timescales,
     const int measurements_per_update) {
-  return time +
-         fraction * (min(old_measurement_timescales) +
-                     min(new_measurement_timescales)) +
-         (measurements_per_update - 1) * min(new_measurement_timescales);
+  return time + min(old_measurement_timescales) +
+         (measurements_per_update - 1 + fraction) *
+             min(new_measurement_timescales);
 }
 
 double measurement_expiration_time(const double time, const double fraction,
