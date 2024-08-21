@@ -284,19 +284,24 @@ void TimeDependentMapOptions<IsCylindrical>::build_maps(
         // DomainHelpers.hpp. The values must match that of Wedge::Axis
         const std::array<int, 6> axes{3, -3, 2, -2, 1, -1};
 
+        const bool transition_ends_at_cube =
+            i == 0 ? shape_options_A_->transition_ends_at_cube
+                   : shape_options_B_->transition_ends_at_cube;
+
         // These centers must take in to account if we have an offset of the
-        // center of the object. The inner center is always the center of the
-        // object. The outer center depends on if we have an offset. If we do,
-        // use that center, if not it's the same as the object center
+        // center of the object and where the transition ends. The inner center
+        // is always the center of the object. The outer center depends on if we
+        // have an offset and where the transition ends. If the transition ends
+        // at the cube, then if we have an offset we use the cube center, if not
+        // it's the same as the object center. If the transition ends at the
+        // sphere, then the center is the object center
         const std::optional<std::array<double, 3>>& cube_center =
             i == 0 ? cube_A_center : cube_B_center;
         const std::array<double, 3>& inner_center = gsl::at(object_centers, i);
         const std::array<double, 3>& outer_center =
-            cube_center.value_or(gsl::at(object_centers, i));
-
-        const bool transition_ends_at_cube =
-            i == 0 ? shape_options_A_->transition_ends_at_cube
-                   : shape_options_B_->transition_ends_at_cube;
+            transition_ends_at_cube
+                ? cube_center.value_or(gsl::at(object_centers, i))
+                : gsl::at(object_centers, i);
 
         const double inner_sphericity = 1.0;
         const double outer_sphericity = transition_ends_at_cube ? 0.0 : 1.0;

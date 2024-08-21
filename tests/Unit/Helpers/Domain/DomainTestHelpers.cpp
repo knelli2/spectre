@@ -382,6 +382,8 @@ double physical_separation(
         block2.moving_mesh_grid_to_inertial_map();
     for (size_t i = 0; i < two_to_the(VolumeDim - 1); i++) {
       for (size_t j = 0; j < VolumeDim; j++) {
+        CAPTURE(map1_logical_to_grid(gsl::at(shared_points1, i)));
+        CAPTURE(map2_logical_to_grid(gsl::at(shared_points2, i)));
         max_separation = std::max(
             max_separation,
             std::abs(map1_grid_to_inertial(

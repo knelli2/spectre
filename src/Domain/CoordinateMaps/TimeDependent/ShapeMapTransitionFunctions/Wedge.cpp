@@ -29,6 +29,8 @@
 #include "Utilities/StdArrayHelpers.hpp"
 #include "Utilities/StdHelpers.hpp"
 
+#include "Parallel/Printf/Printf.hpp"
+
 namespace {
 template <typename T>
 int sgn(T val) {
@@ -156,6 +158,14 @@ T Wedge::lambda_cube(const std::array<T, 3>& centered_coords,
     // If we were given an axis to this function, then we can be confident that
     // all the coords of this axis aren't zero, so we don't have to check them
     if (potential_axis.has_value()) {
+      Parallel::printf(
+          "Lambda cube:\n"
+          " axis: %s\n"
+          " factor: %.16f\n"
+          " coord: %s\n"
+          " projection center: %s\n",
+          axis_, factor, MakeString{} << gsl::at(centered_coords, axis_idx),
+          projection_center_);
       result = factor / gsl::at(centered_coords, axis_idx);
     } else {
       // However, if we have to figure out the axis, it's possible some coords
@@ -237,6 +247,15 @@ T Wedge::lambda_sphere(const std::array<T, 3>& centered_coords,
   CAPTURE_FOR_ERROR(b);
   CAPTURE_FOR_ERROR(c);
 
+  Parallel::printf(
+      "Lambda sphere:\n"
+      " a = %s\n"
+      " b = %s\n"
+      " c = %s\n"
+      " projection center = %s\n",
+      MakeString{} << a, MakeString{} << b, MakeString{} << b,
+      projection_center_);
+
   // The root that we are looking for is positive (since a negative root would
   // be for the opposite side of the sphere)
   return smallest_root_greater_than_value_within_roundoff(
@@ -259,6 +278,8 @@ T Wedge::compute_lambda(const std::array<T, 3>& centered_coords,
              outer_surface_.sphericity *
                  lambda_sphere(centered_coords, centered_coords_magnitude);
   }
+
+  Parallel::printf("Lambda: %s\n", MakeString{} << result);
 
   return result;
 }
@@ -543,8 +564,10 @@ void Wedge::check_distances(
         get_element(result, i) - eps_ > 1.0) {
       ERROR(
           "The Wedge transition map was called with coordinates outside "
-          "the set inner and outer surfaces.\nThe requested (centered) point "
-          "is "
+          "the set inner and outer surfaces of the "
+          << axis_
+          << " axis.\nThe requested (centered) point "
+             "is "
           << source_coords << "\nThe requested (centered) point has radius "
           << get_element(centered_coords_magnitude, i)
           << "\nThe inner surface has center, "

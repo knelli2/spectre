@@ -359,13 +359,13 @@ BinaryCompactObject::BinaryCompactObject(
     const std::optional<std::array<double, 3>> cube_A_center =
         length_inner_cube_ == x_coord_a_ - x_coord_b_
             ? std::optional<std::array<double, 3>>{}
-            : std::array{0.5 * length_inner_cube_, center_of_mass_offset_[0],
-                         center_of_mass_offset_[1]};
+            : std::array{translation_ + 0.5 * length_inner_cube_,
+                         center_of_mass_offset_[0], center_of_mass_offset_[1]};
     const std::optional<std::array<double, 3>> cube_B_center =
         length_inner_cube_ == x_coord_a_ - x_coord_b_
             ? std::optional<std::array<double, 3>>{}
-            : std::array{-0.5 * length_inner_cube_, center_of_mass_offset_[0],
-                         center_of_mass_offset_[1]};
+            : std::array{translation_ - 0.5 * length_inner_cube_,
+                         center_of_mass_offset_[0], center_of_mass_offset_[1]};
     time_dependent_options_->build_maps(
         std::array{std::array{x_coord_a_, center_of_mass_offset_[0],
                               center_of_mass_offset_[1]},
