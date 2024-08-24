@@ -743,7 +743,7 @@ ${{ matrix.build_type }}-pch-${{ matrix.use_pch || 'ON' }}"
         run: |
           make -j4 SolveXcts
           ctest -R InputFiles.Xcts.KerrSchild.yaml.execute_check_output \
-              --output-on-failure --repeat after-timeout:3
+              --output-on-failure --repeat after-timeout:3 --verbose
       - name: Build Benchmark executable
         if: matrix.build_type == 'Release'
         working-directory: build
