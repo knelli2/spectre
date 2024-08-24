@@ -456,7 +456,7 @@ jobs:
             use_xsimd: OFF
             MEMORY_ALLOCATOR: JEMALLOC
           - compiler: clang-13
-            build_type: Release
+            build_type: Debug
             BUILD_SHARED_LIBS: OFF
             MEMORY_ALLOCATOR: JEMALLOC
             XCTS_ONLY: ON
