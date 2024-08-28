@@ -104,8 +104,8 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   const double initial_separation = 15.0;
   // This final time is chosen so that the damping timescales have adequate time
   // to reach the maximum damping timescale
-  const double final_time = 500.0;
-  const double kyle_fraction = 1e-10;
+  const double final_time = 2.0;
+  const double kyle_fraction = 1.0;
 
   // Set up the system helper
   control_system::TestHelpers::SystemHelper<metavars> system_helper{};

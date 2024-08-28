@@ -11,9 +11,13 @@ double function_of_time_expiration_time(
     const DataVector& old_measurement_timescales,
     const DataVector& new_measurement_timescales,
     const int measurements_per_update) {
-  return time + min(old_measurement_timescales) +
-         (static_cast<double>(measurements_per_update - 1) + fraction) *
-             min(new_measurement_timescales);
+  (void)fraction;
+  (void)old_measurement_timescales;
+  return time + static_cast<double>(measurements_per_update) *
+                    min(new_measurement_timescales);
+  //   return time + min(old_measurement_timescales) +
+  //          (static_cast<double>(measurements_per_update - 1) + fraction) *
+  //              min(new_measurement_timescales);
 }
 
 double measurement_expiration_time(const double time, const double fraction,
@@ -23,6 +27,6 @@ double measurement_expiration_time(const double time, const double fraction,
   return function_of_time_expiration_time(
              time, fraction, old_measurement_timescales,
              new_measurement_timescales, measurements_per_update) -
-         fraction * 0.5 * min(new_measurement_timescales);
+         0.5 * min(new_measurement_timescales);
 }
 }  // namespace control_system

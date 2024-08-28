@@ -246,8 +246,8 @@ struct UpdateControlSystem {
     // This call is ok because the measurement timescales are still valid
     // because the measurement timescales expire half a measurement after this
     // time.
-    const DataVector old_measurement_timescale =
-        measurement_timescale->func(time)[0];
+    const DataVector old_measurement_timescale{0.0};
+    // measurement_timescale->func(time)[0];
 
     // Begin step 8
     // Calculate the next expiration times for both the functions of time and

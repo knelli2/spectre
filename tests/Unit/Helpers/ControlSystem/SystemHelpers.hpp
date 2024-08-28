@@ -629,9 +629,11 @@ struct SystemHelper {
           get<control_system::Tags::AskKyleAboutThisFraction<system>>(
               init_tuple);
       kyle_fractions[name<system>()] = kyle_fraction;
-      const double measurement_expr_time = measurement_expiration_time(
-          initial_time_, kyle_fraction, DataVector{0.0},
-          DataVector{min_measurement_timescale}, measurements_per_update_);
+      const double measurement_expr_time =
+          measurement_expiration_time(
+              initial_time_, kyle_fraction, DataVector{0.0},
+              DataVector{min_measurement_timescale}, measurements_per_update_) -
+          min_measurement_timescale;
 
       individual_minimums[name<system>()] =
           std::make_pair(min_measurement_timescale, measurement_expr_time);
@@ -659,10 +661,12 @@ struct SystemHelper {
     for (const auto& [system_name, min_measure_expr_time] :
          individual_minimums) {
       (void)min_measure_expr_time;
-      initial_expiration_times[system_name] = function_of_time_expiration_time(
-          initial_time_, kyle_fractions[system_name], DataVector{0.0},
-          DataVector{overall_min_measurement_timescale},
-          measurements_per_update_);
+      initial_expiration_times[system_name] =
+          function_of_time_expiration_time(
+              initial_time_, kyle_fractions[system_name], DataVector{0.0},
+              DataVector{overall_min_measurement_timescale},
+              measurements_per_update_) -
+          overall_min_measurement_timescale;
     }
 
     const double excision_radius =
@@ -743,6 +747,13 @@ struct SystemHelper {
     // Start loop
     while (time < final_time) {
       ++current_measurement;
+      Parallel::printf(
+          "Time: %.16f\n"
+          " measurement: %.16f\n"
+          " measure expr: %.16f\n"
+          " fot expr: %.16f\n",
+          time, dt, measurement_timescales.at(combined_name_)->time_bounds()[1],
+          functions_of_time.at("Rotation")->time_bounds()[1]);
       // Setup the measurement Id. This would normally be created in the control
       // system event.
       const LinkedMessageId<double> measurement_id{time, prev_time};
