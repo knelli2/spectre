@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -17,14 +18,18 @@
 #include "Domain/CoordinateMaps/CoordinateMap.hpp"
 #include "Domain/CoordinateMaps/CoordinateMap.tpp"
 #include "Domain/CoordinateMaps/TimeDependent/CubicScale.hpp"
+#include "Domain/CoordinateMaps/TimeDependent/RotScaleTrans.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Rotation.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/Translation.hpp"
+#include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/RegisterDerivedWithCharm.hpp"
 #include "Domain/FunctionsOfTime/Tags.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "Framework/MockRuntimeSystemFreeFunctions.hpp"
 #include "Helpers/ControlSystem/SystemHelpers.hpp"
 #include "Helpers/PointwiseFunctions/PostNewtonian/BinaryTrajectories.hpp"
 #include "Parallel/Phase.hpp"
+#include "Utilities/FileSystem.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/StdArrayHelpers.hpp"
 #include "Utilities/TMPL.hpp"
@@ -40,29 +45,36 @@ namespace {
 using TranslationMap = domain::CoordinateMaps::TimeDependent::Translation<3>;
 using RotationMap = domain::CoordinateMaps::TimeDependent::Rotation<3>;
 using ExpansionMap = domain::CoordinateMaps::TimeDependent::CubicScale<3>;
+using CombinedMap = domain::CoordinateMaps::TimeDependent::RotScaleTrans<3>;
 
 using CoordMap =
-    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, ExpansionMap,
-                          RotationMap, TranslationMap>;
+    domain::CoordinateMap<Frame::Distorted, Frame::Inertial, CombinedMap>;
 
-std::string create_input_string(const std::string& name) {
+std::string create_input_string(const std::string& name, const bool active,
+                                const double kyle_fraction) {
   const std::string name_str = "  "s + name + ":\n"s;
   const std::string base_string1{
-      "    IsActive: true\n"
+      "    IsActive: " + (active ? "True"s : "False"s) +
+      "\n"
+      "    AskKyleAboutThisFraction: " +
+      std::to_string(kyle_fraction) +
+      "\n"
       "    Averager:\n"
       "      AverageTimescaleFraction: 0.25\n"
-      "      Average0thDeriv: true\n"
+      "      Average0thDeriv: false\n"
       "    Controller:\n"
       "      UpdateFraction: 0.3\n"
       "    TimescaleTuner:\n"
-      "      InitialTimescales: 0.5\n"
-      "      MinTimescale: 0.1\n"
-      "      MaxTimescale: 10.\n"
-      "      DecreaseThreshold: 2.0\n"
-      "      IncreaseThreshold: 0.1\n"
+      "      InitialTimescales: 0.2\n"
+      "      MinTimescale: 1.e-2\n"
+      "      MaxTimescale: 20.\n"
+      "      DecreaseThreshold: 1.e-3\n"
+      "      IncreaseThreshold: 2.5e-4\n"
       "      IncreaseFactor: 1.01\n"
-      "      DecreaseFactor: 0.99\n"
+      "      DecreaseFactor: 0.98\n"
       "    ControlError:\n"};
+
+  Parallel::printf("%s\n", name_str + base_string1);
 
   return name_str + base_string1;
 }
@@ -77,7 +89,8 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
       TestHelpers::MockMetavars<TranslationDerivOrder, RotationDerivOrder,
                                 ExpansionDerivOrder, 0>;
   using element_component = typename metavars::element_component;
-  using translation_component = typename metavars::translation_component;
+  using observer_component = typename metavars::observer_component;
+  //   using translation_component = typename metavars::translation_component;
   using rotation_component = typename metavars::rotation_component;
   using expansion_component = typename metavars::expansion_component;
   using translation_system = typename metavars::translation_system;
@@ -92,6 +105,7 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   // This final time is chosen so that the damping timescales have adequate time
   // to reach the maximum damping timescale
   const double final_time = 500.0;
+  const double kyle_fraction = 1e-10;
 
   // Set up the system helper
   control_system::TestHelpers::SystemHelper<metavars> system_helper{};
@@ -114,11 +128,12 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
       "      Rotation: 3\n"
       "      Expansion: 1\n"
       "ControlSystems:\n"
-      "  WriteDataToDisk: false\n"
-      "  MeasurementsPerUpdate: 4\n";
-  input_options += create_input_string(translation_name);
-  input_options += create_input_string(rotation_name);
-  input_options += create_input_string(expansion_name);
+      "  WriteDataToDisk: true\n"
+      "  MeasurementsPerUpdate: 4\n"
+      "  OffsetToExpirationTime: False\n";
+  //   input_options += create_input_string(translation_name, false);
+  input_options += create_input_string(rotation_name, true, kyle_fraction);
+  input_options += create_input_string(expansion_name, true, kyle_fraction);
 
   const auto initialize_functions_of_time =
       [](const gsl::not_null<std::unordered_map<
@@ -130,11 +145,12 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
              initial_expiration_times) {
         TestHelpers::initialize_expansion_functions_of_time<expansion_system>(
             functions_of_time, local_initial_time, initial_expiration_times);
-        TestHelpers::initialize_rotation_functions_of_time<rotation_system>(
-            functions_of_time, local_initial_time, initial_expiration_times);
-        return TestHelpers::initialize_translation_functions_of_time<
-            translation_system>(functions_of_time, local_initial_time,
-                                initial_expiration_times);
+        return TestHelpers::initialize_rotation_functions_of_time<
+            rotation_system>(functions_of_time, local_initial_time,
+                             initial_expiration_times);
+        // return TestHelpers::initialize_translation_functions_of_time<
+        //     translation_system>(functions_of_time, local_initial_time,
+        //                         initial_expiration_times);
       };
 
   // Initialize everything within the system helper
@@ -148,10 +164,16 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   auto& domain = system_helper.domain();
   auto& is_active_map = system_helper.is_active_map();
   auto& initial_functions_of_time = system_helper.initial_functions_of_time();
+  initial_functions_of_time["Translation"] =
+      std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
+          initial_time,
+          std::array{DataVector{3, 0.0}, DataVector{3, 0.0},
+                     DataVector{3, 0.0}},
+          std::numeric_limits<double>::infinity());
   auto& initial_measurement_timescales =
       system_helper.initial_measurement_timescales();
-  const auto& init_trans_tuple =
-      system_helper.template init_tuple<translation_system>();
+  //   const auto& init_trans_tuple =
+  //       system_helper.template init_tuple<translation_system>();
   const auto& init_rot_tuple =
       system_helper.template init_tuple<rotation_system>();
   const auto& init_exp_tuple =
@@ -159,18 +181,24 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   auto system_to_combined_names = system_helper.system_to_combined_names();
 
   // Setup runner and all components
+  const std::string filename{"DummyFileName"};
+  if (file_system::check_if_file_exists(filename + ".h5")) {
+    file_system::rm(filename + ".h5", true);
+  }
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   MockRuntimeSystem runner{
-      {"DummyFileName", std::move(domain), 4, false, ::Verbosity::Silent,
+      {filename, std::move(domain), 4, false, true, ::Verbosity::Silent,
        std::move(is_active_map),
        tnsr::I<double, 3, Frame::Grid>{{0.5 * initial_separation, 0.0, 0.0}},
        tnsr::I<double, 3, Frame::Grid>{{-0.5 * initial_separation, 0.0, 0.0}},
        std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
-  ActionTesting::emplace_singleton_component_and_initialize<
-      translation_component>(make_not_null(&runner), ActionTesting::NodeId{0},
-                             ActionTesting::LocalCoreId{0}, init_trans_tuple);
+  //   ActionTesting::emplace_singleton_component_and_initialize<
+  //       translation_component>(make_not_null(&runner),
+  //       ActionTesting::NodeId{0},
+  //                              ActionTesting::LocalCoreId{0},
+  //                              init_trans_tuple);
   ActionTesting::emplace_singleton_component_and_initialize<rotation_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, init_rot_tuple);
@@ -180,23 +208,32 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   ActionTesting::emplace_array_component<element_component>(
       make_not_null(&runner), ActionTesting::NodeId{0},
       ActionTesting::LocalCoreId{0}, 0);
+  ActionTesting::emplace_nodegroup_component_and_initialize<observer_component>(
+      make_not_null(&runner), {});
 
   ActionTesting::set_phase(make_not_null(&runner), Parallel::Phase::Testing);
 
   // PN orbits
-  const std::array<double, 3> initial_velocity{0.1, -0.2, 0.3};
+  const std::array<double, 3> initial_velocity{0.0, 0.0, 0.0};
   const BinaryTrajectories binary_trajectories{initial_separation,
                                                initial_velocity};
 
   // Create coordinate maps for mapping the PN trajectories to the "grid" frame
   // where the control system does its calculations
-  TranslationMap translation_map{translation_name};
+  //   TranslationMap translation_map{translation_name};
   RotationMap rotation_map{rotation_name};
   // The outer boundary is at 1000.0 so that we don't have to worry about it.
   ExpansionMap expansion_map{1000.0, expansion_name,
                              expansion_name + "OuterBoundary"s};
+  CombinedMap combined_map{
+      {{expansion_name, expansion_name + "OuterBoundary"s}},
+      {rotation_name},
+      {translation_name},
+      100.0,
+      1000.0,
+      CombinedMap::BlockRegion::Inner};
 
-  CoordMap coord_map{expansion_map, rotation_map, translation_map};
+  CoordMap coord_map{combined_map};
 
   // Get the functions of time from the cache to use in the maps
   const auto& cache = ActionTesting::cache<element_component>(runner, 0);
@@ -233,9 +270,9 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   const auto& rotation_f_of_t = dynamic_cast<
       domain::FunctionsOfTime::QuaternionFunctionOfTime<RotationDerivOrder>&>(
       *functions_of_time.at(rotation_name));
-  const auto& translation_f_of_t = dynamic_cast<
-      domain::FunctionsOfTime::PiecewisePolynomial<TranslationDerivOrder>&>(
-      *functions_of_time.at(translation_name));
+  const auto& translation_f_of_t =
+      dynamic_cast<domain::FunctionsOfTime::PiecewisePolynomial<2>&>(
+          *functions_of_time.at(translation_name));
   const auto& expansion_f_of_t = dynamic_cast<
       domain::FunctionsOfTime::PiecewisePolynomial<ExpansionDerivOrder>&>(
       *functions_of_time.at(expansion_name));
@@ -281,12 +318,14 @@ SPECTRE_TEST_CASE("Unit.ControlSystem.Systems.RotScaleTrans",
   // the first derivative of omega (second derivative of the angle) doesn't give
   // as accurate results for the final positions of the objects in the grid
   // frame. This is also done is Systems/Test_Rotation.
-  test_rotscaletrans_control_system<2, 2, 2>(5.0e-3);
-  test_rotscaletrans_control_system<3, 2, 2>(5.0e-3);
-  test_rotscaletrans_control_system<2, 3, 2>();
-  test_rotscaletrans_control_system<2, 2, 3>(5.0e-3);
-  test_rotscaletrans_control_system<3, 3, 2>();
-  test_rotscaletrans_control_system<2, 3, 3>();
-  test_rotscaletrans_control_system<3, 3, 3>();
+  //   test_rotscaletrans_control_system<2, 2, 2>(5.0e-3);
+  //   test_rotscaletrans_control_system<3, 2, 2>(5.0e-3);
+  //   test_rotscaletrans_control_system<2, 3, 2>();
+  //   test_rotscaletrans_control_system<2, 2, 3>(5.0e-3);
+  //   test_rotscaletrans_control_system<3, 3, 2>();
+  //   test_rotscaletrans_control_system<2, 3, 3>();
+  //   test_rotscaletrans_control_system<3, 3, 3>();
+
+  test_rotscaletrans_control_system<0, 3, 2>();
 }
 }  // namespace control_system

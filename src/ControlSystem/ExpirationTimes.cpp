@@ -12,7 +12,7 @@ double function_of_time_expiration_time(
     const DataVector& new_measurement_timescales,
     const int measurements_per_update) {
   return time + min(old_measurement_timescales) +
-         (measurements_per_update - 1 + fraction) *
+         (static_cast<double>(measurements_per_update - 1) + fraction) *
              min(new_measurement_timescales);
 }
 

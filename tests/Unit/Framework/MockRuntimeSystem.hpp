@@ -22,6 +22,8 @@
 #include "Utilities/TypeTraits.hpp"
 #include "Utilities/TypeTraits/IsA.hpp"
 
+#include "Framework/MockDistributedObject.hpp"
+
 /// \cond
 namespace ActionTesting {
 template <typename Component>

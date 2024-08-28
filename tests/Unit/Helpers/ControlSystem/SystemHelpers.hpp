@@ -30,6 +30,7 @@
 #include "ControlSystem/Systems/Translation.hpp"
 #include "ControlSystem/Tags/IsActiveMap.hpp"
 #include "ControlSystem/Tags/MeasurementTimescales.hpp"
+#include "ControlSystem/Tags/OptionTags.hpp"
 #include "ControlSystem/Tags/QueueTags.hpp"
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "ControlSystem/TimescaleTuner.hpp"
@@ -56,6 +57,7 @@
 #include "Domain/Structure/Direction.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
 #include "Framework/ActionTesting.hpp"
+#include "Framework/MockRuntimeSystemFreeFunctions.hpp"
 #include "Framework/TestCreation.hpp"
 #include "Framework/TestingFramework.hpp"
 #include "IO/Observer/ObserverComponent.hpp"
@@ -86,6 +88,7 @@ namespace control_system::TestHelpers {
 template <typename ControlSystem>
 using init_simple_tags =
     tmpl::list<control_system::Tags::Averager<ControlSystem>,
+               control_system::Tags::AskKyleAboutThisFraction<ControlSystem>,
                control_system::Tags::TimescaleTuner<ControlSystem>,
                control_system::Tags::Controller<ControlSystem>,
                control_system::Tags::ControlError<ControlSystem>,
@@ -207,6 +210,7 @@ struct MockControlComponent {
 
   using const_global_cache_tags =
       tmpl::list<control_system::Tags::MeasurementsPerUpdate,
+                 control_system::Tags::OffsetToExpirationTime,
                  control_system::Tags::WriteDataToDisk,
                  control_system::Tags::Verbosity,
                  control_system::Tags::IsActiveMap,
@@ -341,8 +345,8 @@ double initialize_expansion_functions_of_time(
     const std::unordered_map<std::string, double>& initial_expiration_times) {
   constexpr size_t deriv_order = ExpansionSystem::deriv_order;
   const double initial_expansion = 1.0;
-  const double expansion_velocity_outer_boundary = 0.0;
-  const double decay_timescale_outer_boundary = 0.05;
+  const double expansion_velocity_outer_boundary = -1.e-6;
+  const double decay_timescale_outer_boundary = 50.0;
   auto init_func_expansion =
       make_array<deriv_order + 1, DataVector>(DataVector{1, 0.0});
   init_func_expansion[0][0] = initial_expansion;
@@ -440,14 +444,16 @@ grid_frame_horizon_centers_for_basic_control_systems(
   // changing BinaryTrajectories to return tensors, which doesn't seem like
   // a good idea.
 
-  std::pair<std::array<double, 3>, std::array<double, 3>> positions =
-      position_function(time);
+  const std::pair<std::array<double, 3>, std::array<double, 3>>
+      inertial_positions = position_function(time);
+  std::pair<std::array<double, 3>, std::array<double, 3>> grid_positions =
+      inertial_positions;
 
   // Covert arrays to tensor so we can pass them into the coordinate map
   const tnsr::I<double, 3, Frame::Inertial> inertial_position_of_a(
-      positions.first);
+      inertial_positions.first);
   const tnsr::I<double, 3, Frame::Inertial> inertial_position_of_b(
-      positions.second);
+      inertial_positions.second);
 
   // Convert to "grid coordinates"
   const auto grid_position_of_a_tnsr =
@@ -458,11 +464,36 @@ grid_frame_horizon_centers_for_basic_control_systems(
   // Convert tensors back to arrays so we can pass them to the control
   // systems. Just reuse `positions`
   for (size_t i = 0; i < 3; i++) {
-    gsl::at(positions.first, i) = grid_position_of_a_tnsr.get(i);
-    gsl::at(positions.second, i) = grid_position_of_b_tnsr.get(i);
+    gsl::at(grid_positions.first, i) = grid_position_of_a_tnsr.get(i);
+    gsl::at(grid_positions.second, i) = grid_position_of_b_tnsr.get(i);
   }
 
-  return positions;
+  {
+    using observer_component = typename Metavars::observer_component;
+    const std::vector<std::string> legend{"Time",
+                                          "GridCenter_x",
+                                          "GridCenter_y",
+                                          "GridCenter_z",
+                                          "InertialCenter_x",
+                                          "InertialCenter_y",
+                                          "InertialCenter_z"};
+    ActionTesting::threaded_action<
+        observer_component, observers::ThreadedActions::WriteReductionDataRow>(
+        make_not_null(&runner), 0, "Centers/AhA", legend,
+        std::make_tuple(time, grid_positions.first[0], grid_positions.first[1],
+                        grid_positions.first[2], inertial_positions.first[0],
+                        inertial_positions.first[1],
+                        inertial_positions.first[2]));
+    ActionTesting::threaded_action<
+        observer_component, observers::ThreadedActions::WriteReductionDataRow>(
+        make_not_null(&runner), 0, "Centers/AhB", legend,
+        std::make_tuple(
+            time, grid_positions.second[0], grid_positions.second[1],
+            grid_positions.second[2], inertial_positions.second[0],
+            inertial_positions.second[1], inertial_positions.second[2]));
+  }
+
+  return grid_positions;
 }
 
 template <typename ElementComponent, typename Metavars, typename F,
@@ -578,8 +609,8 @@ struct SystemHelper {
     std::unordered_map<std::string, std::pair<double, double>>
         individual_minimums{};
     std::unordered_map<std::string, double> initial_expiration_times{};
-    tmpl::for_each<control_systems>([this,
-                                     &individual_minimums](auto system_v) {
+    std::unordered_map<std::string, double> kyle_fractions{};
+    tmpl::for_each<control_systems>([&, this](auto system_v) {
       using system = tmpl::type_from<decltype(system_v)>;
 
       auto& init_tuple = get<LocalTag<system>>(all_init_tags_);
@@ -594,9 +625,13 @@ struct SystemHelper {
       const double min_measurement_timescale = min(measurement_timescale);
       averager.assign_time_between_measurements(min_measurement_timescale);
 
+      const double kyle_fraction =
+          get<control_system::Tags::AskKyleAboutThisFraction<system>>(
+              init_tuple);
+      kyle_fractions[name<system>()] = kyle_fraction;
       const double measurement_expr_time = measurement_expiration_time(
-          initial_time_, DataVector{0.0}, DataVector{min_measurement_timescale},
-          measurements_per_update_);
+          initial_time_, kyle_fraction, DataVector{0.0},
+          DataVector{min_measurement_timescale}, measurements_per_update_);
 
       individual_minimums[name<system>()] =
           std::make_pair(min_measurement_timescale, measurement_expr_time);
@@ -625,7 +660,7 @@ struct SystemHelper {
          individual_minimums) {
       (void)min_measure_expr_time;
       initial_expiration_times[system_name] = function_of_time_expiration_time(
-          initial_time_, DataVector{0.0},
+          initial_time_, kyle_fractions[system_name], DataVector{0.0},
           DataVector{overall_min_measurement_timescale},
           measurements_per_update_);
     }
@@ -770,6 +805,14 @@ struct SystemHelper {
         }
       });
 
+      using observer_component = typename Metavars::observer_component;
+      while (
+          ActionTesting::number_of_queued_threaded_actions<observer_component>(
+              runner, 0) > 0) {
+        ActionTesting::invoke_queued_threaded_action<observer_component>(
+            make_not_null(&runner), 0);
+      }
+
       // At this point, the control systems for each transformation should have
       // done their thing and updated the functions of time (if they had enough
       // data).
@@ -806,7 +849,8 @@ struct SystemHelper {
           control_components, tmpl::bind<option_tag, tmpl::_1>>>,
       control_system::OptionTags::WriteDataToDisk, ::OptionTags::InitialTime,
       domain::OptionTags::DomainCreator<3>,
-      control_system::OptionTags::MeasurementsPerUpdate>;
+      control_system::OptionTags::MeasurementsPerUpdate,
+      control_system::OptionTags::OffsetToExpirationTime>;
   template <typename System>
   using creatable_tags = tmpl::list_difference<
       init_simple_tags<System>,
@@ -855,6 +899,8 @@ struct SystemHelper {
       get<LocalTag<system>>(all_init_tags_) =
           tuples::tagged_tuple_from_typelist<init_simple_tags<system>>{
               get<control_system::Tags::Averager<system>>(created_tags),
+              get<control_system::Tags::AskKyleAboutThisFraction<system>>(
+                  created_tags),
               get<control_system::Tags::TimescaleTuner<system>>(created_tags),
               get<control_system::Tags::Controller<system>>(created_tags),
               get<control_system::Tags::ControlError<system>>(created_tags), 0,
