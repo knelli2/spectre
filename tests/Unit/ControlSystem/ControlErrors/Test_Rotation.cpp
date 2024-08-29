@@ -89,9 +89,10 @@ void test_rotation_control_error() {
   // global cache
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   MockRuntimeSystem runner{
-      {"DummyFileName", std::move(domain), 4, 1.0, false, ::Verbosity::Silent,
-       std::move(is_active_map), std::move(grid_center_A),
-       std::move(grid_center_B), std::move(system_to_combined_names)},
+      {"DummyFileName", std::move(domain), 4, false, ExpirationMethods::spectre,
+       false, ::Verbosity::Silent, std::move(is_active_map),
+       std::move(grid_center_A), std::move(grid_center_B),
+       std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_array_component<element_component>(

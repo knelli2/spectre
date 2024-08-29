@@ -194,7 +194,7 @@ class FakeCreator : public DomainCreator<3> {
 
  private:
   std::unordered_map<std::string, size_t> num_components_map_{};
-  size_t number_of_excisions_;
+  size_t number_of_excisions_{};
 };
 
 template <typename Metavariables, typename ControlSystem>
@@ -211,6 +211,7 @@ struct MockControlComponent {
   using const_global_cache_tags =
       tmpl::list<control_system::Tags::MeasurementsPerUpdate,
                  control_system::Tags::OffsetToExpirationTime,
+                 control_system::Tags::ExpirationMethods,
                  control_system::Tags::WriteDataToDisk,
                  control_system::Tags::Verbosity,
                  control_system::Tags::IsActiveMap,
@@ -407,7 +408,7 @@ double initialize_translation_functions_of_time(
       initial_time, init_func_translation,
       initial_expiration_times.at(translation_name));
 
-  if (initial_expiration_times.count("Rotation") == 0) {
+  if (initial_expiration_times.contains("Rotation")) {
     auto local_init_func_rotation =
         make_array<1, DataVector>(DataVector{4, 0.0});
     local_init_func_rotation[0][0] = 1.0;
@@ -416,7 +417,7 @@ double initialize_translation_functions_of_time(
             initial_time, local_init_func_rotation,
             std::numeric_limits<double>::infinity());
   }
-  if (initial_expiration_times.count("Expansion") == 0) {
+  if (initial_expiration_times.contains("Expansion")) {
     auto local_init_func_expansion =
         make_array<1, DataVector>(DataVector{1, 0.0});
     local_init_func_expansion[0][0] = 1.0;
@@ -512,9 +513,7 @@ build_horizons_for_basic_control_systems(
   ylm::Strahlkorper<Frame::Distorted> horizon_a{2, 2, 1.0, positions.first};
   ylm::Strahlkorper<Frame::Distorted> horizon_b{2, 2, 1.0, positions.second};
 
-  return std::make_pair<ylm::Strahlkorper<Frame::Distorted>,
-                        ylm::Strahlkorper<Frame::Distorted>>(
-      std::move(horizon_a), std::move(horizon_b));
+  return std::make_pair(std::move(horizon_a), std::move(horizon_b));
 }
 
 /*!
@@ -596,10 +595,10 @@ struct SystemHelper {
    * Rotation, and Translation.
    */
   template <typename F>
-  void setup_control_system_test(const double initial_time,
-                                 const double initial_separation,
-                                 const std::string& option_string,
-                                 const F initialize_functions_of_time) {
+  void setup_control_system_test(
+      const double initial_time, const double initial_separation,
+      const std::string& option_string, const F initialize_functions_of_time,
+      const ExpirationMethods expiration_method = ExpirationMethods::spectre) {
     initial_time_ = initial_time;
 
     parse_options(option_string);
@@ -629,11 +628,10 @@ struct SystemHelper {
           get<control_system::Tags::AskKyleAboutThisFraction<system>>(
               init_tuple);
       kyle_fractions[name<system>()] = kyle_fraction;
-      const double measurement_expr_time =
-          measurement_expiration_time(
-              initial_time_, kyle_fraction, DataVector{0.0},
-              DataVector{min_measurement_timescale}, measurements_per_update_) -
-          min_measurement_timescale;
+      const double measurement_expr_time = measurement_expiration_time(
+          initial_time_, kyle_fraction, DataVector{0.0},
+          DataVector{min_measurement_timescale}, measurements_per_update_,
+          expiration_method, expiration_method == ExpirationMethods::spec);
 
       individual_minimums[name<system>()] =
           std::make_pair(min_measurement_timescale, measurement_expr_time);
@@ -661,12 +659,11 @@ struct SystemHelper {
     for (const auto& [system_name, min_measure_expr_time] :
          individual_minimums) {
       (void)min_measure_expr_time;
-      initial_expiration_times[system_name] =
-          function_of_time_expiration_time(
-              initial_time_, kyle_fractions[system_name], DataVector{0.0},
-              DataVector{overall_min_measurement_timescale},
-              measurements_per_update_) -
-          overall_min_measurement_timescale;
+      initial_expiration_times[system_name] = function_of_time_expiration_time(
+          initial_time_, kyle_fractions[system_name], DataVector{0.0},
+          DataVector{overall_min_measurement_timescale},
+          measurements_per_update_, expiration_method,
+          expiration_method == ExpirationMethods::spec);
     }
 
     const double excision_radius =
@@ -815,6 +812,8 @@ struct SystemHelper {
               make_not_null(&runner), 0);
         }
       });
+
+      Parallel::printf(" update time: %.16f\n", time);
 
       using observer_component = typename Metavars::observer_component;
       while (

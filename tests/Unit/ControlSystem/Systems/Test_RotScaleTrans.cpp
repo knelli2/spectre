@@ -1,6 +1,7 @@
 // Distributed under the MIT License.
 // See LICENSE.txt for details.
 
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "Framework/TestingFramework.hpp"
 
 #include <array>
@@ -105,7 +106,12 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   // This final time is chosen so that the damping timescales have adequate time
   // to reach the maximum damping timescale
   const double final_time = 2.0;
-  const double kyle_fraction = 1.0;
+  const double kyle_fraction = 0.0;
+  const ExpirationMethods expiration_method = ExpirationMethods::spectre;
+  const std::string filename =
+      expiration_method == ExpirationMethods::spec
+          ? "ExactSpec"
+          : "SpectreFrac" + std::to_string(kyle_fraction);
 
   // Set up the system helper
   control_system::TestHelpers::SystemHelper<metavars> system_helper{};
@@ -154,9 +160,9 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
       };
 
   // Initialize everything within the system helper
-  system_helper.setup_control_system_test(initial_time, initial_separation,
-                                          input_options,
-                                          initialize_functions_of_time);
+  system_helper.setup_control_system_test(
+      initial_time, initial_separation, input_options,
+      initialize_functions_of_time, expiration_method);
 
   // Get references to everything that was set up inside the system helper. The
   // domain and two functions of time are not const references because they need
@@ -181,14 +187,13 @@ void test_rotscaletrans_control_system(const double rotation_eps = 5.0e-5) {
   auto system_to_combined_names = system_helper.system_to_combined_names();
 
   // Setup runner and all components
-  const std::string filename{"DummyFileName"};
   if (file_system::check_if_file_exists(filename + ".h5")) {
     file_system::rm(filename + ".h5", true);
   }
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<metavars>;
   MockRuntimeSystem runner{
-      {filename, std::move(domain), 4, false, true, ::Verbosity::Silent,
-       std::move(is_active_map),
+      {filename, std::move(domain), 4, false, expiration_method, true,
+       ::Verbosity::Verbose, std::move(is_active_map),
        tnsr::I<double, 3, Frame::Grid>{{0.5 * initial_separation, 0.0, 0.0}},
        tnsr::I<double, 3, Frame::Grid>{{-0.5 * initial_separation, 0.0, 0.0}},
        std::move(system_to_combined_names)},

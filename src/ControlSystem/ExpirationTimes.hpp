@@ -13,12 +13,23 @@
 #include "ControlSystem/CalculateMeasurementTimescales.hpp"
 #include "ControlSystem/CombinedName.hpp"
 #include "ControlSystem/Metafunctions.hpp"
-#include "ControlSystem/Tags/SystemTags.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "Domain/Creators/DomainCreator.hpp"
 #include "Utilities/TMPL.hpp"
 
+/// \cond
+namespace control_system::Tags::detail {
+template <bool AllowDecrease, size_t Dim>
+void initialize_tuner(
+    gsl::not_null<::TimescaleTuner<AllowDecrease>*> tuner,
+    const std::unique_ptr<::DomainCreator<Dim>>& domain_creator,
+    double initial_time, const std::string& name);
+}  // namespace control_system::Tags::detail
+/// \endcond
+
 namespace control_system {
+enum class ExpirationMethods { spec, spectre };
+
 /*!
  * \ingroup ControlSystemGroup
  * \brief Calculate the next expiration time for the FunctionsOfTime.
@@ -51,10 +62,10 @@ namespace control_system {
  * functions of time have been updated.
  */
 double function_of_time_expiration_time(
-    const double time, double fraction,
-    const DataVector& old_measurement_timescales,
-    const DataVector& new_measurement_timescales,
-    const int measurements_per_update);
+    double time, double fraction, const DataVector& old_measurement_timescales,
+    const DataVector& new_measurement_timescales, int measurements_per_update,
+    ExpirationMethods expiration_method = ExpirationMethods::spectre,
+    bool initial = false);
 
 /*!
  * \ingroup ControlSystemGroup
@@ -85,10 +96,11 @@ double function_of_time_expiration_time(
  * just to guarantee we are more than epsilon before the function of time
  * expiration time and more than epsilon after the update measurement.
  */
-double measurement_expiration_time(const double time, double fraction,
-                                   const DataVector& old_measurement_timescales,
-                                   const DataVector& new_measurement_timescales,
-                                   const int measurements_per_update);
+double measurement_expiration_time(
+    double time, double fraction, const DataVector& old_measurement_timescales,
+    const DataVector& new_measurement_timescales, int measurements_per_update,
+    ExpirationMethods expiration_method = ExpirationMethods::spectre,
+    bool initial = false);
 
 /*!
  * \ingroup ControlSystemGroup

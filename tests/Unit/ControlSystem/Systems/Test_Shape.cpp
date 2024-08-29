@@ -86,9 +86,10 @@ void test_shape_control(
   using MockRuntimeSystem = ActionTesting::MockRuntimeSystem<Metavars>;
   // Excision centers aren't used so their values can be anything
   MockRuntimeSystem runner{
-      {"DummyFileName", std::move(domain), 4, 1.0, false, ::Verbosity::Silent,
-       std::move(is_active_map), std::move(grid_center_A),
-       std::move(grid_center_B), std::move(system_to_combined_names)},
+      {"DummyFileName", std::move(domain), 4, false, ExpirationMethods::spectre,
+       false, ::Verbosity::Silent, std::move(is_active_map),
+       std::move(grid_center_A), std::move(grid_center_B),
+       std::move(system_to_combined_names)},
       {std::move(initial_functions_of_time),
        std::move(initial_measurement_timescales)}};
   ActionTesting::emplace_singleton_component_and_initialize<shape_component>(

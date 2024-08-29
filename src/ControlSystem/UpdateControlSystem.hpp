@@ -246,22 +246,32 @@ struct UpdateControlSystem {
     // This call is ok because the measurement timescales are still valid
     // because the measurement timescales expire half a measurement after this
     // time.
-    const DataVector old_measurement_timescale{0.0};
-    // measurement_timescale->func(time)[0];
 
     // Begin step 8
     // Calculate the next expiration times for both the functions of time and
     // the measurement timescales based on the current time. Then, actually
     // update the functions of time and measurement timescales
-    const double fraction =
+    const double kyle_fraction =
         db::get<Tags::AskKyleAboutThisFraction<ControlSystem>>(*box);
+    const ExpirationMethods expiration_method =
+        Parallel::get<Tags::ExpirationMethods>(cache);
+    const DataVector old_measurement_timescale =
+        expiration_method == ExpirationMethods::spectre
+            ? measurement_timescale->func(time)[0]
+            : DataVector{0.0};
+    Parallel::printf(
+        "%s, %.16f:\n"
+        " fraction: %.16f\n"
+        " expr method: %s\n",
+        function_of_time_name, time, kyle_fraction,
+        expiration_method == ExpirationMethods::spec ? "spec" : "spectre");
     const double new_fot_expiration_time = function_of_time_expiration_time(
-        time, fraction, old_measurement_timescale, new_measurement_timescale,
-        measurements_per_update);
+        time, kyle_fraction, old_measurement_timescale,
+        new_measurement_timescale, measurements_per_update, expiration_method);
 
     const double new_measurement_expiration_time = measurement_expiration_time(
-        time, fraction, old_measurement_timescale, new_measurement_timescale,
-        measurements_per_update);
+        time, kyle_fraction, old_measurement_timescale,
+        new_measurement_timescale, measurements_per_update, expiration_method);
 
     if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
       Parallel::printf("%s, time = %.16f: Control signal = %s\n",

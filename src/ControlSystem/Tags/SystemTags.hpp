@@ -14,6 +14,7 @@
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/CombinedName.hpp"
 #include "ControlSystem/Controller.hpp"
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/IsSize.hpp"
 #include "ControlSystem/Metafunctions.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
@@ -99,6 +100,16 @@ struct AskKyleAboutThisFraction : db::SimpleTag {
   static type create_from_options(
       const control_system::OptionHolder<ControlSystem>& option_holder) {
     return option_holder.fraction;
+  }
+};
+
+struct ExpirationMethods : db::SimpleTag {
+  using type = control_system::ExpirationMethods;
+
+  using option_tags = tmpl::list<>;
+  static constexpr bool pass_metavariables = false;
+  static type create_from_options() {
+    return control_system::ExpirationMethods::spectre;
   }
 };
 
