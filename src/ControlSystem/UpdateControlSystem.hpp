@@ -259,12 +259,6 @@ struct UpdateControlSystem {
         expiration_method == ExpirationMethods::spectre
             ? measurement_timescale->func(time)[0]
             : DataVector{0.0};
-    Parallel::printf(
-        "%s, %.16f:\n"
-        " fraction: %.16f\n"
-        " expr method: %s\n",
-        function_of_time_name, time, kyle_fraction,
-        expiration_method == ExpirationMethods::spec ? "spec" : "spectre");
     const double new_fot_expiration_time = function_of_time_expiration_time(
         time, kyle_fraction, old_measurement_timescale,
         new_measurement_timescale, measurements_per_update, expiration_method);
@@ -274,6 +268,12 @@ struct UpdateControlSystem {
         new_measurement_timescale, measurements_per_update, expiration_method);
 
     if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
+      Parallel::printf(
+          "%s, time = %.16f:\n"
+          " fraction: %.16f\n"
+          " expr method: %s\n",
+          function_of_time_name, time, kyle_fraction,
+          expiration_method == ExpirationMethods::spec ? "spec" : "spectre");
       Parallel::printf("%s, time = %.16f: Control signal = %s\n",
                        function_of_time_name, time, control_signal);
       Parallel::printf(

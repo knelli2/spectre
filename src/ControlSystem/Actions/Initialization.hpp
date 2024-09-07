@@ -88,6 +88,7 @@ struct Initialize {
   using const_global_cache_tags = tmpl::flatten<tmpl::list<
       control_system::Tags::SystemToCombinedNames,
       control_system::Tags::MeasurementsPerUpdate,
+      control_system::Tags::ExpirationMethods,
       control_system::Tags::WriteDataToDisk,
       control_system::Tags::OffsetToExpirationTime,
       control_system::Tags::ObserveCenters, control_system::Tags::Verbosity,

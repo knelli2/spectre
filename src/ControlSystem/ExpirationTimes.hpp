@@ -18,6 +18,11 @@
 #include "Utilities/TMPL.hpp"
 
 /// \cond
+namespace Options {
+class Option;
+template <typename T>
+struct create_from_yaml;
+}  // namespace Options
 namespace control_system::Tags::detail {
 template <bool AllowDecrease, size_t Dim>
 void initialize_tuner(
@@ -29,7 +34,24 @@ void initialize_tuner(
 
 namespace control_system {
 enum class ExpirationMethods { spec, spectre };
+std::ostream& operator<<(std::ostream& os, ExpirationMethods expiration_method);
+}  // namespace control_system
 
+template <>
+struct Options::create_from_yaml<control_system::ExpirationMethods> {
+  template <typename Metavariables>
+  static control_system::ExpirationMethods create(
+      const Options::Option& options) {
+    return create<void>(options);
+  }
+};
+
+template <>
+control_system::ExpirationMethods
+Options::create_from_yaml<control_system::ExpirationMethods>::create<void>(
+    const Options::Option& options);
+
+namespace control_system {
 /*!
  * \ingroup ControlSystemGroup
  * \brief Calculate the next expiration time for the FunctionsOfTime.
@@ -137,6 +159,7 @@ double measurement_expiration_time(
 template <size_t Dim, typename... OptionHolders>
 std::unordered_map<std::string, double> initial_expiration_times(
     const double initial_time, const int measurements_per_update,
+    const control_system::ExpirationMethods expiration_method,
     const std::unique_ptr<::DomainCreator<Dim>>& domain_creator,
     const OptionHolders&... option_holders) {
   std::unordered_map<std::string, double> initial_expiration_times{};
@@ -159,9 +182,7 @@ std::unordered_map<std::string, double> initial_expiration_times(
   }
 
   [[maybe_unused]] const auto combine_expiration_times =
-      [&initial_time, &measurements_per_update, &domain_creator, &map_of_names,
-       &combined_expiration_times,
-       &infinite_expiration_times](const auto& option_holder) {
+      [&](const auto& option_holder) {
         const std::string& control_system_name =
             std::decay_t<decltype(option_holder)>::control_system::name();
         const std::string& combined_name = map_of_names[control_system_name];
@@ -178,7 +199,9 @@ std::unordered_map<std::string, double> initial_expiration_times(
 
         double initial_expiration_time = function_of_time_expiration_time(
             initial_time, option_holder.fraction, DataVector{1, 0.0},
-            DataVector{1, min_measurement_timescale}, measurements_per_update);
+            DataVector{1, min_measurement_timescale}, measurements_per_update,
+            expiration_method,
+            expiration_method == control_system::ExpirationMethods::spec);
         initial_expiration_time = option_holder.is_active
                                       ? initial_expiration_time
                                       : std::numeric_limits<double>::infinity();

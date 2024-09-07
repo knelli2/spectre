@@ -74,12 +74,14 @@ struct MeasurementTimescales : db::SimpleTag {
   using option_tags = tmpl::push_front<
       option_holders<Metavariables>,
       control_system::OptionTags::MeasurementsPerUpdate,
+      control_system::OptionTags::ExpirationMethods,
       domain::OptionTags::DomainCreator<Metavariables::volume_dim>,
       ::OptionTags::InitialTime, ::OptionTags::InitialTimeStep>;
 
   template <typename Metavariables, typename... OptionHolders>
   static type create_from_options(
       const int measurements_per_update,
+      const control_system::ExpirationMethods expiration_method,
       const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
           domain_creator,
       const double initial_time, const double initial_time_step,
@@ -110,9 +112,7 @@ struct MeasurementTimescales : db::SimpleTag {
     }
 
     [[maybe_unused]] const auto combine_measurement_timescales =
-        [&initial_time, &initial_time_step, &domain_creator,
-         &measurements_per_update, &map_of_names, &min_measurement_timescales,
-         &expiration_times](const auto& option_holder) {
+        [&](const auto& option_holder) {
           // This check is intentionally inside the lambda so that it will not
           // trigger for domains without control systems.
           if (initial_time_step <= 0.0) {
@@ -151,7 +151,8 @@ struct MeasurementTimescales : db::SimpleTag {
             const double expiration_time = measurement_expiration_time(
                 initial_time, option_holder.fraction, DataVector{1_st, 0.0},
                 DataVector{1_st, min_measurement_timescales[combined_name]},
-                measurements_per_update);
+                measurements_per_update, expiration_method,
+                expiration_method == control_system::ExpirationMethods::spec);
             expiration_times[combined_name] =
                 std::min(expiration_times[combined_name], expiration_time);
           }

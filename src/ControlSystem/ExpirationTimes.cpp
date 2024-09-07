@@ -4,6 +4,9 @@
 #include "ControlSystem/ExpirationTimes.hpp"
 
 #include "DataStructures/DataVector.hpp"
+#include "Options/Options.hpp"
+#include "Options/ParseOptions.hpp"
+#include "Utilities/ErrorHandling/Error.hpp"
 
 namespace control_system {
 double function_of_time_expiration_time(
@@ -50,4 +53,30 @@ double measurement_expiration_time(const double time, const double fraction,
            (fraction - 0.5) * min(new_measurement_timescales);
   }
 }
+
+std::ostream& operator<<(std::ostream& os,
+                         const ExpirationMethods expiration_method) {
+  switch (expiration_method) {
+    case ExpirationMethods::spec:
+      return os << "spec";
+    case ExpirationMethods::spectre:
+      return os << "spectre";
+    default:
+      ERROR("Unknown ExpirationMethods type");
+  }
+}
 }  // namespace control_system
+
+template <>
+control_system::ExpirationMethods
+Options::create_from_yaml<control_system::ExpirationMethods>::create<void>(
+    const Options::Option& options) {
+  const auto expiration_method = options.parse_as<std::string>();
+  if (expiration_method == "spec") {
+    return control_system::ExpirationMethods::spec;
+  } else if (expiration_method == "spectre") {
+    return control_system::ExpirationMethods::spectre;
+  }
+  PARSE_ERROR(options.context(),
+              "ExpirationMethod must be 'spec' or 'spectre'");
+}

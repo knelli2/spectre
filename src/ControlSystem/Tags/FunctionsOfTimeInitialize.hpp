@@ -70,6 +70,7 @@ struct FunctionsOfTimeInitialize : domain::Tags::FunctionsOfTime,
           metavars_has_control_systems<Metavariables>,
           tmpl::flatten<tmpl::list<
               control_system::OptionTags::MeasurementsPerUpdate,
+              control_system::OptionTags::ExpirationMethods,
               ::OptionTags::InitialTime, option_holders<Metavariables>>>,
           tmpl::list<>>,
       domain::OptionTags::DomainCreator<Metavariables::volume_dim>>;
@@ -81,11 +82,12 @@ struct FunctionsOfTimeInitialize : domain::Tags::FunctionsOfTime,
       const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
           domain_creator,
       const int measurements_per_update,
-     const double initial_time, const OptionHolders&... option_holders) {
+      const control_system::ExpirationMethods expiration_method,
+      const double initial_time, const OptionHolders&... option_holders) {
     const auto initial_expiration_times =
         control_system::initial_expiration_times(
-            initial_time, measurements_per_update, domain_creator,
-            option_holders...);
+            initial_time, measurements_per_update, expiration_method,
+            domain_creator, option_holders...);
 
     // We need to check the expiration times so we can ensure a proper domain
     // creator was chosen from options.
@@ -104,7 +106,7 @@ struct FunctionsOfTimeInitialize : domain::Tags::FunctionsOfTime,
   /// define control systems
   template <typename Metavariables>
   static type create_from_options(
-     const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
+      const std::unique_ptr<::DomainCreator<Metavariables::volume_dim>>&
           domain_creator) {
     return domain_creator->functions_of_time();
   }

@@ -8,6 +8,7 @@
 
 #include "ControlSystem/Averager.hpp"
 #include "ControlSystem/Controller.hpp"
+#include "ControlSystem/ExpirationTimes.hpp"
 #include "ControlSystem/IsSize.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "ControlSystem/TimescaleTuner.hpp"
@@ -166,6 +167,14 @@ struct OffsetToExpirationTime {
   static constexpr Options::String help = {
       "Apply a time offset for control error and derivs to the expiration time "
       "(true) or time update was calculated (false)"};
+  using group = ControlSystemGroup;
+};
+
+struct ExpirationMethods {
+  static std::string name() { return "ExpirationMethod"; }
+  using type = control_system::ExpirationMethods;
+  static constexpr Options::String help = {
+      "Style of expiration times to use. Either 'spec' or 'spectre'."};
   using group = ControlSystemGroup;
 };
 

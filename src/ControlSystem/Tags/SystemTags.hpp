@@ -104,12 +104,13 @@ struct AskKyleAboutThisFraction : db::SimpleTag {
 };
 
 struct ExpirationMethods : db::SimpleTag {
+  static std::string name() { return "ExpirationMethod"; }
   using type = control_system::ExpirationMethods;
 
-  using option_tags = tmpl::list<>;
+  using option_tags = tmpl::list<OptionTags::ExpirationMethods>;
   static constexpr bool pass_metavariables = false;
-  static type create_from_options() {
-    return control_system::ExpirationMethods::spectre;
+  static type create_from_options(const type expiration_method) {
+    return expiration_method;
   }
 };
 
