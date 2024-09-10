@@ -1,7 +1,7 @@
 # Distributed under the MIT License.
 # See LICENSE.txt for details.
 
-from typing import Optional
+from typing import Optional, Sequence
 
 import click
 import numpy as np
@@ -19,10 +19,11 @@ def _parse_step(ctx, param, value):
 
 
 def render_domain(
-    xmf_file: str,
+    xmf_files: Sequence[str],
     output: str,
     time_step: int = 0,
     animate: bool = False,
+    color: Optional[Sequence[float]] = None,
     zoom_factor: float = 1.0,
     camera_theta: float = 0.0,
     camera_phi: float = 0.0,
@@ -42,20 +43,10 @@ def render_domain(
     """
     import paraview.simple as pv
 
-    # Load data
-    volume_data = pv.XDMFReader(
-        registrationName="VolumeData", FileNames=[xmf_file]
-    )
-    # if hi_res_xmf_file:
-    #     hi_res_volume_data = pv.XDMFReader(
-    #         registrationName="HiResVolumeData", FileNames=[hi_res_xmf_file]
-    #     )
+    assert len(xmf_files) == 1, "Currently only accepts 1 xmf file"
 
-    render_view = pv.GetActiveViewOrCreate("RenderView")
-    render_view.UseLight = 0
-    render_view.UseColorPaletteForBackground = 0
-    render_view.Background = 3 * [1.0]
-    render_view.OrientationAxesVisibility = 0
+    if color is None:
+        color = [1.0, 1.0, 1.0]
 
     def slice_or_clip(triangulate, **kwargs):
         if slice:
@@ -72,31 +63,55 @@ def render_domain(
             result.ClipType.Normal = clip_normal
         return result
 
-    # Show grid
-    grid = slice_or_clip(
-        registrationName="Grid", Input=volume_data, triangulate=False
-    )
-    grid_display = pv.Show(grid, render_view)
-    grid_display.Representation = "Surface With Edges"
-    grid_display.LineWidth = 1.0
-    grid_display.EdgeColor = 3 * [0.6]
-    # The following line works around a failure in `pv.ColorBy(..., None)`
-    grid_display.ColorArrayName = ("POINTS", None)
-    pv.ColorBy(grid_display, None)
+    # Set up render
+    render_view = pv.GetActiveViewOrCreate("RenderView")
+    render_view.UseLight = 0
+    render_view.UseColorPaletteForBackground = 0
+    render_view.Background = 3 * [1.0]
+    render_view.OrientationAxesVisibility = 0
 
-    # Show outline
-    # outline_data = hi_res_volume_data if hi_res_xmf_file else volume_data
-    outline = slice_or_clip(
-        registrationName="Outline", Input=volume_data, triangulate=True
-    )
-    outline_display = pv.Show(outline, render_view)
-    outline_display.Representation = "Feature Edges"
-    outline_display.LineWidth = 3.0
-    outline_display.DiffuseColor = 3 * [0.0]
-    outline_display.AmbientColor = 3 * [0.0]
-    # The following line works around a failure in `pv.ColorBy(..., None)`
-    outline_display.ColorArrayName = ("POINTS", None)
-    pv.ColorBy(outline_display, None)
+    # Render a single xmf
+    def render_single_xmf(xmf_file: str, index: int, color: Sequence[float]):
+        # Load data
+        volume_data = pv.XDMFReader(
+            registrationName=f"VolumeData{index}", FileNames=[xmf_file]
+        )
+
+        # Show grid
+        grid = slice_or_clip(
+            registrationName=f"Grid{index}",
+            Input=volume_data,
+            triangulate=False,
+        )
+        grid_display = pv.Show(grid, render_view)
+        grid_display.Representation = "Surface With Edges"
+        grid_display.LineWidth = 1.0
+        grid_display.EdgeColor = 3 * [0.6]
+        grid_display.DiffuseColor = color
+        grid_display.ColorArrayName = ("POINTS", None)
+        pv.ColorBy(grid_display, None)
+
+        # Show outline
+        # outline_data = hi_res_volume_data if hi_res_xmf_file else volume_data
+        outline = slice_or_clip(
+            registrationName=f"Outline{index}",
+            Input=volume_data,
+            triangulate=True,
+        )
+        outline_display = pv.Show(outline, render_view)
+        outline_display.Representation = "Feature Edges"
+        outline_display.LineWidth = 3.0
+        outline_display.DiffuseColor = 3 * [0.0]
+        outline_display.AmbientColor = 3 * [0.0]
+        # The following line works around a failure in `pv.ColorBy(..., None)`
+        outline_display.ColorArrayName = ("POINTS", None)
+        pv.ColorBy(outline_display, None)
+
+        return volume_data
+
+    all_volume_data = [
+        render_single_xmf(xmf_files[i], i, color) for i in range(len(xmf_files))
+    ]
 
     # Set resolution
     layout = pv.GetLayout()
@@ -118,14 +133,16 @@ def render_domain(
     if animate:
         pv.SaveAnimation(output, render_view)
     else:
-        render_view.ViewTime = volume_data.TimestepValues[time_step]
+        for volume_data in all_volume_data:
+            render_view.ViewTime = volume_data.TimestepValues[time_step]
         pv.Render()
         pv.SaveScreenshot(output, render_view)
 
 
 @click.command(name="domain", help=render_domain.__doc__)
 @click.argument(
-    "xmf_file",
+    "xmf_files",
+    nargs=-1,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
 )
 @click.option(
@@ -148,6 +165,14 @@ def render_domain(
 )
 @click.option(
     "--animate", is_flag=True, help="Produce an animation of all time steps."
+)
+@click.option(
+    "--color",
+    "-c",
+    type=float,
+    nargs=3,
+    default=None,
+    help="Colors as RGB",
 )
 @click.option("zoom_factor", "--zoom", help="Zoom factor.", default=1.0)
 @click.option(
