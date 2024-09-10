@@ -21,7 +21,6 @@ def _parse_step(ctx, param, value):
 def render_domain(
     xmf_file: str,
     output: str,
-    hi_res_xmf_file: Optional[str] = None,
     time_step: int = 0,
     animate: bool = False,
     zoom_factor: float = 1.0,
@@ -47,10 +46,10 @@ def render_domain(
     volume_data = pv.XDMFReader(
         registrationName="VolumeData", FileNames=[xmf_file]
     )
-    if hi_res_xmf_file:
-        hi_res_volume_data = pv.XDMFReader(
-            registrationName="HiResVolumeData", FileNames=[hi_res_xmf_file]
-        )
+    # if hi_res_xmf_file:
+    #     hi_res_volume_data = pv.XDMFReader(
+    #         registrationName="HiResVolumeData", FileNames=[hi_res_xmf_file]
+    #     )
 
     render_view = pv.GetActiveViewOrCreate("RenderView")
     render_view.UseLight = 0
@@ -86,9 +85,9 @@ def render_domain(
     pv.ColorBy(grid_display, None)
 
     # Show outline
-    outline_data = hi_res_volume_data if hi_res_xmf_file else volume_data
+    # outline_data = hi_res_volume_data if hi_res_xmf_file else volume_data
     outline = slice_or_clip(
-        registrationName="Outline", Input=outline_data, triangulate=True
+        registrationName="Outline", Input=volume_data, triangulate=True
     )
     outline_display = pv.Show(outline, render_view)
     outline_display.Representation = "Feature Edges"
@@ -128,11 +127,6 @@ def render_domain(
 @click.argument(
     "xmf_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
-)
-@click.argument(
-    "hi_res_xmf_file",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
-    required=False,
 )
 @click.option(
     "--output",
