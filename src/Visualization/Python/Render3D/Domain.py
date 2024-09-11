@@ -23,7 +23,7 @@ def render_domain(
     output: str,
     time_step: int = 0,
     animate: bool = False,
-    color: Optional[Sequence[float]] = None,
+    colors: Sequence[Sequence[float]] = [[1.0, 1.0, 1.0]],
     zoom_factor: float = 1.0,
     camera_theta: float = 0.0,
     camera_phi: float = 0.0,
@@ -43,10 +43,8 @@ def render_domain(
     """
     import paraview.simple as pv
 
-    assert len(xmf_files) == 1, "Currently only accepts 1 xmf file"
-
-    if color is None:
-        color = [1.0, 1.0, 1.0]
+    if len(colors) == 1:
+        colors = len(xmf_files) * colors
 
     def slice_or_clip(triangulate, **kwargs):
         if slice:
@@ -110,7 +108,8 @@ def render_domain(
         return volume_data
 
     all_volume_data = [
-        render_single_xmf(xmf_files[i], i, color) for i in range(len(xmf_files))
+        render_single_xmf(xmf_files[i], i, list(colors[i]))
+        for i in range(len(xmf_files))
     ]
 
     # Set resolution
@@ -169,9 +168,11 @@ def render_domain(
 @click.option(
     "--color",
     "-c",
+    "colors",
     type=float,
     nargs=3,
-    default=None,
+    default=[[1.0, 1.0, 1.0]],
+    multiple=True,
     help="Colors as RGB",
 )
 @click.option("zoom_factor", "--zoom", help="Zoom factor.", default=1.0)
