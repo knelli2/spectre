@@ -23,7 +23,7 @@ def render_domain(
     output: str,
     time_step: int = 0,
     animate: bool = False,
-    colors: Sequence[Sequence[float]] = [[1.0, 1.0, 1.0]],
+    colors: Sequence[Sequence[int]] = [[255, 255, 255]],
     zoom_factor: float = 1.0,
     camera_theta: float = 0.0,
     camera_phi: float = 0.0,
@@ -69,7 +69,7 @@ def render_domain(
     render_view.OrientationAxesVisibility = 0
 
     # Render a single xmf
-    def render_single_xmf(xmf_file: str, index: int, color: Sequence[float]):
+    def render_single_xmf(xmf_file: str, index: int, color: Sequence[int]):
         # Load data
         volume_data = pv.XDMFReader(
             registrationName=f"VolumeData{index}", FileNames=[xmf_file]
@@ -85,7 +85,7 @@ def render_domain(
         grid_display.Representation = "Surface With Edges"
         grid_display.LineWidth = 1.0
         grid_display.EdgeColor = 3 * [0.6]
-        grid_display.DiffuseColor = color
+        grid_display.DiffuseColor = list(np.array(color) / 255)
         grid_display.ColorArrayName = ("POINTS", None)
         pv.ColorBy(grid_display, None)
 
@@ -169,11 +169,11 @@ def render_domain(
     "--color",
     "-c",
     "colors",
-    type=float,
+    type=int,
     nargs=3,
-    default=[[1.0, 1.0, 1.0]],
+    default=[[255, 255, 255]],
     multiple=True,
-    help="Colors as RGB",
+    help="Colors as RGB ranges from 0 to 255",
 )
 @click.option("zoom_factor", "--zoom", help="Zoom factor.", default=1.0)
 @click.option(
