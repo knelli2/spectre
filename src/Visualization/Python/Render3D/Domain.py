@@ -183,7 +183,7 @@ def render_domain(
 )
 @click.option("zoom_factor", "--zoom", help="Zoom factor.", default=1.0)
 @click.option(
-    "high-res-xmf",
+    "--high-res-xmf",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
     help="High res xmf for rendering solid black lines",
 )
