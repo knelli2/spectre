@@ -25,6 +25,7 @@ def render_domain(
     animate: bool = False,
     colors: Sequence[Sequence[int]] = [[255, 255, 255]],
     zoom_factor: float = 1.0,
+    high_res_xmf: Optional[str] = None,
     camera_theta: float = 0.0,
     camera_phi: float = 0.0,
     clip_origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
@@ -68,6 +69,11 @@ def render_domain(
     render_view.Background = 3 * [1.0]
     render_view.OrientationAxesVisibility = 0
 
+    if high_res_xmf:
+        high_res_volume_data = pv.XDMFReader(
+            registrationName="HighResVolumeData", FileNames=[high_res_xmf]
+        )
+
     # Render a single xmf
     def render_single_xmf(xmf_file: str, index: int, color: Sequence[int]):
         # Load data
@@ -90,10 +96,10 @@ def render_domain(
         pv.ColorBy(grid_display, None)
 
         # Show outline
-        # outline_data = hi_res_volume_data if hi_res_xmf_file else volume_data
+        outline_data = high_res_volume_data if high_res_xmf else volume_data
         outline = slice_or_clip(
             registrationName=f"Outline{index}",
-            Input=volume_data,
+            Input=outline_data,
             triangulate=True,
         )
         outline_display = pv.Show(outline, render_view)
@@ -176,6 +182,11 @@ def render_domain(
     help="Colors as RGB ranges from 0 to 255",
 )
 @click.option("zoom_factor", "--zoom", help="Zoom factor.", default=1.0)
+@click.option(
+    "high-res-xmf",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+    help="High res xmf for rendering solid black lines",
+)
 @click.option(
     "--camera-theta",
     type=float,
