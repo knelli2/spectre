@@ -246,6 +246,9 @@ Wedge<Dim>::Wedge(
   }
 }
 
+constexpr bool use_cubic = true;
+constexpr double a = M_PI_4;
+
 template <size_t Dim>
 template <bool FuncIsXi, typename T>
 tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_cap_angular_function(
@@ -258,10 +261,15 @@ tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_cap_angular_function(
                      tan(0.5 * opening_angles_distribution_.value()[cap_index] *
                          lowercase_xi_or_eta) /
                      tan(0.5 * opening_angles_distribution_.value()[cap_index])
-               : lowercase_xi_or_eta;
+               : (use_cubic ? a * lowercase_xi_or_eta +
+                                  (1.0 - a) * cube(lowercase_xi_or_eta)
+                            : lowercase_xi_or_eta);
   } else {
-    return with_equiangular_map_ ? tan(M_PI_4 * lowercase_xi_or_eta)
-                                 : lowercase_xi_or_eta;
+    return with_equiangular_map_
+               ? tan(M_PI_4 * lowercase_xi_or_eta)
+               : (use_cubic ? a * lowercase_xi_or_eta +
+                                  (1.0 - a) * cube(lowercase_xi_or_eta)
+                            : lowercase_xi_or_eta);
   }
 }
 
@@ -282,11 +290,15 @@ tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_deriv_cap_angular_function(
                      square(cos(
                          0.5 * opening_angles_distribution_.value()[cap_index] *
                          lowercase_xi_or_eta))
-               : make_with_value<ReturnType>(lowercase_xi_or_eta, 1.0);
+               : (use_cubic
+                      ? a + 3.0 * (1.0 - a) * square(lowercase_xi_or_eta)
+                      : make_with_value<ReturnType>(lowercase_xi_or_eta, 1.0));
   } else {
     return with_equiangular_map_
                ? M_PI_4 / square(cos(M_PI_4 * lowercase_xi_or_eta))
-               : make_with_value<ReturnType>(lowercase_xi_or_eta, 1.0);
+               : (use_cubic
+                      ? a + 3.0 * (1.0 - a) * square(lowercase_xi_or_eta)
+                      : make_with_value<ReturnType>(lowercase_xi_or_eta, 1.0));
   }
 }
 
@@ -539,6 +551,7 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::operator()(
 template <size_t Dim>
 std::optional<std::array<double, Dim>> Wedge<Dim>::inverse(
     const std::array<double, Dim>& target_coords) const {
+  ASSERT(false, "Oh no... :(");
   const std::array<double, Dim> physical_coords =
       discrete_rotation(orientation_of_wedge_.inverse_map(), target_coords);
   const auto rotated_focus =
@@ -802,7 +815,6 @@ Wedge<Dim>::inv_jacobian(const std::array<T, Dim>& source_coords) const {
     xi -= 1.0;
     xi *= 0.5;
   }
-
 
   std::array<ReturnType, Dim - 1> cap{};
   std::array<ReturnType, Dim - 1> cap_deriv{};
