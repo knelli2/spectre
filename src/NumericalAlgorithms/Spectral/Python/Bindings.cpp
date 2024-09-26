@@ -9,6 +9,7 @@
 #include "NumericalAlgorithms/Spectral/Projection.hpp"
 #include "NumericalAlgorithms/Spectral/Python/LogicalCoordinates.hpp"
 #include "NumericalAlgorithms/Spectral/Python/Mesh.hpp"
+#include "NumericalAlgorithms/Spectral/Python/Projection.hpp"
 #include "NumericalAlgorithms/Spectral/Python/Spectral.hpp"
 #include "Utilities/ErrorHandling/SegfaultHandler.hpp"
 
@@ -19,6 +20,7 @@ PYBIND11_MODULE(_Pybindings, m) {  // NOLINT
   py::module_::import("spectre.DataStructures");
   py::module_::import("spectre.DataStructures.Tensor");
   Spectral::py_bindings::bind_logical_coordinates(m);
+  Spectral::py_bindings::bind_projection(m);
   Spectral::py_bindings::bind_spectral(m);
   py_bindings::bind_mesh(m);
   // Filtering

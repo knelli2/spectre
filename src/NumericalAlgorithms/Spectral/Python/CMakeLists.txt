@@ -10,6 +10,7 @@ spectre_python_add_module(
   Bindings.cpp
   LogicalCoordinates.cpp
   Mesh.cpp
+  Projection.cpp
   Spectral.cpp
   PYTHON_FILES
   __init__.py
@@ -21,6 +22,7 @@ spectre_python_headers(
   HEADERS
   LogicalCoordinates.hpp
   Mesh.hpp
+  Projection.hpp
   Spectral.hpp
   )
 
