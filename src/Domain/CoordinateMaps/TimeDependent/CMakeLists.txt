@@ -5,6 +5,7 @@ spectre_target_sources(
   ${LIBRARY}
   PRIVATE
   CubicScale.cpp
+  RadialTranslation.cpp
   Rotation.cpp
   RotationMatrixHelpers.cpp
   RotScaleTrans.cpp
@@ -20,6 +21,7 @@ spectre_target_headers(
   CubicScale.hpp
   ProductMaps.hpp
   ProductMaps.tpp
+  RadialTranslation.hpp
   Rotation.hpp
   RotationMatrixHelpers.hpp
   RotScaleTrans.hpp
