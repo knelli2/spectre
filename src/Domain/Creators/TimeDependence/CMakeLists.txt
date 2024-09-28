@@ -11,6 +11,7 @@ spectre_target_sources(
   CubicScale.cpp
   None.cpp
   ScalingAndZRotation.cpp
+  RadialTranslation.cpp
   RegisterDerivedWithCharm.cpp
   RotationAboutZAxis.cpp
   Shape.cpp
@@ -25,6 +26,7 @@ spectre_target_headers(
   CubicScale.hpp
   GenerateCoordinateMap.hpp
   None.hpp
+  RadialTranslation.hpp
   RegisterDerivedWithCharm.hpp
   RotationAboutZAxis.hpp
   ScalingAndZRotation.hpp
