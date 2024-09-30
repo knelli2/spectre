@@ -7,6 +7,7 @@ spectre_target_sources(
   ${LIBRARY}
   PRIVATE
   Size.cpp
+  Translation.cpp
 )
 
 spectre_target_headers(

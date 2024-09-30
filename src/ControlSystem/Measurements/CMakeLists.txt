@@ -16,6 +16,7 @@ spectre_target_headers(
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
   BNSCenterOfMass.hpp
+  BlobTracker.hpp
   BothHorizons.hpp
   CharSpeed.hpp
   NonFactoryCreatable.hpp

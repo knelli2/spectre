@@ -18,6 +18,8 @@
 #include "Domain/Creators/Tags/ObjectCenter.hpp"
 #include "Domain/FunctionsOfTime/QuaternionHelpers.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
+#include "Options/Auto.hpp"
+#include "Options/Context.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
@@ -35,8 +37,7 @@ struct FunctionsOfTime;
 }  // namespace domain::Tags
 /// \endcond
 
-namespace control_system {
-namespace ControlErrors {
+namespace control_system::ControlErrors {
 /*!
  * \brief Control error in the 3D \link
  * domain::CoordinateMaps::TimeDependent::Translation Translation \endlink
@@ -210,5 +211,88 @@ struct Translation : tt::ConformsTo<protocols::ControlError> {
     }
   }
 };
-}  // namespace ControlErrors
-}  // namespace control_system
+
+struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
+  using object_centers = domain::object_list<domain::ObjectLabel::None>;
+
+  struct InnerOuterRadius {
+    using type = std::array<double, 2>;
+    static constexpr Options::String help = {
+        "Inner and outer radius of the region of radial translation in grid "
+        "coordinates."};
+  };
+
+  struct InnerOuterSafetyDistances {
+    using type = Options::Auto<std::array<double, 2>, Options::AutoLabel::None>;
+    static constexpr Options::String help = {
+        "Distance to keep inner(outer) domain radius from the minimum(maximum) "
+        "feature radius. Specify 'None' if you are using a rigid radial "
+        "translation."};
+  };
+
+  using options = tmpl::list<InnerOuterRadius, InnerOuterSafetyDistances>;
+  static constexpr Options::String help{
+      "Computes the control error for radial translation control. Must use the "
+      "`RadialTranslation` TimeDependence in a Sphere domain with an "
+      "excision."};
+
+  void pup(PUP::er& p);
+
+  RadialTranslation() = default;
+  RadialTranslation(
+      const std::array<double, 2>& radii,
+      const std::optional<std::array<double, 2>>& safety_distances,
+      const Options::Context& context = {});
+
+  template <typename Metavariables, typename... TupleTags>
+  DataVector operator()(const ::TimescaleTuner<true>& /*unused*/,
+                        const Parallel::GlobalCache<Metavariables>& cache,
+                        const double time,
+                        const std::string& /*function_of_time_name*/,
+                        const tuples::TaggedTuple<TupleTags...>& measurements) {
+    const auto& functions_of_time = get<domain::Tags::FunctionsOfTime>(cache);
+
+    ASSERT(functions_of_time.contains("RadialTranslation"),
+           "Gotta have that RadialTranslation");
+    const bool has_outer_radius =
+        functions_of_time.at("RadialTranslation")->func(time).size() == 2;
+
+    DataVector control_error{};
+
+    // TODO: Make Queue tag
+    const double current_inner_radius =
+        get<QueueTags::BlobInnerRadius>(measurements);
+    // TODO: Update for inner and outer
+
+    if (has_outer_radius) {
+      if (UNLIKELY(not safety_distances_.has_value())) {
+        ERROR(
+            "Didn't specify safety distances, but the function of time is for "
+            "both the inner and outer boundary.");
+      }
+
+      const double current_outer_radius =
+          get<QueueTags::BlobOuterRadius>(measurements);
+
+      control_error =
+          DataVector{safety_distances_.value()[0] -
+                         (current_inner_radius - inner_outer_radius_[0]),
+                     safety_distances_.value()[1] -
+                         (current_outer_radius - inner_outer_radius_[1])};
+    } else {
+      if (UNLIKELY(safety_distances_.has_value())) {
+        ERROR(
+            "Specified safety distances, but the function of time is a rigid "
+            "radial translation and so will not be used.");
+      }
+      control_error = DataVector{averaged_radius_ - current_inner_radius};
+    }
+
+    return control_error;
+  }
+
+  std::array<double, 2> inner_outer_radius_{};
+  double averaged_radius_{};
+  std::optional<std::array<double, 2>> safety_distances_{};
+};
+}  // namespace control_system::ControlErrors

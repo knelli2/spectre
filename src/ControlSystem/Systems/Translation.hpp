@@ -10,6 +10,7 @@
 #include "ControlSystem/Component.hpp"
 #include "ControlSystem/ControlErrors/Translation.hpp"
 #include "ControlSystem/Measurements/BNSCenterOfMass.hpp"
+#include "ControlSystem/Measurements/BlobTracker.hpp"
 #include "ControlSystem/Measurements/BothHorizons.hpp"
 #include "ControlSystem/Measurements/SingleHorizon.hpp"
 #include "ControlSystem/Protocols/ControlError.hpp"
@@ -166,6 +167,69 @@ struct Translation : tt::ConformsTo<protocols::ControlSystem> {
           QueueTags::Center<::domain::ObjectLabel::B>, MeasurementQueue,
           UpdateControlSystem<Translation>>>(control_sys_proxy, measurement_id,
                                              DataVector(center_b));
+
+      if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
+        Parallel::printf("%s, time = %.16f: Received measurement '%s'.\n",
+                         name(), measurement_id.id,
+                         pretty_type::name(submeasurement));
+      }
+    }
+  };
+};
+
+template <size_t DerivOrder, typename Measurement>
+struct RadialTranslation : tt::ConformsTo<protocols::ControlSystem> {
+ public:
+  static constexpr size_t deriv_order = DerivOrder;
+
+  static std::string name() { return "RadialTranslation"; }
+
+  static std::optional<std::string> component_name(
+      const size_t component, const size_t num_components) {
+    if (num_components == 2) {
+      return component == 0 ? "in" : "out";
+    } else {
+      return "RadialTranslation";
+    }
+  }
+
+  using measurement = Measurement;
+  static_assert(
+      tt::conforms_to_v<measurement, control_system::protocols::Measurement>);
+
+  using control_error = ControlErrors::RadialTranslation;
+  static_assert(tt::conforms_to_v<control_error,
+                                  control_system::protocols::ControlError>);
+
+  // tag goes in control component
+  struct MeasurementQueue : db::SimpleTag {
+    using type =
+        LinkedMessageQueue<double, tmpl::list<QueueTags::BlobInnerRadius,
+                                              QueueTags::BlobOuterRadius>>;
+  };
+
+  using simple_tags = tmpl::list<MeasurementQueue>;
+
+  struct process_measurement {
+    template <typename Submeasurement>
+    using argument_tags = tmpl::list<measurements::Tags::WaveRadius>;
+
+    template <typename Metavariables>
+    static void apply(
+        measurements::ScalarWavePeakRadius::PeakRadius submeasurement,
+        const double wave_radius, Parallel::GlobalCache<Metavariables>& cache,
+        const LinkedMessageId<double>& measurement_id) {
+      auto& control_sys_proxy = Parallel::get_parallel_component<
+          ControlComponent<Metavariables, RadialTranslation>>(cache);
+
+      Parallel::simple_action<::Actions::UpdateMessageQueue<
+          QueueTags::BlobInnerRadius, MeasurementQueue,
+          UpdateControlSystem<RadialTranslation>>>(control_sys_proxy,
+                                                   measurement_id, wave_radius);
+      Parallel::simple_action<::Actions::UpdateMessageQueue<
+          QueueTags::BlobOuterRadius, MeasurementQueue,
+          UpdateControlSystem<RadialTranslation>>>(control_sys_proxy,
+                                                   measurement_id, wave_radius);
 
       if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
         Parallel::printf("%s, time = %.16f: Received measurement '%s'.\n",

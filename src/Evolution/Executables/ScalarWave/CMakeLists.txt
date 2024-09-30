@@ -4,6 +4,8 @@
 set(LIBS_TO_LINK
   Actions
   Charmxx::main
+  ControlSystem
+  ControlSystemMeasurements
   CoordinateMaps
   DiscontinuousGalerkin
   DomainCreators

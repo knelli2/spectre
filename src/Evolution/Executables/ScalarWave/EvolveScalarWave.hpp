@@ -7,6 +7,13 @@
 #include <cstdint>
 #include <vector>
 
+#include "ControlSystem/Actions/InitializeMeasurements.hpp"
+#include "ControlSystem/Actions/LimitTimeStep.hpp"
+#include "ControlSystem/Component.hpp"
+#include "ControlSystem/Measurements/BlobTracker.hpp"
+#include "ControlSystem/Metafunctions.hpp"
+#include "ControlSystem/Systems/Translation.hpp"
+#include "ControlSystem/Trigger.hpp"
 #include "DataStructures/Tensor/IndexType.hpp"
 #include "Domain/Creators/Factory1D.hpp"
 #include "Domain/Creators/Factory2D.hpp"
@@ -21,6 +28,7 @@
 #include "Evolution/DiscontinuousGalerkin/InboxTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/Mortars.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
+#include "Evolution/Executables/Burgers/EvolveBurgers.hpp"
 #include "Evolution/Initialization/DgDomain.hpp"
 #include "Evolution/Initialization/Evolution.hpp"
 #include "Evolution/Initialization/NonconservativeSystem.hpp"
@@ -80,6 +88,7 @@
 #include "ParallelAlgorithms/EventsAndTriggers/EventsAndTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/LogicalTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndTriggers/Trigger.hpp"
+#include "ParallelAlgorithms/Interpolation/Actions/ElementInitInterpPoints.hpp"
 #include "PointwiseFunctions/AnalyticData/AnalyticData.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/AnalyticSolution.hpp"
 #include "PointwiseFunctions/AnalyticSolutions/Tags.hpp"
@@ -127,7 +136,7 @@ class er;
 /// \endcond
 
 template <size_t Dim>
-struct EvolutionMetavars {
+struct EvolutionMetavars2 {
   static constexpr size_t volume_dim = Dim;
 
   using initial_data_list = ScalarWave::Solutions::all_solutions<Dim>;
@@ -142,8 +151,7 @@ struct EvolutionMetavars {
 
   using analytic_solution_fields = typename system::variables_tag::tags_list;
   using deriv_compute = ::Tags::DerivCompute<
-      typename system::variables_tag,
-      domain::Tags::Mesh<volume_dim>,
+      typename system::variables_tag, domain::Tags::Mesh<volume_dim>,
       domain::Tags::InverseJacobian<volume_dim, Frame::ElementLogical,
                                     Frame::Inertial>,
       typename system::gradient_variables>;
@@ -164,6 +172,9 @@ struct EvolutionMetavars {
           ScalarWave::Tags::OneIndexConstraint<volume_dim>>,
       ::Tags::PointwiseL2NormCompute<
           ScalarWave::Tags::TwoIndexConstraint<volume_dim>>,
+      ::Events::Tags::ObserverCoordinatesCompute<volume_dim,
+                                                 Frame::ElementLogical>,
+      ::Events::Tags::ObserverCoordinatesCompute<volume_dim, Frame::Grid>,
       domain::Tags::Coordinates<volume_dim, Frame::Grid>,
       domain::Tags::Coordinates<volume_dim, Frame::Inertial>>;
   using non_tensor_compute_tags =
@@ -171,6 +182,10 @@ struct EvolutionMetavars {
                  ::Events::Tags::ObserverDetInvJacobianCompute<
                      Frame::ElementLogical, Frame::Inertial>,
                  deriv_compute, analytic_compute, error_compute>;
+
+  using measurement = control_system::measurements::ScalarWavePeakRadius;
+  using control_systems =
+      tmpl::list<control_system::Systems::RadialTranslation<2, measurement>>;
 
   struct factory_creation
       : tt::ConformsTo<Options::protocols::FactoryCreation> {
@@ -180,13 +195,18 @@ struct EvolutionMetavars {
                               amr::Criteria::TruncationError<
                                   volume_dim,
                                   typename system::variables_tag::tags_list>>>,
-        tmpl::pair<DenseTrigger, DenseTriggers::standard_dense_triggers>,
+        tmpl::pair<DenseTrigger,
+                   tmpl::append<DenseTriggers::standard_dense_triggers,
+                                control_system::control_system_triggers<
+                                    control_systems>>>,
         tmpl::pair<DomainCreator<volume_dim>, domain_creators<volume_dim>>,
         tmpl::pair<Event,
                    tmpl::flatten<tmpl::list<
                        Events::Completion,
                        dg::Events::field_observations<
                            volume_dim, observe_fields, non_tensor_compute_tags>,
+                       control_system::metafunctions::control_system_events<
+                           control_systems>,
                        Events::time_events<system>>>>,
         tmpl::pair<evolution::initial_data::InitialData,
                    tmpl::push_back<initial_data_list,
@@ -217,6 +237,8 @@ struct EvolutionMetavars {
                                          Triggers::time_triggers>>>;
   };
 
+  using interpolation_target_tags = tmpl::list<>;
+
   using observed_reduction_data_tags =
       observers::collect_reduction_data_tags<tmpl::flatten<tmpl::list<
           tmpl::at<typename factory_creation::factory_classes, Event>>>>;
@@ -233,8 +255,10 @@ struct EvolutionMetavars {
           use_dg_element_collection>,
       tmpl::conditional_t<
           local_time_stepping,
-          tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<
-                         tmpl::list<evolution::dg::ApplyBoundaryCorrections<
+          tmpl::list<evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
+                         ::domain::CheckFunctionsOfTimeAreReadyPostprocessor<
+                             volume_dim>,
+                         evolution::dg::ApplyBoundaryCorrections<
                              local_time_stepping, system, volume_dim, true>>>,
                      evolution::dg::Actions::ApplyLtsBoundaryCorrections<
                          system, volume_dim, false, use_dg_element_collection>>,
@@ -242,7 +266,9 @@ struct EvolutionMetavars {
               evolution::dg::Actions::ApplyBoundaryCorrectionsToTimeDerivative<
                   system, volume_dim, false, use_dg_element_collection>,
               Actions::RecordTimeStepperData<system>,
-              evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<>>,
+              evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
+                  ::domain::CheckFunctionsOfTimeAreReadyPostprocessor<
+                      volume_dim>>>,
               Actions::UpdateU<system>>>,
       Actions::CleanHistory<system, local_time_stepping>,
       tmpl::conditional_t<
@@ -261,23 +287,26 @@ struct EvolutionMetavars {
 
   using initialization_actions = tmpl::list<
       Initialization::Actions::InitializeItems<
-          Initialization::TimeStepping<EvolutionMetavars, TimeStepperBase>,
+          Initialization::TimeStepping<EvolutionMetavars2, TimeStepperBase>,
           evolution::dg::Initialization::Domain<volume_dim>,
           ::amr::Initialization::Initialize<volume_dim>,
-          Initialization::TimeStepperHistory<EvolutionMetavars>>,
+          Initialization::TimeStepperHistory<EvolutionMetavars2>>,
       Initialization::Actions::NonconservativeSystem<system>,
       evolution::Initialization::Actions::SetVariables<
           domain::Tags::Coordinates<Dim, Frame::ElementLogical>>,
       ScalarWave::Actions::InitializeConstraints<volume_dim>,
       Initialization::Actions::AddComputeTags<
-          StepChoosers::step_chooser_compute_tags<EvolutionMetavars,
+          StepChoosers::step_chooser_compute_tags<EvolutionMetavars2,
                                                   local_time_stepping>>,
       ::evolution::dg::Initialization::Mortars<volume_dim, system>,
       evolution::Actions::InitializeRunEventsAndDenseTriggers,
+      intrp::Actions::ElementInitInterpPoints<
+          intrp::Tags::InterpPointInfo<EvolutionMetavars2>>,
+      control_system::Actions::InitializeMeasurements<control_systems>,
       Parallel::Actions::TerminatePhase>;
 
   using dg_element_array = DgElementArray<
-      EvolutionMetavars,
+      EvolutionMetavars2,
       tmpl::list<
           Parallel::PhaseActions<Parallel::Phase::Initialization,
                                  initialization_actions>,
@@ -296,10 +325,11 @@ struct EvolutionMetavars {
 
           Parallel::PhaseActions<
               Parallel::Phase::Evolve,
-              tmpl::list<evolution::Actions::RunEventsAndTriggers,
-                         Actions::ChangeSlabSize, step_actions,
-                         Actions::AdvanceTime,
-                         PhaseControl::Actions::ExecutePhaseChange>>>>;
+              tmpl::list<
+                  ::domain::Actions::CheckFunctionsOfTimeAreReady<volume_dim>,
+                  evolution::Actions::RunEventsAndTriggers,
+                  Actions::ChangeSlabSize, step_actions, Actions::AdvanceTime,
+                  PhaseControl::Actions::ExecutePhaseChange>>>>;
 
   struct amr : tt::ConformsTo<::amr::protocols::AmrMetavariables> {
     using element_array = dg_element_array;
@@ -307,12 +337,12 @@ struct EvolutionMetavars {
     using projectors = tmpl::list<
         Initialization::ProjectTimeStepping<volume_dim>,
         evolution::dg::Initialization::ProjectDomain<volume_dim>,
-        Initialization::ProjectTimeStepperHistory<EvolutionMetavars>,
+        Initialization::ProjectTimeStepperHistory<EvolutionMetavars2>,
         ::amr::projectors::ProjectVariables<volume_dim,
                                             typename system::variables_tag>,
         ::amr::projectors::ProjectTensors<volume_dim,
                                           ::ScalarWave::Tags::ConstraintGamma2>,
-        evolution::dg::Initialization::ProjectMortars<EvolutionMetavars>,
+        evolution::dg::Initialization::ProjectMortars<EvolutionMetavars2>,
         evolution::Actions::ProjectRunEventsAndDenseTriggers,
         ::amr::projectors::DefaultInitialize<
             Initialization::Tags::InitialTimeDelta,
@@ -325,9 +355,12 @@ struct EvolutionMetavars {
             SelfStart::Tags::InitialValue<Tags::TimeStep>,
             SelfStart::Tags::InitialValue<Tags::Next<Tags::TimeStep>>,
             evolution::dg::Tags::BoundaryData<volume_dim>>,
-        ::amr::projectors::CopyFromCreatorOrLeaveAsIs<
+        ::amr::projectors::CopyFromCreatorOrLeaveAsIs<tmpl::push_back<
+            typename control_system::Actions::InitializeMeasurements<
+                control_systems>::simple_tags,
+            intrp::Tags::InterpPointInfo<EvolutionMetavars2>,
             Tags::ChangeSlabSize::NumberOfExpectedMessages,
-            Tags::ChangeSlabSize::NewSlabSize>>;
+            Tags::ChangeSlabSize::NewSlabSize>>>;
   };
 
   struct registration
@@ -336,11 +369,15 @@ struct EvolutionMetavars {
         tmpl::map<tmpl::pair<dg_element_array, dg_registration_list>>;
   };
 
-  using component_list =
-      tmpl::list<::amr::Component<EvolutionMetavars>,
-                 observers::Observer<EvolutionMetavars>,
-                 observers::ObserverWriter<EvolutionMetavars>,
-                 dg_element_array>;
+  using component_list = tmpl::flatten<tmpl::list<
+      ::amr::Component<EvolutionMetavars2>,
+      observers::Observer<EvolutionMetavars2>,
+      observers::ObserverWriter<EvolutionMetavars2>,
+      control_system::control_components<EvolutionMetavars2, control_systems>,
+      //   tmpl::transform<interpolation_target_tags,
+      //                   tmpl::bind<intrp::InterpolationTarget,
+      //                              tmpl::pin<EvolutionMetavars2>, tmpl::_1>>,
+      dg_element_array>>;
 
   static constexpr Options::String help{
       "Evolve a Scalar Wave in Dim spatial dimension.\n\n"

@@ -125,4 +125,12 @@ struct SizeHorizonQuantities {
   using type = tuples::TaggedTuple<ylm::Tags::Strahlkorper<Frame>,
                                    ::Tags::dt<ylm::Tags::Strahlkorper<Frame>>>;
 };
+
+struct BlobInnerRadius {
+  using type = double;
+};
+
+struct BlobOuterRadius {
+  using type = double;
+};
 }  // namespace control_system::QueueTags
