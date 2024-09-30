@@ -175,10 +175,7 @@ class RadialTranslation final : public TimeDependence<MeshDim> {
   double initial_time_{std::numeric_limits<double>::signaling_NaN()};
   std::vector<double> inner_initial_values_{};
   std::optional<OuterMapOptions> outer_map_options_{};
-  inline static const std::string inner_function_of_time_name_{
-      "InnerRadialTranslation"};
-  inline static const std::string outer_function_of_time_name_{
-      "OuterRadialTranslation"};
+  inline static const std::string function_of_time_name_{"RadialTranslation"};
 };
 
 template <size_t Dim>

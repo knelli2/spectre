@@ -112,44 +112,30 @@ RadialTranslation<MeshDim>::functions_of_time(
   // between different frames for moving meshes can require Hessians.
 
   // Functions of time don't expire by default
-  double inner_expiration_time = std::numeric_limits<double>::infinity();
-  double outer_expiration_time = std::numeric_limits<double>::infinity();
+  double expiration_time = std::numeric_limits<double>::infinity();
 
   // If we have control systems, overwrite the expiration time with the one
   // supplied by the control system
-  if (initial_expiration_times.count(inner_function_of_time_name_) == 1) {
-    inner_expiration_time =
-        initial_expiration_times.at(inner_function_of_time_name_);
+  if (initial_expiration_times.count(function_of_time_name_) == 1) {
+    expiration_time = initial_expiration_times.at(function_of_time_name_);
   }
 
-  std::array<DataVector, 3> initial_values = make_array<3>(DataVector{0.0});
+  std::array<DataVector, 3> initial_values = make_array<3>(
+      DataVector{outer_map_options_.has_value() ? 2_st : 1_st, 0.0});
 
   for (size_t i = 0; i < inner_initial_values_.size(); i++) {
-    gsl::at(initial_values, i) = DataVector{inner_initial_values_[i]};
+    gsl::at(initial_values, i)[0] = inner_initial_values_[i];
   }
-
-  result[inner_function_of_time_name_] =
-      std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
-          initial_time_, std::move(initial_values), inner_expiration_time);
 
   if (outer_map_options_.has_value()) {
-    if (initial_expiration_times.count(outer_function_of_time_name_) == 1) {
-      outer_expiration_time =
-          initial_expiration_times.at(outer_function_of_time_name_);
-    }
-
-    std::array<DataVector, 3> outer_initial_values =
-        make_array<3>(DataVector{0.0});
     for (size_t i = 0; i < outer_map_options_->initial_values.size(); i++) {
-      gsl::at(outer_initial_values, i) =
-          DataVector{outer_map_options_->initial_values[i]};
+      gsl::at(initial_values, i)[1] = outer_map_options_->initial_values[i];
     }
-
-    result[outer_function_of_time_name_] =
-        std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
-            initial_time_, std::move(outer_initial_values),
-            outer_expiration_time);
   }
+
+  result[function_of_time_name_] =
+      std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
+          initial_time_, std::move(initial_values), expiration_time);
 
   return result;
 }
@@ -158,15 +144,16 @@ template <size_t MeshDim>
 auto RadialTranslation<MeshDim>::grid_to_inertial_map() const
     -> GridToInertialMap {
   if (outer_map_options_.has_value()) {
-    return GridToInertialMap{RadialTranslationMap{
-        inner_function_of_time_name_, outer_function_of_time_name_,
-        outer_map_options_->inner_outer_radius[0],
-        outer_map_options_->inner_outer_radius[1], make_array<MeshDim>(0.0)}};
+    return GridToInertialMap{
+        RadialTranslationMap{function_of_time_name_,
+                             make_array<MeshDim>(0.0),
+                             {outer_map_options_->inner_outer_radius}}};
   } else {
-    return GridToInertialMap{RadialTranslationMap{inner_function_of_time_name_,
-                                                  make_array<MeshDim>(0.0)}};
+    return GridToInertialMap{
+        RadialTranslationMap{function_of_time_name_, make_array<MeshDim>(0.0)}};
   }
 }
+
 template <size_t Dim>
 bool operator==(const RadialTranslation<Dim>& lhs,
                 const RadialTranslation<Dim>& rhs) {
