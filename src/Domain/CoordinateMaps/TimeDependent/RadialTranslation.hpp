@@ -157,12 +157,9 @@ class RadialTranslation {
   static constexpr size_t dim = Dim;
 
   RadialTranslation() = default;
-  explicit RadialTranslation(std::string function_of_time_name,
-                             const std::array<double, Dim>& center);
-  explicit RadialTranslation(std::string inner_function_of_time_name,
-                             std::string outer_function_of_time_name,
-                             double inner_radius, double outer_radius,
-                             const std::array<double, Dim>& center);
+  explicit RadialTranslation(
+      std::string function_of_time_name, const std::array<double, Dim>& center,
+      std::optional<std::array<double, 2>> radii = std::nullopt);
 
   ~RadialTranslation() = default;
   RadialTranslation(RadialTranslation&&) = default;
@@ -238,17 +235,12 @@ class RadialTranslation {
           functions_of_time,
       size_t function_or_deriv_index) const;
 
-  void check_bounding_radii(const DataVector& inner_function_of_time,
-                            const DataVector& outer_function_of_time) const;
+  void check_bounding_radii(const DataVector& function_of_time) const;
 
-  std::string inner_f_of_t_name_{};
-  std::string outer_f_of_t_name_{};
-  bool functions_of_time_equal_{};
+  std::string f_of_t_name_{};
   std::unordered_set<std::string> f_of_t_names_{};
-  double inner_radius_{std::numeric_limits<double>::signaling_NaN()};
-  double outer_radius_{std::numeric_limits<double>::signaling_NaN()};
-  double one_over_radii_difference_{
-      std::numeric_limits<double>::signaling_NaN()};
+  std::optional<std::array<double, 2>> radii_{};
+  double one_over_radii_difference_{};
   std::array<double, Dim> center_{};
 };
 
