@@ -109,10 +109,10 @@ class ScalarWaveTracker : public ::Event {
     const auto index_of_max_element = static_cast<size_t>(
         std::distance(get(psi).begin(), iterator_to_max_element));
 
-    ASSERT(index_of_max_element < grid_radius.size() - 1,
+    ASSERT(index_of_max_element < get(grid_radius).size(),
            "Index of max element " << index_of_max_element
                                    << " outside the range of the coords vector "
-                                   << grid_radius.size() - 1);
+                                   << get(grid_radius).size() - 1);
 
     // Reduction
     auto my_proxy =

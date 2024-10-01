@@ -116,7 +116,8 @@ RadialTranslation<MeshDim>::functions_of_time(
 
   // If we have control systems, overwrite the expiration time with the one
   // supplied by the control system
-  if (initial_expiration_times.count(function_of_time_name_) == 1) {
+  Parallel::printf("Initial expiration times: %s\n", initial_expiration_times);
+  if (initial_expiration_times.contains(function_of_time_name_)) {
     expiration_time = initial_expiration_times.at(function_of_time_name_);
   }
 
