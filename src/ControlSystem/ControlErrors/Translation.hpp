@@ -286,11 +286,12 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
             "radial translation and so will not be used.");
       }
       Parallel::printf(
-          "Inner outer radius: %s\n"
-          "Averaged radius: %.16f\n"
-          "Current inner radius: %.16f\n",
-          inner_outer_radius_, averaged_radius_, current_inner_radius);
-      control_error = DataVector{averaged_radius_ - current_inner_radius};
+          "CS, t = %.16f\n"
+          " Inner outer radius: %s\n"
+          " Averaged radius: %.16f\n"
+          " Current inner radius: %.16f\n",
+          time, inner_outer_radius_, averaged_radius_, current_inner_radius);
+      control_error = -DataVector{averaged_radius_ - current_inner_radius};
     }
 
     return control_error;
