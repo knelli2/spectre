@@ -42,6 +42,9 @@ RegularSphericalWave& RegularSphericalWave::operator=(
   return *this;
 }
 
+constexpr double out_factor = 1.0;
+constexpr double in_factor = 0.0;
+
 tuples::TaggedTuple<Tags::Psi, Tags::Pi, Tags::Phi<3>>
 RegularSphericalWave::variables(
     const tnsr::I<DataVector, 3>& x, double t,
@@ -61,10 +64,10 @@ RegularSphericalWave::variables(
         dpsi_dx.get(d)[i] = 0.;
       }
     } else {
-      const auto F_out = profile_->operator()(r[i] - t);
-      const auto F_in = profile_->operator()(-r[i] - t);
-      const auto dF_out = profile_->first_deriv(r[i] - t);
-      const auto dF_in = profile_->first_deriv(-r[i] - t);
+      const auto F_out = out_factor * profile_->operator()(r[i] - t);
+      const auto F_in = in_factor * profile_->operator()(-r[i] - t);
+      const auto dF_out = out_factor * profile_->first_deriv(r[i] - t);
+      const auto dF_in = in_factor * profile_->first_deriv(-r[i] - t);
       get(psi)[i] = (F_out - F_in) / r[i];
       get(dpsi_dt)[i] = (-dF_out + dF_in) / r[i];
       const double dpsi_dx_isotropic =
@@ -101,10 +104,10 @@ RegularSphericalWave::variables(
         d2psi_dtdx.get(d)[i] = 0.;
       }
     } else {
-      const auto dF_out = profile_->first_deriv(r[i] - t);
-      const auto dF_in = profile_->first_deriv(-r[i] - t);
-      const auto d2F_out = profile_->second_deriv(r[i] - t);
-      const auto d2F_in = profile_->second_deriv(-r[i] - t);
+      const auto dF_out = out_factor * profile_->first_deriv(r[i] - t);
+      const auto dF_in = in_factor * profile_->first_deriv(-r[i] - t);
+      const auto d2F_out = out_factor * profile_->second_deriv(r[i] - t);
+      const auto d2F_in = in_factor * profile_->second_deriv(-r[i] - t);
       get(dpsi_dt)[i] = (-dF_out + dF_in) / r[i];
       get(d2psi_dt2)[i] = (d2F_out - d2F_in) / r[i];
       const double d2psi_dtdx_isotropic =
