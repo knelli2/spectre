@@ -64,8 +64,7 @@ struct LinkedMessageIdLessComparator {
   }
   bool operator()(const LinkedMessageId<Id>& lhs,
                   const LinkedMessageId<Id>& rhs) const {
-    return lhs.id < rhs.id or
-           (lhs.id == rhs.id and lhs.previous < rhs.previous);
+    return lhs.id < rhs.id;
   }
   bool operator()(const LinkedMessageId<Id>& linked_message_id,
                   const Id& id) const {
