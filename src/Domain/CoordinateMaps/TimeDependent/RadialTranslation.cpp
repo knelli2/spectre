@@ -24,10 +24,13 @@
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/MakeArray.hpp"
+#include "Utilities/MakeString.hpp"
 #include "Utilities/MakeWithValue.hpp"
 #include "Utilities/Serialization/PupStlCpp17.hpp"
 #include "Utilities/StdArrayHelpers.hpp"
 #include "Utilities/StdHelpers.hpp"
+
+#include "Parallel/Printf/Printf.hpp"
 
 namespace domain::CoordinateMaps::TimeDependent {
 
@@ -229,13 +232,33 @@ RadialTranslation<Dim>::function_and_velocity_helper(
          (gsl::at(func_and_deriv_of_time, function_or_deriv_index)[1] -
           gsl::at(func_and_deriv_of_time, function_or_deriv_index)[0]) *
              centered_radius);
-    if (function_or_deriv_index == 0) {
-      scaling_factor += centered_radius;
-    }
   } else {
-    scaling_factor = centered_radius + gsl::at(func_and_deriv_of_time,
-                                               function_or_deriv_index)[0];
+    scaling_factor = make_with_value<CVT>(
+        centered_radius,
+        gsl::at(func_and_deriv_of_time, function_or_deriv_index)[0]);
   }
+
+  if (function_or_deriv_index == 0) {
+    scaling_factor += centered_radius;
+
+    // Only check for the map, not the velocity
+    for (size_t i = 0; i < get_size(scaling_factor); i++) {
+      if (get_element(scaling_factor, i) <= 0.0) {
+        ERROR_NO_TRACE("Mapping through origin!!");
+      }
+    }
+  }
+
+  // Parallel::printf(
+  //     "%s\n"
+  //     " funcs: %s\n"
+  //     " input : %s\n"
+  //     " result: %s\n",
+  //     function_or_deriv_index == 0 ? "Map" : "Velocity",
+  //     func_and_deriv_of_time, MakeString{} << source_coords, MakeString{} <<
+  //     scaling_factor * centered_source_coords /
+  //                             centered_radius +
+  //                         center_);
 
   return scaling_factor * centered_source_coords / centered_radius + center_;
 }
