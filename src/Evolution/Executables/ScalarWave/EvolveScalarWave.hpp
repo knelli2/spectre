@@ -269,6 +269,7 @@ struct EvolutionMetavars2 {
               evolution::Actions::RunEventsAndDenseTriggers<tmpl::list<
                   ::domain::CheckFunctionsOfTimeAreReadyPostprocessor<
                       volume_dim>>>,
+              control_system::Actions::LimitTimeStep<control_systems>,
               Actions::UpdateU<system>>>,
       Actions::CleanHistory<system, local_time_stepping>,
       tmpl::conditional_t<
