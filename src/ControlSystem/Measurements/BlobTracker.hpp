@@ -109,6 +109,21 @@ class ScalarWaveTracker : public ::Event {
     const auto index_of_max_element = static_cast<size_t>(
         std::distance(get(psi).begin(), iterator_to_max_element));
 
+    const LinkedMessageId<double> hacky_data_to_reduce{
+        get(psi)[index_of_max_element], get(grid_radius)[index_of_max_element]};
+
+    // Parallel::printf(
+    //     "Element: %s\n"
+    //     " time: %.16f\n"
+    //     " Psi size: %u\n"
+    //     " Max Psi index: %u\n"
+    //     " Max Psi: %.16f\n"
+    //     " Radius size: %u\n"
+    //     " Max radius: %.16f\n",
+    //     array_index, time, get(psi).size(), index_of_max_element,
+    //     get(psi)[index_of_max_element], get(grid_radius).size(),
+    //     get(grid_radius)[index_of_max_element]);
+
     ASSERT(index_of_max_element < get(grid_radius).size(),
            "Index of max element " << index_of_max_element
                                    << " outside the range of the coords vector "
@@ -123,8 +138,8 @@ class ScalarWaveTracker : public ::Event {
         ControlComponent<Metavariables, tmpl::front<ControlSystems>>>(cache);
     Parallel::ReductionData<
         Parallel::ReductionDatum<LinkedMessageId<double>, funcl::AssertEqual<>>,
-        Parallel::ReductionDatum<double, funcl::Max<>>>
-        reduction_data{measurement_id, get(grid_radius)[index_of_max_element]};
+        Parallel::ReductionDatum<LinkedMessageId<double>, funcl::Max<>>>
+        reduction_data{measurement_id, hacky_data_to_reduce};
     Parallel::contribute_to_reduction<
         measurements::PostReductionSendWaveRadiusToControlSystem<
             ControlSystems>>(std::move(reduction_data), my_proxy,
@@ -177,15 +192,18 @@ struct PostReductionSendWaveRadiusToControlSystem {
   static void apply(db::DataBox<DbTags>& /*box*/,
                     Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& /*array_index*/,
-                    const LinkedMessageId<double>& id, const double radius) {
-    const auto center_databox =
-        db::create<db::AddSimpleTags<Tags::WaveRadius>>(radius);
+                    const LinkedMessageId<double>& id,
+                    const LinkedMessageId<double>& hacky_reduced_data) {
+    ASSERT(hacky_reduced_data.previous.has_value(), "You're dumb.");
+    const auto center_databox = db::create<db::AddSimpleTags<Tags::WaveRadius>>(
+        hacky_reduced_data.previous.value());
     // Send results to the control system(s)
     RunCallbacks<ScalarWavePeakRadius::PeakRadius, ControlSystems>::apply(
         center_databox, cache, id);
 
     if (Parallel::get<control_system::Tags::WriteDataToDisk>(cache)) {
-      std::vector<double> data_to_write{id.id, radius};
+      std::vector<double> data_to_write{id.id,
+                                        hacky_reduced_data.previous.value()};
 
       auto& writer_proxy = Parallel::get_parallel_component<
           observers::ObserverWriter<Metavariables>>(cache);
@@ -201,8 +219,7 @@ struct PostReductionSendWaveRadiusToControlSystem {
  private:
   const static inline std::vector<std::string> legend_{"Time",
                                                        "WavePeakRadius"};
-  const static inline std::string subfile_path_{
-      "/ControlSystems/ScalarWaveRadius"};
+  const static inline std::string subfile_path_{"/ScalarWaveRadius"};
 };
 }  // namespace measurements
 }  // namespace control_system
