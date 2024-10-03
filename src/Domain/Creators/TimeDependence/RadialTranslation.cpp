@@ -134,6 +134,8 @@ RadialTranslation<MeshDim>::functions_of_time(
     }
   }
 
+  Parallel::printf("Initial values: %s\n", initial_values);
+
   result[function_of_time_name_] =
       std::make_unique<FunctionsOfTime::PiecewisePolynomial<2>>(
           initial_time_, std::move(initial_values), expiration_time);

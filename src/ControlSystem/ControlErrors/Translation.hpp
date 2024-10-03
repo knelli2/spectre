@@ -255,7 +255,7 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
     ASSERT(functions_of_time.contains("RadialTranslation"),
            "Gotta have that RadialTranslation");
     const bool has_outer_radius =
-        functions_of_time.at("RadialTranslation")->func(time).size() == 2;
+        functions_of_time.at("RadialTranslation")->func(time)[0].size() == 2;
 
     DataVector control_error{};
 
@@ -274,11 +274,24 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
       const double current_outer_radius =
           get<QueueTags::BlobOuterRadius>(measurements);
 
+      // TODO This needs to change because things are in different frames. The
+      // current radii and inner/outer radius are in the grid frame but the
+      // safety distance is in the inertial frame. Need ot find a way to convert
+      // safety distance into grid frame quantity.
       control_error =
-          DataVector{safety_distances_.value()[0] -
-                         (current_inner_radius - inner_outer_radius_[0]),
+          DataVector{(current_inner_radius - inner_outer_radius_[0]) -
+                         safety_distances_.value()[0],
                      safety_distances_.value()[1] -
-                         (current_outer_radius - inner_outer_radius_[1])};
+                         (inner_outer_radius_[1] - current_outer_radius)};
+      Parallel::printf(
+          "CS, t = %.16f\n"
+          " Inner outer radius: %s\n"
+          " Safety distances: %s\n"
+          " Current inner radius: %.16f\n"
+          " Current outer radius: %.16f\n"
+          " Control error: %s\n",
+          time, inner_outer_radius_, safety_distances_.value(),
+          current_inner_radius, current_outer_radius, control_error);
     } else {
       if (UNLIKELY(safety_distances_.has_value())) {
         ERROR(

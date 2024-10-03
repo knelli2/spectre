@@ -20,6 +20,7 @@
 #include "Utilities/ContainerHelpers.hpp"
 #include "Utilities/DereferenceWrapper.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
+#include "Utilities/ErrorHandling/CaptureForError.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/GenerateInstantiations.hpp"
 #include "Utilities/Gsl.hpp"
@@ -69,9 +70,10 @@ std::optional<std::array<double, Dim>> RadialTranslation<Dim>::inverse(
     const std::unordered_map<
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time) const {
-  std::array<double, Dim> centered_target_coords = target_coords - center_;
+  const std::array<double, Dim> centered_target_coords =
+      target_coords - center_;
   const double centered_target_radius = magnitude(centered_target_coords);
-  double scaling_factor = 0.0;
+  double source_radius = 0.0;
 
   const DataVector function_of_time =
       functions_of_time.at(f_of_t_name_)->func(time)[0];
@@ -83,24 +85,23 @@ std::optional<std::array<double, Dim>> RadialTranslation<Dim>::inverse(
   check_bounding_radii(function_of_time);
 
   if (radii_.has_value()) {
-    scaling_factor = (centered_target_radius -
-                      one_over_radii_difference_ *
-                          (radii_.value()[1] * function_of_time[0] -
-                           radii_.value()[0] * function_of_time[1])) /
-                     (1.0 + one_over_radii_difference_ *
-                                (function_of_time[1] - function_of_time[0]));
+    source_radius = (centered_target_radius -
+                     one_over_radii_difference_ *
+                         (radii_.value()[1] * function_of_time[0] -
+                          radii_.value()[0] * function_of_time[1])) /
+                    (1.0 + one_over_radii_difference_ *
+                               (function_of_time[1] - function_of_time[0]));
 
     const double eps = std::numeric_limits<double>::epsilon() * 100.0;
-    const double source_radius = scaling_factor * centered_target_radius;
     if (source_radius + eps < radii_.value()[0] or
         source_radius - eps > radii_.value()[1]) {
       return std::nullopt;
     }
   } else {
-    scaling_factor = centered_target_radius - function_of_time[0];
+    source_radius = centered_target_radius - function_of_time[0];
   }
 
-  return scaling_factor * centered_target_coords / centered_target_radius +
+  return source_radius * centered_target_coords / centered_target_radius +
          center_;
 }
 
@@ -139,7 +140,7 @@ RadialTranslation<Dim>::jacobian(
                                             << "! This should not happen.");
   }
   one_over_centered_radius = 1.0 / one_over_centered_radius;
-  const CVT one_over_centered_radius_cubed = cube(one_over_centered_radius);
+  const CVT one_over_centered_radius_squared = square(one_over_centered_radius);
 
   const DataVector function_of_time =
       functions_of_time.at(f_of_t_name_)->func(time)[0];
@@ -154,18 +155,20 @@ RadialTranslation<Dim>::jacobian(
   CVT factor_for_delta{};
 
   if (radii_.has_value()) {
-    factor_for_cross_terms = one_over_radii_difference_ *
-                             (radii_.value()[1] * function_of_time[0] -
-                              radii_.value()[0] * function_of_time[1]) *
-                             one_over_centered_radius_cubed;
-    factor_for_delta = 1.0 +
-                       one_over_radii_difference_ *
-                           (function_of_time[1] - function_of_time[0]) +
-                       factor_for_cross_terms * one_over_centered_radius;
-  } else {
+    factor_for_delta = one_over_radii_difference_ *
+                       (radii_.value()[1] * function_of_time[0] -
+                        radii_.value()[0] * function_of_time[1]) *
+                       one_over_centered_radius;
+
     factor_for_cross_terms =
-        function_of_time[0] * one_over_centered_radius_cubed;
-    factor_for_delta = 1.0 + function_of_time[0] * one_over_centered_radius;
+        factor_for_delta * one_over_centered_radius_squared;
+    factor_for_delta += 1.0 + one_over_radii_difference_ *
+                                  (function_of_time[1] - function_of_time[0]);
+  } else {
+    factor_for_delta = function_of_time[0] * one_over_centered_radius;
+    factor_for_cross_terms =
+        factor_for_delta * one_over_centered_radius_squared;
+    factor_for_delta += 1.0;
   }
 
   for (size_t i = 0; i < Dim; i++) {
@@ -200,6 +203,7 @@ RadialTranslation<Dim>::function_and_velocity_helper(
         std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>&
         functions_of_time,
     const size_t function_or_deriv_index) const {
+  CAPTURE_FOR_ERROR(function_or_deriv_index);
   using CVT = tt::remove_cvref_wrap_t<T>;
   const auto func_and_deriv_of_time =
       functions_of_time.at(f_of_t_name_)->func_and_deriv(time);
@@ -209,6 +213,9 @@ RadialTranslation<Dim>::function_and_velocity_helper(
              << (radii_.has_value() ? 2 : 1));
 
   check_bounding_radii(func_and_deriv_of_time[0]);
+
+  const auto& func_or_deriv_of_time =
+      gsl::at(func_and_deriv_of_time, function_or_deriv_index);
 
   // TODO: Have points inside inner radius and outside outer radius just have
   // rigid radial translations.
@@ -220,30 +227,25 @@ RadialTranslation<Dim>::function_and_velocity_helper(
   }
 
   const CVT centered_radius = magnitude(centered_source_coords);
-  CVT scaling_factor{};
+  CVT mapped_radius{};
 
   if (radii_.has_value()) {
-    scaling_factor =
-        one_over_radii_difference_ *
-        (radii_.value()[1] *
-             gsl::at(func_and_deriv_of_time, function_or_deriv_index)[0] -
-         radii_.value()[0] *
-             gsl::at(func_and_deriv_of_time, function_or_deriv_index)[1] +
-         (gsl::at(func_and_deriv_of_time, function_or_deriv_index)[1] -
-          gsl::at(func_and_deriv_of_time, function_or_deriv_index)[0]) *
-             centered_radius);
+    mapped_radius = one_over_radii_difference_ *
+                    (radii_.value()[1] * func_or_deriv_of_time[0] -
+                     radii_.value()[0] * func_or_deriv_of_time[1] +
+                     (func_or_deriv_of_time[1] - func_or_deriv_of_time[0]) *
+                         centered_radius);
   } else {
-    scaling_factor = make_with_value<CVT>(
-        centered_radius,
-        gsl::at(func_and_deriv_of_time, function_or_deriv_index)[0]);
+    mapped_radius =
+        make_with_value<CVT>(centered_radius, func_or_deriv_of_time[0]);
   }
 
   if (function_or_deriv_index == 0) {
-    scaling_factor += centered_radius;
+    mapped_radius += centered_radius;
 
     // Only check for the map, not the velocity
-    for (size_t i = 0; i < get_size(scaling_factor); i++) {
-      if (get_element(scaling_factor, i) <= 0.0) {
+    for (size_t i = 0; i < get_size(mapped_radius); i++) {
+      if (get_element(mapped_radius, i) <= 0.0) {
         ERROR_NO_TRACE("Mapping through origin!!");
       }
     }
@@ -256,11 +258,11 @@ RadialTranslation<Dim>::function_and_velocity_helper(
   //     " result: %s\n",
   //     function_or_deriv_index == 0 ? "Map" : "Velocity",
   //     func_and_deriv_of_time, MakeString{} << source_coords, MakeString{} <<
-  //     scaling_factor * centered_source_coords /
+  //     mapped_radius * centered_source_coords /
   //                             centered_radius +
   //                         center_);
 
-  return scaling_factor * centered_source_coords / centered_radius + center_;
+  return mapped_radius * centered_source_coords / centered_radius + center_;
 }
 
 template <size_t Dim>
