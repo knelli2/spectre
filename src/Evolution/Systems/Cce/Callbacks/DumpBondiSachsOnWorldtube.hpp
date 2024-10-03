@@ -87,13 +87,6 @@ struct DumpBondiSachsOnWorldtube
   using cce_boundary_tags = Cce::Tags::characteristic_worldtube_boundary_tags<
       Cce::Tags::BoundaryValue>;
 
-  using cce_tags_to_dump = db::wrap_tags_in<
-      Cce::Tags::BoundaryValue,
-      tmpl::list<Cce::Tags::BondiBeta, Cce::Tags::Dr<Cce::Tags::BondiJ>,
-                 Cce::Tags::Du<Cce::Tags::BondiR>, Cce::Tags::BondiH,
-                 Cce::Tags::BondiJ, Cce::Tags::BondiQ, Cce::Tags::BondiR,
-                 Cce::Tags::BondiU, Cce::Tags::BondiW>>;
-
   using gh_source_vars_for_cce =
       tmpl::list<gr::Tags::SpacetimeMetric<DataVector, 3>,
                  gh::Tags::Pi<DataVector, 3>, gh::Tags::Phi<DataVector, 3>>;
@@ -102,8 +95,10 @@ struct DumpBondiSachsOnWorldtube
       typename InterpolationTargetTag::vars_to_interpolate_to_target;
 
   static_assert(
-      std::is_same_v<tmpl::list_difference<cce_tags_to_dump, cce_boundary_tags>,
-                     tmpl::list<>>,
+      std::is_same_v<
+          tmpl::list_difference<Cce::Tags::worldtube_boundary_tags_for_writing,
+                                cce_boundary_tags>,
+          tmpl::list<>>,
       "Cce tags to dump are not in the boundary tags.");
 
   static_assert(
@@ -190,7 +185,7 @@ struct DumpBondiSachsOnWorldtube
           MakeString{} << filename_prefix << "CceR" << std::setfill('0')
                        << std::setw(4) << std::lround(radius);
 
-      tmpl::for_each<cce_tags_to_dump>(
+      tmpl::for_each<Cce::Tags::worldtube_boundary_tags_for_writing>(
           [&temporal_id, &l_max, &all_legend, &real_legend, &filename,
            &bondi_boundary_data, &goldberg_mode_buffer, &cache](auto tag_v) {
             using tag = tmpl::type_from<std::decay_t<decltype(tag_v)>>;

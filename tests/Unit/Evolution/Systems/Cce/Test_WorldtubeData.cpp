@@ -662,19 +662,8 @@ void test_reduced_spec_worldtube_buffer_updater(
           lapse_coefficients, dt_lapse_coefficients, dr_lapse_coefficients,
           extraction_radius, file_l_max);
 
-      using reduced_boundary_tags = tmpl::list<
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiBeta>,
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiU>,
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiQ>,
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiW>,
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiJ>,
-          Cce::Tags::BoundaryValue<Cce::Tags::Dr<Cce::Tags::BondiJ>>,
-          Cce::Tags::BoundaryValue<Cce::Tags::Du<Cce::Tags::BondiJ>>,
-          Cce::Tags::BoundaryValue<Cce::Tags::BondiR>,
-          Cce::Tags::BoundaryValue<Cce::Tags::Du<Cce::Tags::BondiR>>>;
-
       // loop over the tags that we want to dump.
-      tmpl::for_each<reduced_boundary_tags>(
+      tmpl::for_each<Cce::Tags::worldtube_boundary_tags_for_writing>(
           [&recorder, &boundary_data_variables, &output_goldberg_mode_buffer,
            &output_libsharp_mode_buffer, &file_l_max, &time](auto tag_v) {
             using tag = typename decltype(tag_v)::type;

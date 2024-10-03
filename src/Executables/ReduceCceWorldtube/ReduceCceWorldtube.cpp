@@ -182,17 +182,6 @@ void perform_cce_worldtube_reduction(
       boundary_data_variables{
           Spectral::Swsh::number_of_swsh_collocation_points(computation_l_max)};
 
-  using reduced_boundary_tags =
-      tmpl::list<Cce::Tags::BoundaryValue<Cce::Tags::BondiBeta>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::BondiU>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::BondiQ>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::BondiW>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::BondiJ>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::Dr<Cce::Tags::BondiJ>>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::Du<Cce::Tags::BondiJ>>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::BondiR>,
-                 Cce::Tags::BoundaryValue<Cce::Tags::Du<Cce::Tags::BondiR>>>;
-
   size_t time_span_start = 0;
   size_t time_span_end = 0;
   Cce::ReducedWorldtubeModeRecorder recorder{output_file};
@@ -248,7 +237,7 @@ void perform_cce_worldtube_reduction(
           buffer_updater.get_extraction_radius(), computation_l_max);
     }
     // loop over the tags that we want to dump.
-    tmpl::for_each<reduced_boundary_tags>(
+    tmpl::for_each<Cce::Tags::worldtube_boundary_tags_for_writing>(
         [&recorder, &boundary_data_variables, &output_goldberg_mode_buffer,
          &output_libsharp_mode_buffer, &l_max, &computation_l_max,
          &time](auto tag_v) {
