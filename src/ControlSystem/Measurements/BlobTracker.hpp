@@ -92,25 +92,35 @@ class ScalarWaveTracker : public ::Event {
   using argument_tags =
       tmpl::list<::Tags::Time, ::Tags::PreviousTriggerTime,
                  ScalarWave::Tags::Psi,
-                 ::Events::Tags::ObserverCoordinates<3, Frame::Grid>>;
+                 ::Events::Tags::ObserverCoordinates<3, Frame::Grid>,
+                 ::Events::Tags::ObserverCoordinates<3, Frame::Inertial>>;
 
   template <typename Metavariables, typename ArrayIndex,
             typename ParallelComponent>
   void operator()(const double time, const std::optional<double>& previous_time,
                   const Scalar<DataVector>& psi,
                   const tnsr::I<DataVector, 3, Frame::Grid>& x_grid,
+                  const tnsr::I<DataVector, 3, Frame::Inertial>& x_inertial,
                   Parallel::GlobalCache<Metavariables>& cache,
                   const ArrayIndex& array_index,
                   const ParallelComponent* const /*meta*/,
                   const ObservationValue& /*observation_value*/) const {
     const LinkedMessageId<double> measurement_id{time, previous_time};
-    const Scalar<DataVector> grid_radius = magnitude(x_grid);
+
+    const auto& functions_of_time =
+        Parallel::get<domain::Tags::FunctionsOfTime>(cache);
+    const DataVector function_of_time =
+        functions_of_time.at("RadialTranslation")->func(time)[0];
+    const bool use_grid = function_of_time.size() == 1;
+
+    const Scalar<DataVector> radius =
+        use_grid ? magnitude(x_grid) : magnitude(x_inertial);
     const auto iterator_to_max_element = alg::max_element(get(psi));
     const auto index_of_max_element = static_cast<size_t>(
         std::distance(get(psi).begin(), iterator_to_max_element));
 
     const LinkedMessageId<double> hacky_data_to_reduce{
-        get(psi)[index_of_max_element], get(grid_radius)[index_of_max_element]};
+        get(psi)[index_of_max_element], get(radius)[index_of_max_element]};
 
     // Parallel::printf(
     //     "Element: %s\n"
@@ -124,10 +134,10 @@ class ScalarWaveTracker : public ::Event {
     //     get(psi)[index_of_max_element], get(grid_radius).size(),
     //     get(grid_radius)[index_of_max_element]);
 
-    ASSERT(index_of_max_element < get(grid_radius).size(),
+    ASSERT(index_of_max_element < get(radius).size(),
            "Index of max element " << index_of_max_element
                                    << " outside the range of the coords vector "
-                                   << get(grid_radius).size() - 1);
+                                   << get(radius).size() - 1);
 
     // Reduction
     auto my_proxy =

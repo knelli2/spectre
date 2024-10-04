@@ -175,8 +175,7 @@ struct EvolutionMetavars2 {
       ::Events::Tags::ObserverCoordinatesCompute<volume_dim,
                                                  Frame::ElementLogical>,
       ::Events::Tags::ObserverCoordinatesCompute<volume_dim, Frame::Grid>,
-      domain::Tags::Coordinates<volume_dim, Frame::Grid>,
-      domain::Tags::Coordinates<volume_dim, Frame::Inertial>>;
+      ::Events::Tags::ObserverCoordinatesCompute<volume_dim, Frame::Inertial>>;
   using non_tensor_compute_tags =
       tmpl::list<::Events::Tags::ObserverMeshCompute<volume_dim>,
                  ::Events::Tags::ObserverDetInvJacobianCompute<

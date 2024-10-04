@@ -254,8 +254,9 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
 
     ASSERT(functions_of_time.contains("RadialTranslation"),
            "Gotta have that RadialTranslation");
-    const bool has_outer_radius =
-        functions_of_time.at("RadialTranslation")->func(time)[0].size() == 2;
+    const DataVector function_of_time =
+        functions_of_time.at("RadialTranslation")->func(time)[0];
+    const bool has_outer_radius = function_of_time.size() == 2;
 
     DataVector control_error{};
 
@@ -274,23 +275,23 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
       const double current_outer_radius =
           get<QueueTags::BlobOuterRadius>(measurements);
 
-      // TODO This needs to change because things are in different frames. The
-      // current radii and inner/outer radius are in the grid frame but the
-      // safety distance is in the inertial frame. Need ot find a way to convert
-      // safety distance into grid frame quantity.
-      control_error =
-          DataVector{(current_inner_radius - inner_outer_radius_[0]) -
-                         safety_distances_.value()[0],
-                     safety_distances_.value()[1] -
-                         (inner_outer_radius_[1] - current_outer_radius)};
+      const DataVector inertial_inner_outer_radius =
+          DataVector{inner_outer_radius_} + function_of_time;
+
+      control_error = DataVector{
+          (current_inner_radius - inertial_inner_outer_radius[0]) -
+              safety_distances_.value()[0],
+          safety_distances_.value()[1] -
+              (inertial_inner_outer_radius[1] - current_outer_radius)};
+
       Parallel::printf(
           "CS, t = %.16f\n"
-          " Inner outer radius: %s\n"
+          " Inertial inner outer radius: %s\n"
           " Safety distances: %s\n"
           " Current inner radius: %.16f\n"
           " Current outer radius: %.16f\n"
           " Control error: %s\n",
-          time, inner_outer_radius_, safety_distances_.value(),
+          time, inertial_inner_outer_radius, safety_distances_.value(),
           current_inner_radius, current_outer_radius, control_error);
     } else {
       if (UNLIKELY(safety_distances_.has_value())) {
