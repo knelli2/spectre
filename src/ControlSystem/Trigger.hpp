@@ -96,7 +96,7 @@ class Trigger : public DenseTrigger {
 
     if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
       Parallel::printf(
-          "%s, time = %.16f: Trigger for control systems (%s) is%s "
+          "%s, time = %.16e: Trigger for control systems (%s) is%s "
           "triggered.\n",
           get_output(array_index), time,
           pretty_type::list_of_names<ControlSystems>(),
@@ -168,7 +168,7 @@ class Trigger : public DenseTrigger {
       if (not is_ready) {
         if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
           Parallel::printf(
-              "%s, time = %.16f: Trigger for control systems (%s) - Cannot "
+              "%s, time = %.16e: Trigger for control systems (%s) - Cannot "
               "calculate next_check_time\n",
               get_output(array_index), time,
               pretty_type::list_of_names<ControlSystems>());
@@ -183,8 +183,8 @@ class Trigger : public DenseTrigger {
 
     if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
       Parallel::printf(
-          "%s, time = %.16f: Trigger for control systems (%s) - next check "
-          "time is %.16f\n",
+          "%s, time = %.16e: Trigger for control systems (%s) - next check "
+          "time is %.16e\n",
           get_output(array_index), time,
           pretty_type::list_of_names<ControlSystems>(), next_trigger);
     }

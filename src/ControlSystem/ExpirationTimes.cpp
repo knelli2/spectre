@@ -21,9 +21,17 @@ double function_of_time_expiration_time(
     // initial set of measurements whereas in subsequent updates, this "first"
     // measurement when we compute the update and expiration times doesn't count
     // towards the current set of measurements
-    return time +
-           static_cast<double>(measurements_per_update - (initial ? 1 : 0)) *
-               min(new_measurement_timescales);
+    double result = time;
+    const double min_new_measurement_timescale =
+        min(new_measurement_timescales);
+    for (int i = 0; i < measurements_per_update - (initial ? 1 : 0); i++) {
+      result += min_new_measurement_timescale;
+    }
+
+    return result;
+    // return time +
+    //        static_cast<double>(measurements_per_update - (initial ? 1 : 0)) *
+    //            min(new_measurement_timescales);
   } else {
     return time + min(old_measurement_timescales) +
            (static_cast<double>(measurements_per_update - 1 -
