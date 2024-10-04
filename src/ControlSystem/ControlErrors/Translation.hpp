@@ -284,27 +284,28 @@ struct RadialTranslation : tt::ConformsTo<protocols::ControlError> {
           safety_distances_.value()[1] -
               (inertial_inner_outer_radius[1] - current_outer_radius)};
 
-      Parallel::printf(
-          "CS, t = %.16f\n"
-          " Inertial inner outer radius: %s\n"
-          " Safety distances: %s\n"
-          " Current inner radius: %.16f\n"
-          " Current outer radius: %.16f\n"
-          " Control error: %s\n",
-          time, inertial_inner_outer_radius, safety_distances_.value(),
-          current_inner_radius, current_outer_radius, control_error);
+      //   Parallel::printf(
+      //       "CS, t = %.16f\n"
+      //       " Inertial inner outer radius: %s\n"
+      //       " Safety distances: %s\n"
+      //       " Current inner radius: %.16f\n"
+      //       " Current outer radius: %.16f\n"
+      //       " Control error: %s\n",
+      //       time, inertial_inner_outer_radius, safety_distances_.value(),
+      //       current_inner_radius, current_outer_radius, control_error);
     } else {
       if (UNLIKELY(safety_distances_.has_value())) {
         ERROR(
             "Specified safety distances, but the function of time is a rigid "
             "radial translation and so will not be used.");
       }
-      Parallel::printf(
-          "CS, t = %.16f\n"
-          " Inner outer radius: %s\n"
-          " Averaged radius: %.16f\n"
-          " Current inner radius: %.16f\n",
-          time, inner_outer_radius_, averaged_radius_, current_inner_radius);
+      //   Parallel::printf(
+      //       "CS, t = %.16f\n"
+      //       " Inner outer radius: %s\n"
+      //       " Averaged radius: %.16f\n"
+      //       " Current inner radius: %.16f\n",
+      //       time, inner_outer_radius_, averaged_radius_,
+      //       current_inner_radius);
       control_error = -DataVector{averaged_radius_ - current_inner_radius};
     }
 
