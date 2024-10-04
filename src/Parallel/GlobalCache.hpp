@@ -47,6 +47,10 @@
 #include "Parallel/GlobalCache.decl.h"
 #include "Parallel/Main.decl.h"
 
+#include <sstream>
+#include "Parallel/Printf/Printf.hpp"
+#include "Utilities/PrettyType.hpp"
+
 /// \cond
 namespace Parallel {
 template <typename Metavariables>
@@ -590,13 +594,22 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
     std::get<1>(tuples::get<tag>(mutable_global_cache_)).clear();
   }
 
+  std::stringstream ss{};
+  ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
+     << my_node() << ". ";
+  ss << "Args = (" << args << "). Calling " << callbacks.size()
+     << " callbacks:\n";
+
   // Invoke the callbacks.  Any new callbacks that are added to the
   // list (if a callback calls mutable_cache_item_is_ready) will be
   // saved and will not be invoked here.
   for (auto& [array_component_id, callback] : callbacks) {
-    (void)array_component_id;
+    ss << " ArrayComponentId " << array_component_id << ": " << callback->name()
+       << "\n";
     callback->invoke();
   }
+
+  Parallel::printf("%s\n", ss.str());
 }
 
 #if defined(__GNUC__) && !defined(__clang__)

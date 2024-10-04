@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "Parallel/Invoke.hpp"
+#include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 
@@ -31,6 +32,7 @@ class Callback : public PUP::able {
   virtual void invoke() = 0;
   virtual void register_with_charm() = 0;
   virtual bool is_equal_to(const Callback& rhs) const = 0;
+  virtual std::string name() const = 0;
 };
 
 /// Wraps a call to a simple action and its arguments.
@@ -67,13 +69,17 @@ class SimpleActionCallback : public Callback {
   }
 
   bool is_equal_to(const Callback& rhs) const override {
-    const auto* downcast_ptr =
-        dynamic_cast<const SimpleActionCallback*>(&rhs);
+    const auto* downcast_ptr = dynamic_cast<const SimpleActionCallback*>(&rhs);
     if (downcast_ptr == nullptr) {
       return false;
     }
-    return // proxy_ == downcast_ptr->proxy_ and
+    return  // proxy_ == downcast_ptr->proxy_ and
         args_ == downcast_ptr->args_;
+  }
+
+  std::string name() const override {
+    return "SimpleActionCallback(" + pretty_type::get_name<SimpleAction>() +
+           "," + pretty_type::name<Proxy>() + ")";
   }
 
  private:
@@ -105,9 +111,13 @@ class SimpleActionCallback<SimpleAction, Proxy> : public Callback {
   }
 
   bool is_equal_to(const Callback& rhs) const override {
-    const auto* downcast_ptr =
-        dynamic_cast<const SimpleActionCallback*>(&rhs);
+    const auto* downcast_ptr = dynamic_cast<const SimpleActionCallback*>(&rhs);
     return downcast_ptr != nullptr;
+  }
+
+  std::string name() const override {
+    return "SimpleActionCallback(" + pretty_type::get_name<SimpleAction>() +
+           "," + pretty_type::name<Proxy>() + ")";
   }
 
  private:
@@ -157,6 +167,11 @@ class ThreadedActionCallback : public Callback {
         args_ == downcast_ptr->args_;
   }
 
+  std::string name() const override {
+    return "ThreadedActionCallback(" + pretty_type::get_name<ThreadedAction>() +
+           "," + pretty_type::name<Proxy>() + ")";
+  }
+
  private:
   std::decay_t<Proxy> proxy_{};
   std::tuple<std::decay_t<Args>...> args_{};
@@ -191,6 +206,11 @@ class ThreadedActionCallback<ThreadedAction, Proxy> : public Callback {
     return downcast_ptr != nullptr;
   }
 
+  std::string name() const override {
+    return "ThreadedActionCallback(" + pretty_type::get_name<ThreadedAction>() +
+           "," + pretty_type::name<Proxy>() + ")";
+  }
+
  private:
   std::decay_t<Proxy> proxy_{};
 };
@@ -223,6 +243,10 @@ class PerformAlgorithmCallback : public Callback {
     return downcast_ptr != nullptr;
   }
 
+  std::string name() const override {
+    return "PerformAlgorithmCallback(" + pretty_type::name<Proxy>() + ")";
+  }
+
  private:
   std::decay_t<Proxy> proxy_{};
 };
@@ -233,7 +257,7 @@ template <typename Proxy>
 PUP::able::PUP_ID PerformAlgorithmCallback<Proxy>::my_PUP_ID = 0;
 template <typename SimpleAction, typename Proxy, typename... Args>
 PUP::able::PUP_ID
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     SimpleActionCallback<SimpleAction, Proxy, Args...>::my_PUP_ID =
         0;  // NOLINT
 template <typename SimpleAction, typename Proxy>
@@ -242,7 +266,7 @@ PUP::able::PUP_ID SimpleActionCallback<SimpleAction, Proxy>::my_PUP_ID =
     0;  // NOLINT
 template <typename ThreadedAction, typename Proxy, typename... Args>
 PUP::able::PUP_ID
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     ThreadedActionCallback<ThreadedAction, Proxy, Args...>::my_PUP_ID =
         0;  // NOLINT
 template <typename ThreadedAction, typename Proxy>
