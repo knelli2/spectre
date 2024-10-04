@@ -634,13 +634,9 @@ void test_reduced_spec_worldtube_buffer_updater(
     file_system::rm(filename, true);
   }
 
-  ComplexModalVector output_goldberg_mode_buffer{square(file_l_max + 1)};
-  ComplexModalVector output_libsharp_mode_buffer{
-      Spectral::Swsh::size_of_libsharp_coefficient_vector(file_l_max)};
-
   // scoped to close the file
   {
-    Cce::ReducedWorldtubeModeRecorder recorder{filename};
+    Cce::WorldtubeModeRecorder recorder{file_l_max, filename};
     for (size_t t = 0; t < 20; ++t) {
       const double time = 0.01 * t + target_time - 0.1;
       TestHelpers::create_fake_time_varying_modal_data(
@@ -664,31 +660,14 @@ void test_reduced_spec_worldtube_buffer_updater(
 
       // loop over the tags that we want to dump.
       tmpl::for_each<Cce::Tags::worldtube_boundary_tags_for_writing>(
-          [&recorder, &boundary_data_variables, &output_goldberg_mode_buffer,
-           &output_libsharp_mode_buffer, &file_l_max, &time](auto tag_v) {
+          [&recorder, &boundary_data_variables, &time](auto tag_v) {
             using tag = typename decltype(tag_v)::type;
-            SpinWeighted<ComplexModalVector, tag::type::type::spin>
-                spin_weighted_libsharp_view;
-            spin_weighted_libsharp_view.set_data_ref(
-                output_libsharp_mode_buffer.data(),
-                output_libsharp_mode_buffer.size());
-            Spectral::Swsh::swsh_transform(
-                file_l_max, 1, make_not_null(&spin_weighted_libsharp_view),
-                get(get<tag>(boundary_data_variables)));
 
-            SpinWeighted<ComplexModalVector, tag::type::type::spin>
-                spin_weighted_goldberg_view;
-            spin_weighted_goldberg_view.set_data_ref(
-                output_goldberg_mode_buffer.data(),
-                output_goldberg_mode_buffer.size());
-            Spectral::Swsh::libsharp_to_goldberg_modes(
-                make_not_null(&spin_weighted_goldberg_view),
-                spin_weighted_libsharp_view, file_l_max);
+            const ComplexDataVector& nodal_data =
+                get(get<tag>(boundary_data_variables)).data();
 
-            recorder.append_worldtube_mode_data(
-                "/" + dataset_label_for_tag<tag>(), time,
-                output_goldberg_mode_buffer, file_l_max,
-                tag::type::type::spin == 0);
+            recorder.append_modal_data<tag::type::type::spin>(
+                recorder.subfile_name<tag>(), time, nodal_data);
           });
     }
   }
