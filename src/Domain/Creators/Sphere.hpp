@@ -337,6 +337,14 @@ class Sphere : public DomainCreator<3> {
     using type = std::unique_ptr<BoundaryConditionsBase>;
   };
 
+  template <typename BoundaryConditionsBase>
+  struct PartialWedgeBoundaryCondition {
+    static constexpr Options::String help =
+        "Options for the boundary conditions at the outer radius.";
+    using type = Options::Auto<std::unique_ptr<BoundaryConditionsBase>,
+                               Options::AutoLabel::None>;
+  };
+
   using basic_options =
       tmpl::list<InnerRadius, OuterRadius, Interior, InitialRefinement,
                  InitialGridPoints, UseEquiangularMap, EquatorialCompression,
@@ -350,6 +358,9 @@ class Sphere : public DomainCreator<3> {
       tmpl::push_back<
           basic_options,
           OuterBoundaryCondition<
+              domain::BoundaryConditions::get_boundary_conditions_base<
+                  typename Metavariables::system>>,
+          PartialWedgeBoundaryCondition<
               domain::BoundaryConditions::get_boundary_conditions_base<
                   typename Metavariables::system>>>,
       basic_options>;
@@ -375,6 +386,9 @@ class Sphere : public DomainCreator<3> {
       std::optional<TimeDepOptionType> time_dependent_options = std::nullopt,
       std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
           outer_boundary_condition = nullptr,
+      std::optional<
+          std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>
+          partial_wedge_boundary_condition = std::nullopt,
       const Options::Context& context = {});
 
   Sphere() = default;
@@ -433,6 +447,8 @@ class Sphere : public DomainCreator<3> {
   bool use_hard_coded_maps_{false};
   std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
       outer_boundary_condition_;
+  std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
+      partial_wedge_boundary_condition_;
   size_t num_shells_;
   size_t num_blocks_;
   size_t num_blocks_per_shell_;

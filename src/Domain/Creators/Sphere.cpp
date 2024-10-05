@@ -83,6 +83,9 @@ Sphere::Sphere(
     std::optional<TimeDepOptionType> time_dependent_options,
     std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
         outer_boundary_condition,
+    std::optional<
+        std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>
+        partial_wedge_boundary_condition,
     const Options::Context& context)
     : inner_radius_(inner_radius),
       outer_radius_(outer_radius),
@@ -93,7 +96,11 @@ Sphere::Sphere(
       radial_partitioning_(std::move(radial_partitioning)),
       which_wedges_(which_wedges),
       time_dependent_options_(std::move(time_dependent_options)),
-      outer_boundary_condition_(std::move(outer_boundary_condition)) {
+      outer_boundary_condition_(std::move(outer_boundary_condition)),
+      partial_wedge_boundary_condition_(
+          partial_wedge_boundary_condition.has_value()
+              ? partial_wedge_boundary_condition.value()->get_clone()
+              : nullptr) {
   if (inner_radius_ > outer_radius_) {
     PARSE_ERROR(context,
                 "Inner radius must be smaller than outer radius, but inner "
@@ -242,13 +249,19 @@ Sphere::Sphere(
     }
   }
   if (outer_boundary_condition != nullptr and
-      which_wedges_ != ShellWedges::All) {
+      which_wedges_ == ShellWedges::FourOnEquator) {
     PARSE_ERROR(
         context,
         "Can only apply boundary conditions when the outer boundary of the "
         "domain is a full sphere. "
         "Additional cases can be supported by adding them to the Sphere "
         "domain creator.");
+  }
+  if (which_wedges_ == ShellWedges::OneAlongMinusX and
+      partial_wedge_boundary_condition_ == nullptr) {
+    ERROR(
+        "Need to specify partial wedge BC when using OneAlongMinusX shell "
+        "wedges.");
   }
 
   if (time_dependent_options_.has_value()) {
@@ -443,7 +456,7 @@ Sphere::external_boundary_conditions() const {
   // This assumes 6 wedges making up the shell. If you need to support other
   // configurations the below code needs to be updated. This would require
   // adding more boundary condition options to the domain creator.
-  if (which_wedges_ != ShellWedges::All) {
+  if (which_wedges_ == ShellWedges::FourOnEquator) {
     ERROR(
         "Boundary conditions for incomplete spherical shells are not currently "
         "implemented. Add support to the Sphere domain creator.");
@@ -453,20 +466,45 @@ Sphere::external_boundary_conditions() const {
       3, std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>>
       boundary_conditions{num_blocks_};
   // Outer boundary conditions
-  const size_t outer_blocks_offset = num_blocks_ - 6 - (fill_interior_ ? 1 : 0);
-  for (size_t i = 0; i < 6; ++i) {
+  const size_t num_outer_blocks = which_wedges_ == ShellWedges::All ? 6 : 1;
+  const size_t outer_blocks_offset =
+      num_blocks_ - num_outer_blocks - (fill_interior_ ? 1 : 0);
+  for (size_t i = 0; i < num_outer_blocks; ++i) {
     boundary_conditions[i + outer_blocks_offset][Direction<3>::upper_zeta()] =
         outer_boundary_condition_->get_clone();
+
+    if (which_wedges_ == ShellWedges::OneAlongMinusX) {
+      for (const auto& direction :
+           {Direction<3>::upper_eta(), Direction<3>::lower_eta(),
+            Direction<3>::upper_xi(), Direction<3>::lower_xi()}) {
+        boundary_conditions[i + outer_blocks_offset][direction] =
+            partial_wedge_boundary_condition_->get_clone();
+      }
+    }
   }
+
   // Inner boundary conditions
   if (not fill_interior_) {
     const auto& inner_boundary_condition =
         std::get<Excision>(interior_).boundary_condition;
-    for (size_t i = 0; i < 6; ++i) {
+    for (size_t i = 0; i < num_outer_blocks; ++i) {
       boundary_conditions[i][Direction<3>::lower_zeta()] =
           inner_boundary_condition->get_clone();
     }
   }
+
+  // The rest of the boundary conditions
+  if (which_wedges_ == ShellWedges::OneAlongMinusX) {
+    for (size_t i = 0; i < num_outer_blocks; i++) {
+      for (const auto& direction :
+           {Direction<3>::upper_eta(), Direction<3>::lower_eta(),
+            Direction<3>::upper_xi(), Direction<3>::lower_xi()}) {
+        boundary_conditions[i + outer_blocks_offset][direction] =
+            partial_wedge_boundary_condition_->get_clone();
+      }
+    }
+  }
+
   return boundary_conditions;
 }
 
