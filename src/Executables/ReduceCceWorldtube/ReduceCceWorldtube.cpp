@@ -2,9 +2,11 @@
 // See LICENSE.txt for details.
 
 #include <boost/program_options.hpp>
+#include <chrono>
 #include <cstddef>
 #include <exception>
 #include <string>
+#include <variant>
 
 #include "DataStructures/ComplexDataVector.hpp"
 #include "DataStructures/ComplexModalVector.hpp"
@@ -19,6 +21,8 @@
 #include "Evolution/Systems/Cce/Tags.hpp"
 #include "Evolution/Systems/Cce/WorldtubeBufferUpdater.hpp"
 #include "Evolution/Systems/Cce/WorldtubeModeRecorder.hpp"
+#include "IO/H5/CombineH5.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/SpinWeightedSphericalHarmonics/SwshCoefficients.hpp"
 #include "NumericalAlgorithms/SpinWeightedSphericalHarmonics/SwshCollocation.hpp"
 #include "Options/Auto.hpp"
@@ -26,6 +30,7 @@
 #include "Options/String.hpp"
 #include "Parallel/CreateFromOptions.hpp"
 #include "Parallel/Printf/Printf.hpp"
+#include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
@@ -194,12 +199,40 @@ void perform_cce_worldtube_reduction(
   Parallel::printf("\n");
 }
 
+enum class InputDataFormat { MetricNodal, MetricModal, BondiNodal, BondiModal };
+
+std::ostream& operator<<(std::ostream& os,
+                         const InputDataFormat input_data_format) {
+  switch (input_data_format) {
+    case InputDataFormat::MetricNodal:
+      return os << "MetricNodal";
+    case InputDataFormat::MetricModal:
+      return os << "MetricModal";
+    case InputDataFormat::BondiNodal:
+      return os << "BondiNodal";
+    case InputDataFormat::BondiModal:
+      return os << "BondiModal";
+    default:
+      ERROR("Unknown InputDataFormat type");
+  }
+}
+
 namespace OptionTags {
-struct InputH5File {
-  using type = std::string;
+struct InputH5Files {
+  static std::string name() { return "InputH5File(s)"; }
+  using type = std::variant<std::string, std::vector<std::string>>;
   static constexpr Options::String help =
-      "Name of the H5 worldtube file. A '.h5' extension will be added if "
-      "needed.";
+      "Name of H5 worldtube file(s). A '.h5' extension will be added if "
+      "needed. Can specify a single file or if multiple files are specified, "
+      "this will combine the times in each file. If there are "
+      "duplicate/overlapping times, the last/latest of the times are chosen.";
+};
+
+struct InputDataFormat {
+  using type = InputDataFormat;
+  static constexpr Options::String help =
+      "The type of data stored in the 'InputH5Files'. Can be  'MetricNodal', "
+      "'MetricModal', 'BondiNodal', or 'BondiModal'.";
 };
 
 struct OutputH5File {
@@ -234,21 +267,45 @@ struct LMaxFactor {
 }  // namespace OptionTags
 
 using option_tags =
-    tmpl::list<OptionTags::InputH5File, OptionTags::OutputH5File,
-               OptionTags::FixSpecNormalization, OptionTags::BufferDepth,
-               OptionTags::LMaxFactor>;
+    tmpl::list<OptionTags::InputH5Files, OptionTags::InputDataFormat,
+               OptionTags::OutputH5File, OptionTags::FixSpecNormalization,
+               OptionTags::BufferDepth, OptionTags::LMaxFactor>;
 using OptionTuple = tuples::tagged_tuple_from_typelist<option_tags>;
 
 namespace ReduceCceTags {
-struct InputH5File : db::SimpleTag {
-  using type = std::string;
-  using option_tags = tmpl::list<OptionTags::InputH5File>;
+struct InputH5Files : db::SimpleTag {
+  using type = std::vector<std::string>;
+  using option_tags = tmpl::list<OptionTags::InputH5Files>;
   static constexpr bool pass_metavariables = false;
-  static type create_from_options(std::string option) {
-    if (not option.ends_with(".h5")) {
-      option += ".h5";
+  static type create_from_options(
+      const std::variant<std::string, std::vector<std::string>>& option) {
+    struct Overloader {
+      std::vector<std::string> operator()(
+          const std::vector<std::string>& input) {
+        return input;
+      }
+      std::vector<std::string> operator()(const std::string& input) {
+        return {input};
+      }
+    };
+
+    std::vector<std::string> result = std::visit(Overloader{}, option);
+    for (std::string& filename : result) {
+      if (not filename.ends_with(".h5")) {
+        filename += ".h5";
+      }
     }
-    return option;
+
+    return result;
+  }
+};
+
+struct InputDataFormat : db::SimpleTag {
+  using type = ::InputDataFormat;
+  using option_tags = tmpl::list<OptionTags::InputDataFormat>;
+  static constexpr bool pass_metavariables = false;
+  static type create_from_options(type input_data_format) {
+    return input_data_format;
   }
 };
 
@@ -290,11 +347,66 @@ struct LMaxFactor : db::SimpleTag {
 };
 }  // namespace ReduceCceTags
 
-using tags = tmpl::list<ReduceCceTags::InputH5File, ReduceCceTags::OutputH5File,
-                        ReduceCceTags::FixSpecNormalization,
-                        ReduceCceTags::BufferDepth, ReduceCceTags::LMaxFactor>;
+using tags =
+    tmpl::list<ReduceCceTags::InputH5Files, ReduceCceTags::InputDataFormat,
+               ReduceCceTags::OutputH5File, ReduceCceTags::FixSpecNormalization,
+               ReduceCceTags::BufferDepth, ReduceCceTags::LMaxFactor>;
 using TagsTuple = tuples::tagged_tuple_from_typelist<tags>;
 }  // namespace
+
+// Has to be outside the anon namespace
+template <>
+struct Options::create_from_yaml<InputDataFormat> {
+  template <typename Metavariables>
+  static InputDataFormat create(const Options::Option& options) {
+    const auto ordering = options.parse_as<std::string>();
+    if (ordering == "MetricNodal") {
+      return InputDataFormat::MetricNodal;
+    } else if (ordering == "MetricModal") {
+      return InputDataFormat::MetricModal;
+    } else if (ordering == "BondiNodal") {
+      return InputDataFormat::BondiNodal;
+    } else if (ordering == "BondiModal") {
+      return InputDataFormat::BondiModal;
+    }
+    PARSE_ERROR(options.context(),
+                "InputDataFormat must be 'MetricNodal', 'MetricModal', "
+                "'BondiNodal', or 'BondiModal'");
+  }
+};
+
+/*
+ * There are multiple things we want to do with this executable. The input
+ * file(s) could be any of these:
+ *
+ * 1. Metric components
+ *  a) Metric data (gxx, ..)
+ *  b) Bondi data (J, ...)
+ * 2. Decomposition
+ *  a) Nodal
+ *  b) Modal
+ * 3. Multiple H5 files
+ *
+ *
+ * Input formats and steps needed to convert to Bondi modal
+ *
+ * 1. Bondi modal
+ *   a. Just combine H5 files
+ * 2. Bondi nodal
+ *   a. Combine H5 files
+ *   b. Convert libsharp nodal to goldberg modes
+ * 3. Metric modal
+ *   a. Combine H5 files
+ *   b. Call 'src/Evolution/Systems/Cce/BoundaryData.hpp:986' to get bondi
+ *    nodal (what perform_cce_worldtube_reduction does above, but now don't
+ *    write the result to a file)
+ *   c. Convert libsharp nodal to goldberg modes
+ * 4. Metric nodal
+ *   a. Combine H5 files
+ *   b. Either:
+ *     i. Convert to metric modal first, then do 3.
+ *     ii. Convert to bondi nodal first, then do 2.
+ */
 
 /*
  * This executable is used for converting the unnecessarily large SpEC worldtube
@@ -347,13 +459,83 @@ int main(int argc, char** argv) {
     const TagsTuple inputs =
         Parallel::create_from_options<void>(options, tags{});
 
-    // Do the reduction
-    perform_cce_worldtube_reduction(
-        tuples::get<ReduceCceTags::InputH5File>(inputs),
-        tuples::get<ReduceCceTags::OutputH5File>(inputs),
-        tuples::get<ReduceCceTags::BufferDepth>(inputs),
-        tuples::get<ReduceCceTags::BufferDepth>(inputs),
-        tuples::get<ReduceCceTags::FixSpecNormalization>(inputs));
+    const InputDataFormat input_data_format =
+        tuples::get<ReduceCceTags::InputDataFormat>(inputs);
+    const std::vector<std::string>& input_files =
+        tuples::get<ReduceCceTags::InputH5Files>(inputs);
+    const std::string& output_h5_file =
+        tuples::get<ReduceCceTags::OutputH5File>(inputs);
+
+    std::string temporary_combined_h5_file{};
+
+    if (input_files.size() != 1) {
+      // If the input format is BondiModal, then we don't actually have to do
+      // any transformations, only combining H5 files. So the temporary file
+      // name is just the output file
+      if (input_data_format == InputDataFormat::BondiModal) {
+        temporary_combined_h5_file = output_h5_file;
+      } else {
+        // Otherwise we have to do a transformation so a temporary H5 file is
+        // necessary. Name the file based on the current time so it doesn't
+        // conflict with another h5 file
+        const auto now = std::chrono::system_clock::now();
+        const auto now_ns =
+            std::chrono::time_point_cast<std::chrono::nanoseconds>(now);
+        const auto value = now_ns.time_since_epoch();
+        temporary_combined_h5_file =
+            "tmp_combined_" + std::to_string(value.count()) + ".h5";
+      }
+
+      // Now combine the h5 files into a single file
+      h5::combine_h5_dat(input_files, temporary_combined_h5_file,
+                         Verbosity::Quiet);
+    } else {
+      // We were only given 1 H5 file so no need to combine anything. Just make
+      // the "temporary" file name the input file
+      temporary_combined_h5_file = input_files[0];
+
+      // QUESTION: Error here if the input data format is BondiModal?
+      if (input_data_format == InputDataFormat::BondiModal) {
+        ERROR_NO_TRACE(
+            "Only a single input H5 file was supplied and the input data "
+            "format is Bondi modal. This means that no combination needs to be "
+            "done and running ReduceCceWorldtube was unnecessary.");
+      }
+    }
+
+    // Nothing to do here because this is the desired output format and the
+    // H5 files were combined above
+    if (input_data_format == InputDataFormat::BondiModal) {
+      return 0;
+    }
+
+    switch (input_data_format) {
+      case InputDataFormat::BondiModal:
+        // TODO: Copy temporary to output H5 file
+        return 0;
+      case InputDataFormat::BondiNodal:
+        // TODO: Already in bondi nodal form, so now only thing to do is convert
+        // to bondi modal
+        return 0;
+      case InputDataFormat::MetricModal:
+        // TODO: Edit this function to probably return bondi nodal data
+        perform_cce_worldtube_reduction(
+            temporary_combined_h5_file, output_h5_file,
+            tuples::get<ReduceCceTags::BufferDepth>(inputs),
+            tuples::get<ReduceCceTags::LMaxFactor>(inputs),
+            tuples::get<ReduceCceTags::FixSpecNormalization>(inputs));
+        return 0;
+      case InputDataFormat::MetricNodal:
+        // TODO: Call the other create_bondi_boundary_data to get bondi nodal
+        // data
+        return 0;
+      default:
+        ERROR("Unknown input data format " << input_data_format);
+    }
+
+    // TODO: Take the last three cases, have them all return bondi nodal data,
+    // and then here convert bondi nodal data into bondi modal data and then
+    // we're done!
   } catch (const std::exception& exception) {
     Parallel::printf("%s\n", exception.what());
     return 1;
