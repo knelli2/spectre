@@ -84,7 +84,7 @@ std::pair<size_t, size_t> create_span_for_time_value(
 
 // retrieves time stamps and lmax the from the specified file.
 void set_time_buffer_and_lmax(gsl::not_null<DataVector*> time_buffer,
-                              size_t& l_max, const h5::Dat& data);
+                              size_t& l_max, const h5::Dat& data, bool is_real);
 
 // retrieves modal data from Bondi or Klein-Gordon worldtube H5 file.
 void update_buffer_with_modal_data(
@@ -212,7 +212,8 @@ class MetricWorldtubeH5BufferUpdater
   /// retrieved as an integer in the filename.
   explicit MetricWorldtubeH5BufferUpdater(
       const std::string& cce_data_filename,
-      std::optional<double> extraction_radius = std::nullopt);
+      std::optional<double> extraction_radius = std::nullopt,
+      bool file_is_from_spec = true);
 
   WRAPPED_PUPable_decl_template(MetricWorldtubeH5BufferUpdater);  // NOLINT
 
@@ -269,6 +270,7 @@ class MetricWorldtubeH5BufferUpdater
 
   h5::H5File<h5::AccessType::ReadOnly> cce_data_file_;
   std::string filename_;
+  bool file_is_from_spec_ = true;
 
   tuples::tagged_tuple_from_typelist<
       db::wrap_tags_in<Tags::detail::InputDataSet, cce_metric_input_tags>>
