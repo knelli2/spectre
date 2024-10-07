@@ -25,27 +25,6 @@ namespace Cce {
 template <typename Tag>
 std::string dataset_label_for_tag();
 
-/// Records a compressed representation of SpEC-like worldtube data associated
-/// with just the spin-weighted scalars required to perform the CCE algorithm.
-struct ReducedWorldtubeModeRecorder {
- public:
-  /// The constructor takes the filename used to create the H5File object for
-  /// writing the data
-  explicit ReducedWorldtubeModeRecorder(const std::string& filename)
-      : output_file_{filename} {}
-
-  /// append to `dataset_path` the vector created by `time` followed by the
-  /// `modes` rearranged in ascending m-varies-fastest format.
-  ///
-  /// For real quantities, negative m and the imaginary part of m=0 are omitted.
-  void append_worldtube_mode_data(const std::string& dataset_path, double time,
-                                  const ComplexModalVector& modes, size_t l_max,
-                                  bool is_real = false);
-
- private:
-  h5::H5File<h5::AccessType::ReadWrite> output_file_;
-};
-
 /*!
  * \brief Class that standardizes the output of our worldtube data into the
  * Bondi modal format that the CharacteristicExtract executable can read in.
