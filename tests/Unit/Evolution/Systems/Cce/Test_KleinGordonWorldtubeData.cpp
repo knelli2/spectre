@@ -261,8 +261,8 @@ void test_klein_gordon_worldtube_buffer_updater(
   const size_t computation_l_max = 10;
 
   const std::string filename = extraction_radius_in_filename
-                                   ? "BoundaryDataH5Test_CceR0100.h5"
-                                   : "BoundaryDataH5Test.h5";
+                                   ? "KgBoundaryDataH5Test_CceR0100.h5"
+                                   : "KgBoundaryDataH5Test.h5";
   if (file_system::check_if_file_exists(filename)) {
     file_system::rm(filename, true);
   }
