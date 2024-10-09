@@ -355,28 +355,42 @@ tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_one_over_rho(
     ASSERT(zero_offset,
            "Can't have an offset right now. Too hard. Brain no think.");
 
+    // Worry about making it cleaner/optimized later
     ReturnType square_cap_0 = square(cap[0]);
     ReturnType fourth_cap_0 = square(square_cap_0);
     ReturnType sixth_cap_0 = square_cap_0 * fourth_cap_0;
+    ReturnType eigth_cap_0 = square_cap_0 * sixth_cap_0;
+    ReturnType tenth_cap_0 = square_cap_0 * eigth_cap_0;
 
-    // 1 - x^2 / 2 + 3x^4 / 8 - 5x^6 / 16
-    one_over_rho =
-        1.0 - 0.5 * square_cap_0 + 0.375 * fourth_cap_0 - 0.3125 * sixth_cap_0;
+    // 1 - x^2 / 2 + 3x^4 / 8 - 5x^6 / 16 + 35x^8 / 128 - 63x^10 / 256
+    one_over_rho = 1.0 - 0.5 * square_cap_0 + 0.375 * fourth_cap_0 -
+                   0.3125 * sixth_cap_0 + 0.2734375 * eigth_cap_0 -
+                   0.24609375 * tenth_cap_0;
 
     if constexpr (Dim == 3) {
-      ReturnType& square_cap_1 = sixth_cap_0;
-      square_cap_1 = square(cap[1]);
+      ReturnType square_cap_1 = square(cap[1]);
+      ReturnType fourth_cap_1 = square(square_cap_1);
+      ReturnType sixth_cap_1 = square_cap_1 * fourth_cap_1;
+      ReturnType eigth_cap_1 = square_cap_1 * sixth_cap_1;
+      ReturnType tenth_cap_1 = square_cap_1 * eigth_cap_1;
 
-      // -y^2 / 2 + 3x^2 y^2 / 4 - 15x^4 y^2 / 16
+      // y^2 / 2 + 3y^4 / 8 - 5y^6 / 16 + 35y^8 / 128 - 63y^10 / 256
+      one_over_rho += -0.5 * square_cap_1 + 0.375 * fourth_cap_1 -
+                      0.3125 * sixth_cap_1 + 0.2734375 * eigth_cap_1 -
+                      0.24609375 * tenth_cap_1;
+
+      // cross terms
+      // 3x^2 y^2 / 4 -15x^4 y^2 / 16 - 15x^2 y^4 / 16 + 35x^6 y^2 / 32
+      // + 35x^2 y^6 / 32 + 105x^4 y^4 / 64 - 315x^8 y^2 / 256
+      // - 315x^2 y^8 / 256 - 315x^6 y^4 / 128 - 315x^4 y^6 / 128
       one_over_rho +=
-          (-0.5 + 0.75 * square_cap_0 - 0.9375 * fourth_cap_0) * square_cap_1;
-
-      ReturnType& fourth_cap_1 = sixth_cap_0;
-      fourth_cap_1 = square(square_cap_1);
-
-      // 3y^4 / 8 - 5y^6 / 16 - 15x^2 y^4 / 16
-      one_over_rho += (0.375 - 0.3125 * square_cap_1 - 0.9375 * square_cap_0) *
-                      fourth_cap_1;
+          0.75 * square_cap_0 * square_cap_1 -
+          0.9375 * (fourth_cap_0 * square_cap_1 + square_cap_0 * fourth_cap_1) +
+          1.09375 * (sixth_cap_0 * square_cap_1 + square_cap_0 * sixth_cap_1) +
+          1.640625 * fourth_cap_0 * fourth_cap_1 -
+          1.23046875 *
+              (eigth_cap_0 * square_cap_1 + square_cap_0 * eigth_cap_1) -
+          2.4609375 * (sixth_cap_0 * fourth_cap_1 + fourth_cap_0 * sixth_cap_1);
     }
   } else {
     if (zero_offset) {
