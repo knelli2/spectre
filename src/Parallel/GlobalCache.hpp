@@ -500,11 +500,10 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
 
       if (callbacks.count(array_component_id) != 1) {
         callbacks[array_component_id] = std::move(optional_callback);
-      } else {
-        ASSERT(
-            callbacks.at(array_component_id)->is_equal_to(*optional_callback),
-            "Callbacks are not equal for tag "
-                << db::tag_name<GlobalCacheTag>());
+      } else if (not callbacks.at(array_component_id)
+                         ->is_equal_to(*optional_callback)) {
+        ERROR("Callbacks are not equal for tag "
+              << db::tag_name<GlobalCacheTag>());
       }
     }
 
