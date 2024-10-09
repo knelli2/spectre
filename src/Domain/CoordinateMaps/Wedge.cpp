@@ -246,7 +246,7 @@ Wedge<Dim>::Wedge(
   }
 }
 
-constexpr bool use_cubic = true;
+constexpr bool use_cubic = false;
 constexpr double a = M_PI_4;
 
 template <size_t Dim>
@@ -334,6 +334,8 @@ std::array<tt::remove_cvref_wrap_t<T>, Dim> Wedge<Dim>::get_rho_vec(
   return rho_vec;
 }
 
+constexpr bool expand_rho = true;
+
 template <size_t Dim>
 template <typename T>
 tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_one_over_rho(
@@ -349,22 +351,52 @@ tt::remove_cvref_wrap_t<T> Wedge<Dim>::get_one_over_rho(
          "for an offset Wedge.");
   const bool zero_offset = not cube_half_length_.has_value();
 
-  if (zero_offset) {
-    one_over_rho = 1.0 + square(cap[0]);
-  } else {
+  if constexpr (expand_rho) {
+    ASSERT(zero_offset,
+           "Can't have an offset right now. Too hard. Brain no think.");
+
+    ReturnType square_cap_0 = square(cap[0]);
+    ReturnType fourth_cap_0 = square(square_cap_0);
+    ReturnType sixth_cap_0 = square_cap_0 * fourth_cap_0;
+
+    // 1 - x^2 / 2 + 3x^4 / 8 - 5x^6 / 16
     one_over_rho =
-        square(1.0 - rotated_focus[radial_coord] / cube_half_length_.value()) +
-        square(cap[0] - rotated_focus[polar_coord] / cube_half_length_.value());
-  }
-  if constexpr (Dim == 3) {
-    if (zero_offset) {
-      one_over_rho += square(cap[1]);
-    } else {
-      one_over_rho += square(cap[1] - rotated_focus[azimuth_coord] /
-                                          cube_half_length_.value());
+        1.0 - 0.5 * square_cap_0 + 0.375 * fourth_cap_0 - 0.3125 * sixth_cap_0;
+
+    if constexpr (Dim == 3) {
+      ReturnType& square_cap_1 = sixth_cap_0;
+      square_cap_1 = square(cap[1]);
+
+      // -y^2 / 2 + 3x^2 y^2 / 4 - 15x^4 y^2 / 16
+      one_over_rho +=
+          (-0.5 + 0.75 * square_cap_0 - 0.9375 * fourth_cap_0) * square_cap_1;
+
+      ReturnType& fourth_cap_1 = sixth_cap_0;
+      fourth_cap_1 = square(square_cap_1);
+
+      // 3y^4 / 8 - 5y^6 / 16 - 15x^2 y^4 / 16
+      one_over_rho += (0.375 - 0.3125 * square_cap_1 - 0.9375 * square_cap_0) *
+                      fourth_cap_1;
     }
+  } else {
+    if (zero_offset) {
+      one_over_rho = 1.0 + square(cap[0]);
+    } else {
+      one_over_rho = square(1.0 - rotated_focus[radial_coord] /
+                                      cube_half_length_.value()) +
+                     square(cap[0] - rotated_focus[polar_coord] /
+                                         cube_half_length_.value());
+    }
+    if constexpr (Dim == 3) {
+      if (zero_offset) {
+        one_over_rho += square(cap[1]);
+      } else {
+        one_over_rho += square(cap[1] - rotated_focus[azimuth_coord] /
+                                            cube_half_length_.value());
+      }
+    }
+    one_over_rho = 1.0 / sqrt(one_over_rho);
   }
-  one_over_rho = 1.0 / sqrt(one_over_rho);
 
   return one_over_rho;
 }
