@@ -500,10 +500,16 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
 
       if (callbacks.count(array_component_id) != 1) {
         callbacks[array_component_id] = std::move(optional_callback);
-      } else if (not callbacks.at(array_component_id)
-                         ->is_equal_to(*optional_callback)) {
-        ERROR("Callbacks are not equal for tag "
-              << db::tag_name<GlobalCacheTag>());
+      } else {
+        const std::optional<bool> maybe_are_equal =
+            callbacks.at(array_component_id)->is_equal_to(*optional_callback);
+        if (not maybe_are_equal.value_or(false)) {
+          ERROR("Callbacks are not equal for tag "
+                << db::tag_name<GlobalCacheTag>() << ". "
+                << (maybe_are_equal.has_value()
+                        ? " Args were not correct."
+                        : " Downcast of Callback pointer failed."));
+        }
       }
     }
 
