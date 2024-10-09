@@ -628,24 +628,24 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
     std::get<1>(tuples::get<tag>(mutable_global_cache_)).clear();
   }
 
-  std::stringstream ss{};
-  ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
-     << my_node() << ". ";
-  ss << "Args = (" << args << "). Calling " << callbacks.size()
-     << " callbacks:\n";
+  // std::stringstream ss{};
+  // ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
+  //    << my_node() << ". ";
+  // ss << "Args = (" << args << "). Calling " << callbacks.size()
+  //    << " callbacks:\n";
 
   // Invoke the callbacks.  Any new callbacks that are added to the
   // list (if a callback calls mutable_cache_item_is_ready) will be
   // saved and will not be invoked here.
   for (auto& [array_component_id, vec_callbacks] : callbacks) {
     for (auto& callback : vec_callbacks) {
-      ss << " ArrayComponentId " << array_component_id << ": "
-         << callback->name() << "\n";
+      // ss << " ArrayComponentId " << array_component_id << ": "
+      //    << callback->name() << "\n";
       callback->invoke();
     }
   }
 
-  Parallel::printf("%s\n", ss.str());
+  // Parallel::printf("%s\n", ss.str());
 }
 
 #if defined(__GNUC__) && !defined(__clang__)
