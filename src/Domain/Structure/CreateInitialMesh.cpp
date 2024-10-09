@@ -27,7 +27,7 @@ Mesh<Dim> create_initial_mesh(
   for (size_t i = 0; i < Dim; ++i) {
     extents[i] = gsl::at(unoriented_extents, orientation(i));
   }
-  return {extents.indices(), Spectral::Basis::Chebyshev, quadrature};
+  return {extents.indices(), Spectral::Basis::Legendre, quadrature};
 }
 }  // namespace domain::Initialization
 
