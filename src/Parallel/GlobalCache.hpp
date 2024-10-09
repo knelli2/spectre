@@ -507,8 +507,11 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
           ERROR("Callbacks are not equal for tag "
                 << db::tag_name<GlobalCacheTag>() << ". "
                 << (maybe_are_equal.has_value()
-                        ? " Args were not correct."
-                        : " Downcast of Callback pointer failed."));
+                        ? "Args were not correct."
+                        : "Downcast of Callback pointer failed.")
+                << "\n Existing callback name: "
+                << callbacks.at(array_component_id)->name()
+                << "\n Incoming callback name: " << optional_callback->name());
         }
       }
     }
