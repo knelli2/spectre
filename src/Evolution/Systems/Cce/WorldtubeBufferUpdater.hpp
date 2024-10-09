@@ -3,12 +3,14 @@
 
 #pragma once
 
+#include <brigand/brigand.hpp>
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 
+#include "DataStructures/ComplexDataVector.hpp"
 #include "DataStructures/ComplexModalVector.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Prefixes.hpp"
@@ -30,13 +32,18 @@
 #include "Utilities/TaggedTuple.hpp"
 
 namespace Cce {
-namespace Tags {
-namespace detail {
+namespace Tags::detail {
 // tags for use in the buffers for the modal input worldtube data management
 // classes
-using SpatialMetric = gr::Tags::SpatialMetric<ComplexModalVector, 3>;
-using Shift = gr::Tags::Shift<ComplexModalVector, 3>;
-using Lapse = gr::Tags::Lapse<ComplexModalVector>;
+template <typename T>
+using SpatialMetric = gr::Tags::SpatialMetric<T, 3>;
+template <typename T>
+using Shift = gr::Tags::Shift<T, 3>;
+template <typename T>
+using Lapse = gr::Tags::Lapse<T>;
+
+template <typename T>
+using metric_tags = tmpl::list<SpatialMetric<T>, Shift<T>, Lapse<T>>;
 
 // radial derivative prefix tag to be used with the modal input worldtube data
 template <typename Tag>
@@ -52,8 +59,14 @@ struct InputDataSet : db::SimpleTag, db::PrefixTag {
   using type = std::string;
   using tag = Tag;
 };
-}  // namespace detail
-}  // namespace Tags
+
+template <typename Tag>
+struct apply_derivs {
+  using type = tmpl::list<Tag, ::Tags::dt<Tag>, Dr<Tag>>;
+};
+template <typename Tag>
+using apply_derivs_t = apply_derivs<Tag>::type;
+}  // namespace Tags::detail
 
 namespace detail {
 // generates the component dataset name in the worldtube file based on the
@@ -84,13 +97,15 @@ std::pair<size_t, size_t> create_span_for_time_value(
 
 // retrieves time stamps and lmax the from the specified file.
 void set_time_buffer_and_lmax(gsl::not_null<DataVector*> time_buffer,
-                              size_t& l_max, const h5::Dat& data, bool is_real);
+                              size_t& l_max, const h5::Dat& data, bool is_real,
+                              bool is_modal_data);
 
 // retrieves modal data from Bondi or Klein-Gordon worldtube H5 file.
+template <int Spin>
 void update_buffer_with_modal_data(
     gsl::not_null<ComplexModalVector*> buffer_to_update,
     const h5::Dat& read_data, size_t computation_l_max, size_t l_max,
-    size_t time_span_start, size_t time_span_end, bool is_real);
+    size_t time_span_start, size_t time_span_end, bool is_modal_data);
 
 // updates `time_span_start` and `time_span_end` based on the provided `time`,
 // and inserts the cooresponding modal data (for `InputTags`) from worldtube H5
@@ -108,12 +123,19 @@ double update_buffers_for_time(
 }  // namespace detail
 
 /// the full set of tensors to be extracted from the worldtube h5 file
-using cce_metric_input_tags = tmpl::list<
-    Tags::detail::SpatialMetric, Tags::detail::Dr<Tags::detail::SpatialMetric>,
-    ::Tags::dt<Tags::detail::SpatialMetric>, Tags::detail::Shift,
-    Tags::detail::Dr<Tags::detail::Shift>, ::Tags::dt<Tags::detail::Shift>,
-    Tags::detail::Lapse, Tags::detail::Dr<Tags::detail::Lapse>,
-    ::Tags::dt<Tags::detail::Lapse>>;
+template <typename T>
+using cce_metric_input_tags =
+    tmpl::flatten<tmpl::transform<Tags::detail::metric_tags<T>,
+                                  Tags::detail::apply_derivs<tmpl::_1>>>;
+
+// template <typename T>
+// using cce_metric_input_tags = tmpl::list<
+//     Tags::detail::SpatialMetric,
+//     Tags::detail::Dr<Tags::detail::SpatialMetric>,
+//     ::Tags::dt<Tags::detail::SpatialMetric>, Tags::detail::Shift,
+//     Tags::detail::Dr<Tags::detail::Shift>, ::Tags::dt<Tags::detail::Shift>,
+//     Tags::detail::Lapse, Tags::detail::Dr<Tags::detail::Lapse>,
+//     ::Tags::dt<Tags::detail::Lapse>>;
 
 /// the full set of tensors to be extracted from the reduced form of the
 /// worldtube h5 file
@@ -201,7 +223,20 @@ class WorldtubeBufferUpdater : public PUP::able {
 /// A `WorldtubeBufferUpdater` specialized to the CCE input worldtube  H5 file
 /// produced by SpEC.
 class MetricWorldtubeH5BufferUpdater
-    : public WorldtubeBufferUpdater<cce_metric_input_tags> {
+    : public WorldtubeBufferUpdater<cce_metric_input_tags<ComplexModalVector>> {
+  template <template <typename> class Tag, typename T>
+  struct replace_type {
+    using type = Tag<T>;
+  };
+  template <template <typename> class Tag, typename T>
+  using replace_type_t = replace_type<Tag, T>::type;
+  template <template <typename, int> class Tag, typename T>
+  struct replace_type_dim {
+    using type = Tag<T, 3>;
+  };
+  template <template <typename, int> class Tag, typename T>
+  using replace_type_dim_t = replace_type_dim<Tag, T>::type;
+
  public:
   // charm needs the empty constructor
   MetricWorldtubeH5BufferUpdater() = default;
@@ -213,27 +248,41 @@ class MetricWorldtubeH5BufferUpdater
   explicit MetricWorldtubeH5BufferUpdater(
       const std::string& cce_data_filename,
       std::optional<double> extraction_radius = std::nullopt,
-      bool file_is_from_spec = true);
+      bool file_is_from_spec = true, bool is_modal_data = true);
 
   WRAPPED_PUPable_decl_template(MetricWorldtubeH5BufferUpdater);  // NOLINT
 
   explicit MetricWorldtubeH5BufferUpdater(CkMigrateMessage* /*unused*/) {}
 
-  /// update the `buffers`, `time_span_start`, and `time_span_end` with
-  /// time-varies-fastest, Goldberg modal data and the start and end index in
-  /// the member `time_buffer_` covered by the newly updated `buffers`. The
-  /// function returns the next time at which a full update will occur. If
+  /// @{
+  /// \brief Update the `buffers`, `time_span_start`, and `time_span_end` with
+  /// time-varies-fastest data (either Goldberg modal data or just nodal data)
+  /// and the start and end index in the member `time_buffer_` covered by the
+  /// newly updated `buffers`.
+  ///
+  /// The function returns the next time at which a full update will occur. If
   /// called again at times earlier than the next full update time, it will
   /// leave the `buffers` unchanged and again return the next needed time.
   double update_buffers_for_time(
-      gsl::not_null<Variables<cce_metric_input_tags>*> buffers,
+      gsl::not_null<Variables<cce_metric_input_tags<ComplexModalVector>>*>
+          buffers,
       gsl::not_null<size_t*> time_span_start,
       gsl::not_null<size_t*> time_span_end, double time,
       size_t computation_l_max, size_t interpolator_length,
       size_t buffer_depth) const override;
 
-  std::unique_ptr<WorldtubeBufferUpdater<cce_metric_input_tags>> get_clone()
-      const override;
+  double update_buffers_for_time(
+      gsl::not_null<Variables<cce_metric_input_tags<ComplexDataVector>>*>
+          buffers,
+      gsl::not_null<size_t*> time_span_start,
+      gsl::not_null<size_t*> time_span_end, double time,
+      size_t computation_l_max, size_t interpolator_length,
+      size_t buffer_depth) const;
+  /// @}
+
+  std::unique_ptr<
+      WorldtubeBufferUpdater<cce_metric_input_tags<ComplexModalVector>>>
+  get_clone() const override;
 
   /// The time can only be supported in the buffer update if it is between the
   /// first and last time of the input file.
@@ -260,12 +309,20 @@ class MetricWorldtubeH5BufferUpdater
   void pup(PUP::er& p) override;
 
  private:
-  void update_buffer(gsl::not_null<ComplexModalVector*> buffer_to_update,
+  template <typename T>
+  void update_buffer(gsl::not_null<T*> buffer_to_update,
                      const h5::Dat& read_data, size_t computation_l_max,
                      size_t time_span_start, size_t time_span_end) const;
+  std::optional<double> common_buffer_checks(
+      gsl::not_null<size_t*> time_span_start,
+      gsl::not_null<size_t*> time_span_end, double time,
+      size_t interpolator_length, size_t buffer_depth) const;
+  template <typename T>
+  void set_names();
 
   bool has_version_history_ = true;
   double extraction_radius_ = std::numeric_limits<double>::signaling_NaN();
+  bool is_modal_data_ = true;
   size_t l_max_ = 0;
 
   h5::H5File<h5::AccessType::ReadOnly> cce_data_file_;
@@ -273,7 +330,10 @@ class MetricWorldtubeH5BufferUpdater
   bool file_is_from_spec_ = true;
 
   tuples::tagged_tuple_from_typelist<
-      db::wrap_tags_in<Tags::detail::InputDataSet, cce_metric_input_tags>>
+      tmpl::append<db::wrap_tags_in<Tags::detail::InputDataSet,
+                                    cce_metric_input_tags<ComplexModalVector>>,
+                   db::wrap_tags_in<Tags::detail::InputDataSet,
+                                    cce_metric_input_tags<ComplexDataVector>>>>
       dataset_names_;
 
   // stores all the times in the input file
@@ -294,7 +354,8 @@ class BondiWorldtubeH5BufferUpdater
   /// retrieved as an integer in the filename.
   explicit BondiWorldtubeH5BufferUpdater(
       const std::string& cce_data_filename,
-      std::optional<double> extraction_radius = std::nullopt);
+      std::optional<double> extraction_radius = std::nullopt,
+      bool is_modal_data = true);
 
   WRAPPED_PUPable_decl_template(BondiWorldtubeH5BufferUpdater);  // NOLINT
 
@@ -353,6 +414,7 @@ class BondiWorldtubeH5BufferUpdater
 
  private:
   std::optional<double> extraction_radius_ = std::nullopt;
+  bool is_modal_data_ = true;
   size_t l_max_ = 0;
 
   h5::H5File<h5::AccessType::ReadOnly> cce_data_file_;
