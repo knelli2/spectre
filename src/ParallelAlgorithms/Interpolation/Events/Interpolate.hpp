@@ -117,21 +117,29 @@ class Interpolate<VolumeDim, InterpolationTargetTag,
   bool is_ready(const double time, Parallel::GlobalCache<Metavariables>& cache,
                 const ArrayIndex& array_index,
                 const Component* const component) const {
-    if constexpr (Parallel::is_dg_element_collection_v<Component>) {
-      const auto element_location = static_cast<int>(
-          Parallel::local_synchronous_action<
-              Parallel::Actions::GetItemFromDistributedOject<
-                  Parallel::Tags::ElementLocations<VolumeDim>>>(
-              Parallel::get_parallel_component<Component>(cache))
-              ->at(array_index));
-      return domain::functions_of_time_are_ready_threaded_action_callback<
-          domain::Tags::FunctionsOfTime,
-          Parallel::Actions::PerformAlgorithmOnElement<false>>(
-          cache, element_location, component, time, std::nullopt, array_index);
-    } else {
-      return domain::functions_of_time_are_ready_algorithm_callback<
-          domain::Tags::FunctionsOfTime>(cache, array_index, component, time);
-    }
+    // if constexpr (Parallel::is_dg_element_collection_v<Component>) {
+    //   const auto element_location = static_cast<int>(
+    //       Parallel::local_synchronous_action<
+    //           Parallel::Actions::GetItemFromDistributedOject<
+    //               Parallel::Tags::ElementLocations<VolumeDim>>>(
+    //           Parallel::get_parallel_component<Component>(cache))
+    //           ->at(array_index));
+    //   return domain::functions_of_time_are_ready_threaded_action_callback<
+    //       domain::Tags::FunctionsOfTime,
+    //       Parallel::Actions::PerformAlgorithmOnElement<false>>(
+    //       cache, element_location, component, time, std::nullopt,
+    //       array_index);
+    // } else {
+    //   return domain::functions_of_time_are_ready_algorithm_callback<
+    //       domain::Tags::FunctionsOfTime>(cache, array_index, component,
+    //       time);
+    // }
+
+    (void)time;
+    (void)cache;
+    (void)array_index;
+    (void)component;
+    return true;
   }
 
   bool needs_evolved_variables() const override { return true; }

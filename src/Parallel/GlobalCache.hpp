@@ -512,6 +512,19 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
                                ->is_equal_to(*optional_callback)
                                .value_or(false);
                          })) {
+          std::stringstream ss{};
+          ss << "For tag " << db::tag_name<GlobalCacheTag>() << ", "
+             << vec_callbacks.size() << " callbacks already registered on id "
+             << array_component_id << ". Names are:\n";
+
+          for (const auto& callback : vec_callbacks) {
+            ss << " " << callback->name() << "\n";
+          }
+
+          ss << "New callback name:\n " << optional_callback->name();
+
+          Parallel::printf("%s\n", ss.str());
+
           vec_callbacks.emplace_back(std::move(optional_callback));
         }
       } else {
