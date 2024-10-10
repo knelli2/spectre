@@ -21,6 +21,7 @@
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/Numeric.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
@@ -204,7 +205,7 @@ void try_to_interpolate(
     // non-empty.
     if (debug_print) {
       ss << "finished interpolation on all " << num_elements
-         << " elements on core " << sys::my_proc();
+         << " elements on core " << sys::my_proc() << ".";
     }
 
     if (not vars_infos.at(temporal_id).global_offsets.empty()) {
@@ -216,7 +217,13 @@ void try_to_interpolate(
           receiver_proxy, info.vars, info.global_offsets, temporal_id);
 
       if (debug_print) {
-        ss << " Sending interpolated data.\n";
+        const size_t num_points_to_be_sent = alg::accumulate(
+            info.global_offsets, 0_st,
+            [](const size_t value, const std::vector<size_t>& vec) {
+              return value + vec.size();
+            });
+        ss << " Sending " << num_points_to_be_sent << " / "
+           << info.block_coord_holders.size() << " total points.";
       }
     } else if (debug_print) {
       ss << " Global offsets empty. Nothing to interpolate.";
@@ -240,9 +247,8 @@ void try_to_interpolate(
               .interpolation_is_done_for_these_elements.size();
   }
 
-  if (debug_print) {
-    Parallel::printf("%s\n", ss.str());
-  }
+    if (debug_print) {
+      Parallel::printf("%s\n", ss.str());
+    }
 }
-
 }  // namespace intrp

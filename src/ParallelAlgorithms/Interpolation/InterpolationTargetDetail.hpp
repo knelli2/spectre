@@ -410,7 +410,7 @@ bool have_data_at_all_points(
       db::get<Tags::InterpolatedVars<InterpolationTargetTag, TemporalId>>(box)
           .at(temporal_id)
           .number_of_grid_points();
-  if (verbosity >= ::Verbosity::Debug) {
+  if (verbosity >= ::Verbosity::Verbose) {
     struct HaveDataAtAllPoints {};
     Parallel::printf(
         "%s, Total expected points = %d, valid points received = %d, "

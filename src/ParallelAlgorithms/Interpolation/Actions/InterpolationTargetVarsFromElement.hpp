@@ -175,6 +175,11 @@ struct InterpolationTargetVarsFromElement {
               temporal_id, true)) {
         return;
       }
+
+      if (verbose_print) {
+        ss << "calling callbacks and cleaning up target.";
+        Parallel::printf("%s\n", ss.str());
+      }
       // All the valid points have been interpolated.
       // We throw away the return value of call_callbacks in this case
       // (it is known to be always true; it can be false only for
@@ -183,10 +188,6 @@ struct InterpolationTargetVarsFromElement {
           make_not_null(&box), make_not_null(&cache), temporal_id);
       InterpolationTarget_detail::clean_up_interpolation_target<
           InterpolationTargetTag>(make_not_null(&box), temporal_id);
-      if (verbose_print) {
-        ss << "calling callbacks and cleaning up target.";
-        Parallel::printf("%s\n", ss.str());
-      }
     } else if (debug_print) {
       ss << "not enough data. Waiting. See Total/valid/invalid points line.";
       Parallel::printf("%s\n", ss.str());

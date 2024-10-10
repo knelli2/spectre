@@ -89,7 +89,7 @@ struct SendPointsToInterpolator {
         Parallel::get_parallel_component<Interpolator<Metavariables>>(cache);
     Parallel::simple_action<Actions::ReceivePoints<InterpolationTargetTag>>(
         receiver_proxy, temporal_id, std::move(coords), iteration);
-    if (Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
+    if (Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
       Parallel::printf(
           "%s, Sending points to interpolator.\n",
           InterpolationTarget_detail::target_output_prefix<
