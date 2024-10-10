@@ -100,7 +100,7 @@ struct InterpolationTargetReceiveVars {
           typename InterpolationTargetTag::vars_to_interpolate_to_target>>&
           vars_src,
       const std::vector<std::vector<size_t>>& global_offsets,
-      const TemporalId& temporal_id,
+      const TemporalId& temporal_id, const size_t sender_core,
       const bool vars_have_already_been_received = false) {
     // Check if we already have completed interpolation at this
     // temporal_id.
@@ -158,7 +158,7 @@ struct InterpolationTargetReceiveVars {
                                   temporal_id);
     }
     if (InterpolationTarget_detail::have_data_at_all_points<
-            InterpolationTargetTag>(box, temporal_id, verbosity)) {
+            InterpolationTargetTag>(box, temporal_id, sender_core, verbosity)) {
       if (verbose_print) {
         ss << "calling callbacks ";
       }
@@ -173,7 +173,13 @@ struct InterpolationTargetReceiveVars {
               std::add_pointer_t<ParallelComponent>{nullptr},
               InterpolationTarget_detail::get_temporal_id_value(temporal_id),
               std::nullopt, std::decay_t<decltype(vars_src)>{},
-              std::decay_t<decltype(global_offsets)>{}, temporal_id, true)) {
+              std::decay_t<decltype(global_offsets)>{}, temporal_id,
+              sender_core, true)) {
+        if (verbose_print) {
+          ss << "but functions of time aren't ready. Registering parallel "
+                "callback.";
+          Parallel::printf("%s\n", ss.str());
+        }
         return;
       }
 

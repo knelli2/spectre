@@ -32,6 +32,7 @@
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Literals.hpp"
+#include "Utilities/MakeString.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Requires.hpp"
 #include "Utilities/System/ParallelInfo.hpp"
@@ -377,6 +378,7 @@ void clean_up_interpolation_target(
       box);
 }
 
+struct CheckReceivedPoints {};
 /// Returns true if this InterpolationTarget has received data
 /// at all its points.
 ///
@@ -388,10 +390,11 @@ void clean_up_interpolation_target(
 /// Currently two Actions call have_data_at_all_points:
 /// - InterpolationTargetReceiveVars (called by Interpolator ParallelComponent)
 /// - InterpolationTargetVarsFromElement (called by DgElementArray)
-template <typename InterpolationTargetTag, typename DbTags, typename TemporalId>
+template <typename InterpolationTargetTag, typename DbTags, typename TemporalId,
+          typename Sender>
 bool have_data_at_all_points(
     const db::DataBox<DbTags>& box, const TemporalId& temporal_id,
-    const ::Verbosity verbosity = ::Verbosity::Silent) {
+    const Sender& sender, const ::Verbosity verbosity = ::Verbosity::Silent) {
   const auto& filled_indices =
       db::get<Tags::IndicesOfFilledInterpPoints<TemporalId>>(box);
 
@@ -411,12 +414,14 @@ bool have_data_at_all_points(
           .at(temporal_id)
           .number_of_grid_points();
   if (verbosity >= ::Verbosity::Verbose) {
-    struct HaveDataAtAllPoints {};
     Parallel::printf(
-        "%s, Total expected points = %d, valid points received = %d, "
+        "%s: From %s, Total expected points = %d, valid points received = "
+        "%d, "
         "invalid points received = %d\n",
-        target_output_prefix<HaveDataAtAllPoints, InterpolationTargetTag>(
+        target_output_prefix<CheckReceivedPoints, InterpolationTargetTag>(
             temporal_id),
+        MakeString{} << (std::is_same_v<size_t, Sender> ? "core " : "element ")
+                     << sender,
         interp_size, filled_size, invalid_size);
   }
   return (invalid_size + filled_size == interp_size);

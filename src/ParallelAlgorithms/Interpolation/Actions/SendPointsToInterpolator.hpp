@@ -9,6 +9,7 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/Printf/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
@@ -81,7 +82,8 @@ struct SendPointsToInterpolator {
         std::vector<std::vector<size_t>> global_offsets{};
         Parallel::simple_action<
             Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
-            receiver_proxy, vars, global_offsets, temporal_id);
+            receiver_proxy, vars, global_offsets, temporal_id,
+            Parallel::my_proc<size_t>(cache));
       }
     }
 

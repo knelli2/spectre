@@ -85,6 +85,7 @@ struct InterpolationTargetVarsFromElement {
           block_logical_coords,
       const std::vector<std::vector<size_t>>& global_offsets,
       const TemporalId& temporal_id,
+      const ElementId<Metavariables::volume_dim>& sender_element,
       const bool vars_have_already_been_received = false) {
     static_assert(
         not InterpolationTargetTag::compute_target_points::is_sequential::value,
@@ -159,7 +160,8 @@ struct InterpolationTargetVarsFromElement {
     }
 
     if (InterpolationTarget_detail::have_data_at_all_points<
-            InterpolationTargetTag>(box, temporal_id, verbosity)) {
+            InterpolationTargetTag>(box, temporal_id, sender_element,
+                                    verbosity)) {
       // Check if functions of time are ready on this component. Since this
       // simple action has already been called, we don't need to resend the
       // data, so we just pass empty vectors for vars_src and
@@ -172,7 +174,12 @@ struct InterpolationTargetVarsFromElement {
               InterpolationTarget_detail::get_temporal_id_value(temporal_id),
               std::nullopt, std::decay_t<decltype(vars_src)>{},
               std::decay_t<decltype(block_logical_coords)>{}, global_offsets,
-              temporal_id, true)) {
+              temporal_id, sender_element, true)) {
+        if (verbose_print) {
+          ss << "functions of time aren't ready. Registering parallel "
+                "callback.";
+          Parallel::printf("%s\n", ss.str());
+        }
         return;
       }
 

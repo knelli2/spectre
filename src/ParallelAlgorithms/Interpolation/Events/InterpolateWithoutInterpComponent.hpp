@@ -400,7 +400,7 @@ class InterpolateWithoutInterpComponent<VolumeDim, InterpolationTargetTag,
             {interpolator.interpolate(interp_vars)}),
         block_logical_coords,
         std::vector<std::vector<size_t>>({element_coord_holder.offsets}),
-        temporal_id);
+        temporal_id, array_index);
 
     if (debug_print) {
       ss << "Sending points and vars to target.";

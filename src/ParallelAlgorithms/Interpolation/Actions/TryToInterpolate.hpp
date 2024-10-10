@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 
@@ -16,6 +17,7 @@
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Interpolation/IrregularInterpolant.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/Printf/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
@@ -214,7 +216,8 @@ void try_to_interpolate(
           InterpolationTarget<Metavariables, InterpolationTargetTag>>(*cache);
       Parallel::simple_action<
           Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
-          receiver_proxy, info.vars, info.global_offsets, temporal_id);
+          receiver_proxy, info.vars, info.global_offsets, temporal_id,
+          Parallel::my_proc<size_t>(*cache));
 
       if (debug_print) {
         const size_t num_points_to_be_sent = alg::accumulate(
@@ -247,8 +250,8 @@ void try_to_interpolate(
               .interpolation_is_done_for_these_elements.size();
   }
 
-    if (debug_print) {
-      Parallel::printf("%s\n", ss.str());
-    }
+  if (debug_print) {
+    Parallel::printf("%s\n", ss.str());
+  }
 }
 }  // namespace intrp
