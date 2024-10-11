@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/DataBox/TagName.hpp"
 #include "IO/Observer/Actions/ObserverRegistration.hpp"
@@ -12,18 +14,25 @@
 #include "Parallel/Algorithms/AlgorithmGroup.hpp"
 #include "Parallel/ArrayComponentId.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/PhaseDependentActionList.hpp"
+#include "Parallel/Reduction.hpp"
 #include "ParallelAlgorithms/Actions/TerminatePhase.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/DumpInterpolatorVolumeData.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InitializeInterpolator.hpp"
+#include "Utilities/Functional.hpp"
 #include "Utilities/GetOutput.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TypeTraits/IsA.hpp"
 
 namespace intrp {
+namespace Tags {
+struct NumberOfElements;
+}  // namespace Tags
+
 namespace Actions {
 template <typename TemporalIdTag>
 struct RegisterWithObserverWriter {
@@ -50,6 +59,48 @@ struct RegisterWithObserverWriter {
     Parallel::simple_action<
         observers::Actions::RegisterVolumeContributorWithObserverWriter>(
         observer_writer, observation_key, array_component_id);
+
+    return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+  }
+};
+
+struct CheckNumberOfElements {
+  template <typename ParallelComponent, typename DbTags, typename Metavariables,
+            typename ArrayIndex>
+  static void apply(db::DataBox<DbTags>& /*box*/,
+                    Parallel::GlobalCache<Metavariables>& /*cache*/,
+                    const ArrayIndex& /*array_index*/,
+                    const size_t total_elements_registered) {
+    Parallel::printf(
+        "Total number of elements registered on interpolator is %u\n",
+        total_elements_registered);
+  }
+};
+
+struct ContributeToCheckNumberOfElements {
+  template <typename DbTagList, typename... InboxTags, typename Metavariables,
+            typename ArrayIndex, typename ActionList,
+            typename ParallelComponent>
+  static Parallel::iterable_action_return_t apply(
+      db::DataBox<DbTagList>& box,
+      const tuples::TaggedTuple<InboxTags...>& /*inboxes*/,
+      Parallel::GlobalCache<Metavariables>& cache,
+      const ArrayIndex& array_index, const ActionList /*meta*/,
+      const ParallelComponent* const /*meta*/) {
+    const size_t num_elements = db::get<intrp::Tags::NumberOfElements>(box);
+    Parallel::ReductionData<Parallel::ReductionDatum<size_t, funcl::Plus<>>>
+        reduction_data{num_elements};
+
+    Parallel::printf("Contributing %u elements from interpolator core %u\n",
+                     num_elements, Parallel::my_proc<size_t>(cache));
+
+    const auto& my_proxy =
+        Parallel::get_parallel_component<ParallelComponent>(cache)[array_index];
+    const auto& target_proxy =
+        Parallel::get_parallel_component<ParallelComponent>(cache)[0];
+
+    Parallel::contribute_to_reduction<CheckNumberOfElements>(
+        std::move(reduction_data), my_proxy, target_proxy);
 
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
@@ -98,6 +149,10 @@ struct Interpolator {
                   all_temporal_ids,
                   tmpl::bind<Actions::RegisterWithObserverWriter, tmpl::_1>>,
               Parallel::Actions::TerminatePhase>>>,
+      Parallel::PhaseActions<
+          Parallel::Phase::InitializeTimeStepperHistory,
+          tmpl::list<Actions::ContributeToCheckNumberOfElements,
+                     Parallel::Actions::TerminatePhase>>,
       Parallel::PhaseActions<
           Parallel::Phase::PostFailureCleanup,
           tmpl::list<Actions::DumpInterpolatorVolumeData<all_temporal_ids>,
