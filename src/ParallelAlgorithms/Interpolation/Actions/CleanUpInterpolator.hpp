@@ -12,6 +12,7 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/Variables.hpp"
 #include "IO/Logging/Verbosity.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Printf/Printf.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceiveVolumeData.hpp"
 #include "ParallelAlgorithms/Interpolation/Tags.hpp"
@@ -179,7 +180,8 @@ struct CleanUpInterpolator {
           make_not_null(&box));
 
       if (debug_print) {
-        ss << "finished interpolating and cleaned up interpolator.";
+        ss << "finished interpolating and cleaned up interpolator on core "
+           << Parallel::my_proc<size_t>(cache);
       }
     }
 

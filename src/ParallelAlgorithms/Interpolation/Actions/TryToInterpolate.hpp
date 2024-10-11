@@ -207,7 +207,7 @@ void try_to_interpolate(
     // non-empty.
     if (debug_print) {
       ss << "finished interpolation on all " << num_elements
-         << " elements on core " << sys::my_proc() << ".";
+         << " elements on core " << Parallel::my_proc<size_t>(*cache) << ".";
     }
 
     if (not vars_infos.at(temporal_id).global_offsets.empty()) {
@@ -245,7 +245,8 @@ void try_to_interpolate(
         box);
   } else if (debug_print) {
     ss << "interpolation not finished on all local elements of core "
-       << sys::my_proc() << ". Expected " << num_elements << ", received "
+       << Parallel::my_proc<size_t>(*cache) << ". Expected " << num_elements
+       << ", received "
        << vars_infos.at(temporal_id)
               .interpolation_is_done_for_these_elements.size();
   }
