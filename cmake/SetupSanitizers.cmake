@@ -9,6 +9,7 @@ option(ASAN "Add AddressSanitizer compile flags" OFF)
 # interface flags before CMake 3.13.
 add_library(Sanitizers IMPORTED INTERFACE)
 add_library(Sanitizers::Address IMPORTED INTERFACE)
+add_library(Sanitizers::Thread IMPORTED INTERFACE)
 add_library(Sanitizers::UbInteger IMPORTED INTERFACE)
 add_library(Sanitizers::UbUndefined IMPORTED INTERFACE)
 
@@ -22,6 +23,24 @@ if (ASAN)
   set(
     CMAKE_EXE_LINKER_FLAGS
     "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address"
+    )
+endif ()
+
+option(THREADSAN "Add thread sanitizer behavior compile flags" OFF)
+if (ASAN)
+  set_property(
+    TARGET Sanitizers::Thread
+    APPEND PROPERTY
+    INTERFACE_COMPILE_OPTIONS
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-omit-frame-pointer -fsanitize=thread>
+    )
+  set(
+    CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=thread"
+    )
+  set(
+    CMAKE_EXE_LINKER_FLAGS
+    "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread"
     )
 endif ()
 
@@ -61,6 +80,7 @@ target_link_libraries(
   SpectreFlags
   INTERFACE
   Sanitizers::Address
+  Sanitizers::Thread
   Sanitizers::UbInteger
   Sanitizers::UbUndefined
   )
