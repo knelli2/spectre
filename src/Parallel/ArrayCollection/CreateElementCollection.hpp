@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <sstream>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
@@ -29,11 +30,13 @@
 #include "Parallel/Info.hpp"
 #include "Parallel/Local.hpp"
 #include "Parallel/NodeLock.hpp"
+#include "Parallel/Printf/Printf.hpp"
 #include "Parallel/Reduction.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
 #include "Utilities/Functional.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TaggedTuple.hpp"
 
 namespace Parallel::Actions {
@@ -80,6 +83,8 @@ struct CreateElementCollection {
 
   using return_tag_list = tmpl::append<simple_tags, compute_tags>;
 
+  static size_t number_of_previous_calls;
+
   template <typename DbTagsList, typename... InboxTags, typename ArrayIndex,
             typename ActionList, typename ParallelComponent>
   static Parallel::iterable_action_return_t apply(
@@ -120,6 +125,11 @@ struct CreateElementCollection {
     my_elements_and_cores.reserve(total_num_elements / number_of_nodes + 1);
     std::unordered_map<ElementId<Dim>, size_t> node_of_elements{};
     const size_t my_node = Parallel::my_node<size_t>(local_cache);
+
+    Parallel::printf(
+        "Calling CreateElementCollection on node %u. This action has been "
+        "called %u times on this node before.\n",
+        my_node, number_of_previous_calls);
 
     Parallel::create_elements_using_distribution(
         [&my_elements_and_cores, my_node, &node_of_elements](
@@ -170,6 +180,21 @@ struct CreateElementCollection {
                                     serialized_initialization_items.data()),
                                 element_id))
                         .second) {
+              std::stringstream ss{};
+              ss << "Node: " << sys::my_node() << ": ";
+              ss << "Trying to assign element " << element_id << " to core "
+                 << core << "\n";
+              ss << "My elements and cores to assign: " << my_elements_and_cores
+                 << "\n";
+              ss << "Current elements already assigned are:\n";
+              for (const auto& [collection_element, dg_element_array_member] :
+                   *collection_ptr) {
+                ss << " " << collection_element << ", core "
+                   << dg_element_array_member.get_core() << "\n";
+              }
+
+              Parallel::printf("%s\n", ss.str());
+
               ERROR("Failed to insert element with ID: " << element_id);
             }
             if (collection_ptr->at(element_id).get_terminate() == true) {
@@ -199,7 +224,16 @@ struct CreateElementCollection {
             local_cache)[my_node],
         Parallel::get_parallel_component<ParallelComponent>(local_cache));
 
+    number_of_previous_calls++;
+
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };
+
+template <size_t Dim, class Metavariables, class PhaseDepActionList,
+          typename SimpleTagsFromOptions>
+size_t
+    CreateElementCollection<Dim, Metavariables, PhaseDepActionList,
+                            SimpleTagsFromOptions>::number_of_previous_calls =
+        0;
 }  // namespace Parallel::Actions
