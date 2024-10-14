@@ -226,7 +226,7 @@ struct CreateElementCollection {
 
     number_of_previous_calls++;
 
-    return {Parallel::AlgorithmExecution::Continue, std::nullopt};
+    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
   }
 };
 
