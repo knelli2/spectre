@@ -22,10 +22,10 @@ namespace Parallel::Actions {
 
 /*!
  * \ingroup ActionsGroup
- * \brief Terminate the algorithm to proceed to the next phase by return a
- * `Parallel::AlgorithmExecution::Terminate`
+ * \brief Pause the algorithm by returning
+ * `Parallel::AlgorithmExecution::Pause`.
  */
-struct TerminatePhase {
+struct PausePhase {
   template <typename DataBox, typename... InboxTags, typename Metavariables,
             typename ArrayIndex, typename ActionList,
             typename ParallelComponent>
@@ -37,7 +37,7 @@ struct TerminatePhase {
       const ActionList /*meta*/,
       // NOLINTNEXTLINE(readability-avoid-const-params-in-decls)
       const ParallelComponent* const /*meta*/) {
-    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
+    return {Parallel::AlgorithmExecution::Pause, std::nullopt};
   }
 };
 
