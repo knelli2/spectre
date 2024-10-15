@@ -47,7 +47,7 @@ struct InitializeValue {
       const ParallelComponent* const /*meta*/) {
     Initialization::mutate_assign<simple_tags>(make_not_null(&box),
                                                array_index + 1.0, 0);
-    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
   }
 };
 
@@ -121,7 +121,7 @@ struct DoubleValueOfElement0 {
         if constexpr (Parallel::is_array_v<ParallelComponent>) {
           return {Parallel::AlgorithmExecution::Retry, std::nullopt};
         } else if constexpr (Parallel::is_nodegroup_v<ParallelComponent>) {
-          return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+          return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
         } else {
           ERROR(
               "Only know how to handle arrays and nodegroups in "
@@ -129,7 +129,7 @@ struct DoubleValueOfElement0 {
         }
       }
     }
-    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
   }
 };
 

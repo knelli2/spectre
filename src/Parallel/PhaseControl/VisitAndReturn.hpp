@@ -61,7 +61,7 @@ struct TemporaryPhaseRequested {
 
 /*!
  * \brief Phase control object for temporarily visiting `TargetPhase`, until the
- * algorithm halts again, then returning to the original phase.
+ * algorithm terminates again, then returning to the original phase.
  *
  * The motivation for this type of procedure is e.g. load balancing,
  * checkpointing, and other maintenance tasks that should be performed

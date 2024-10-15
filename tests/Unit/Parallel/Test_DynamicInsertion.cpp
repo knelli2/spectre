@@ -104,7 +104,7 @@ struct InitializeValue {
       const ParallelComponent* const /*meta*/) {
     Initialization::mutate_assign<simple_tags>(make_not_null(&box),
                                                array_index + 1.0);
-    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
   }
 };
 

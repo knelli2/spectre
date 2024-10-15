@@ -118,7 +118,7 @@ inline bool operator==(const NodeId& lhs, const NodeId& rhs) {
 }
 
 inline bool operator!=(const NodeId& lhs, const NodeId& rhs) {
-  return not(lhs==rhs);
+  return not(lhs == rhs);
 }
 
 /// Wraps a size_t representing the local core number. This is so the
@@ -141,7 +141,7 @@ inline bool operator==(const LocalCoreId& lhs, const LocalCoreId& rhs) {
 }
 
 inline bool operator!=(const LocalCoreId& lhs, const LocalCoreId& rhs) {
-  return not(lhs==rhs);
+  return not(lhs == rhs);
 }
 
 /// Wraps a size_t representing the global core number.
@@ -160,7 +160,7 @@ inline bool operator==(const GlobalCoreId& lhs, const GlobalCoreId& rhs) {
 }
 
 inline bool operator!=(const GlobalCoreId& lhs, const GlobalCoreId& rhs) {
-  return not(lhs==rhs);
+  return not(lhs == rhs);
 }
 }  // namespace ActionTesting
 
@@ -373,7 +373,7 @@ class MockDistributedObject {
     phase_ = phase;
     algorithm_step_ = 0;
     terminate_ = number_of_actions_in_phase(phase) == 0;
-    halt_algorithm_until_next_phase_ = false;
+    terminate_algorithm_until_next_phase_ = false;
   }
   Parallel::Phase get_phase() const { return phase_; }
 
@@ -686,8 +686,8 @@ class MockDistributedObject {
       case Parallel::AlgorithmExecution::Pause:
         terminate_ = true;
         return true;
-      case Parallel::AlgorithmExecution::Halt:
-        halt_algorithm_until_next_phase_ = true;
+      case Parallel::AlgorithmExecution::Terminate:
+        terminate_algorithm_until_next_phase_ = true;
         terminate_ = true;
         return true;
       default:  // LCOV_EXCL_LINE
@@ -705,7 +705,7 @@ class MockDistributedObject {
   bool next_action_impl(std::index_sequence<Is...> /*meta*/);
 
   bool terminate_{false};
-  bool halt_algorithm_until_next_phase_{false};
+  bool terminate_algorithm_until_next_phase_{false};
   databox_type box_;
   // The next action we should execute.
   size_t algorithm_step_ = 0;
@@ -743,9 +743,10 @@ void MockDistributedObject<Component>::pup(PUP::er& p) {
 template <typename Component>
 void MockDistributedObject<Component>::next_action() {
   if (not next_action_if_ready()) {
-    ERROR("Attempted to run an action, but it returned "
-          "AlgorithmExecution::Retry.  Actions that are expected to retry "
-          "can be tested with next_action_if_ready().");
+    ERROR(
+        "Attempted to run an action, but it returned "
+        "AlgorithmExecution::Retry.  Actions that are expected to retry "
+        "can be tested with next_action_if_ready().");
   }
 }
 
@@ -753,17 +754,17 @@ template <typename Component>
 bool MockDistributedObject<Component>::next_action_if_ready() {
   bool found_matching_phase = false;
   bool was_ready = false;
-  const auto invoke_for_phase =
-      [this, &found_matching_phase, &was_ready](auto phase_dep_v) {
-        using PhaseDep = typename decltype(phase_dep_v)::type;
-        constexpr Parallel::Phase phase = PhaseDep::phase;
-        using actions_list = typename PhaseDep::action_list;
-        if (phase_ == phase) {
-          found_matching_phase = true;
-          was_ready = this->template next_action_impl<PhaseDep>(
-              std::make_index_sequence<tmpl::size<actions_list>::value>{});
-        }
-      };
+  const auto invoke_for_phase = [this, &found_matching_phase,
+                                 &was_ready](auto phase_dep_v) {
+    using PhaseDep = typename decltype(phase_dep_v)::type;
+    constexpr Parallel::Phase phase = PhaseDep::phase;
+    using actions_list = typename PhaseDep::action_list;
+    if (phase_ == phase) {
+      found_matching_phase = true;
+      was_ready = this->template next_action_impl<PhaseDep>(
+          std::make_index_sequence<tmpl::size<actions_list>::value>{});
+    }
+  };
   tmpl::for_each<phase_dependent_action_lists>(invoke_for_phase);
   if (not found_matching_phase) {
     ERROR("Could not find any actions in the current phase ("
@@ -783,9 +784,9 @@ bool MockDistributedObject<Component>::next_action_impl(
         "MockDistributedObject (an element of a parallel component array, or a "
         "parallel component singleton).");
   }
-  if (UNLIKELY(halt_algorithm_until_next_phase_)) {
+  if (UNLIKELY(terminate_algorithm_until_next_phase_)) {
     ERROR(
-        "The algorithm has been halted pending a phase change. No iterable "
+        "The algorithm has been terminated pending a phase change. No iterable "
         "action can be executed until after the next change of phase.");
   }
   // Keep track of if we already evaluated an action since we want `next_action`

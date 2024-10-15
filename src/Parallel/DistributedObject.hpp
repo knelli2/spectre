@@ -385,17 +385,9 @@ class DistributedObject<ParallelComponent,
   }
   /// @}
 
-  // Invoke the static `apply` method of `ThisAction`. The if constexprs are for
-  // handling the cases where the `apply` method returns a tuple of one, two,
-  // or three elements, in order:
-  // 1. A DataBox
-  // 2. Either:
-  //    2a. A bool determining whether or not to terminate (and potentially move
-  //        to the next phase), or
-  //    2b. An `AlgorithmExecution` object describing whether to continue,
-  //        pause, or halt.
-  // 3. An unsigned integer corresponding to which action in the current phase's
-  //    algorithm to execute next.
+  // Invoke the static `apply` method of `ThisAction`. Uses
+  // `Parallel::iterable_action_return_t` to determine whether to stop execution
+  // and whether to allow it to be restarted.
   //
   // Returns whether the action ran successfully, i.e., did not return
   // AlgorithmExecution::Retry.
@@ -428,8 +420,8 @@ class DistributedObject<ParallelComponent,
                                std::index_sequence<Is...> /*meta*/);
 
   template <typename Action, typename... Args, size_t... Is>
-  void forward_tuple_to_threaded_action(
-      std::tuple<Args...>&& args, std::index_sequence<Is...> /*meta*/);
+  void forward_tuple_to_threaded_action(std::tuple<Args...>&& args,
+                                        std::index_sequence<Is...> /*meta*/);
 
   size_t number_of_actions_in_phase(const Parallel::Phase phase) const;
 
@@ -451,7 +443,7 @@ class DistributedObject<ParallelComponent,
       node_lock_;
 
   bool terminate_{true};
-  bool halt_algorithm_until_next_phase_{false};
+  bool terminate_algorithm_until_next_phase_{false};
 
   // Records the name of the next action to be called so that during deadlock
   // analysis we can print this out.
@@ -620,8 +612,8 @@ DistributedObject<ParallelComponent,
   os << "phase_bookmarks_ = " << phase_bookmarks_ << ";\n";
   os << "algorithm_step_ = " << algorithm_step_ << ";\n";
   os << "terminate_ = " << terminate_ << ";\n";
-  os << "halt_algorithm_until_next_phase_ = "
-     << halt_algorithm_until_next_phase_ << ";\n";
+  os << "terminate_algorithm_until_next_phase_ = "
+     << terminate_algorithm_until_next_phase_ << ";\n";
   os << "array_index_ = " << array_index_ << ";\n";
   return os.str();
 }
@@ -662,7 +654,7 @@ void DistributedObject<
     p | node_lock_;
   }
   p | terminate_;
-  p | halt_algorithm_until_next_phase_;
+  p | terminate_algorithm_until_next_phase_;
   p | box_;
   // After unpacking the DataBox, we "touch" the GlobalCache proxy inside.
   // This forces the DataBox to recompute the GlobalCache* the next time it
@@ -904,7 +896,7 @@ void DistributedObject<
     tmpl::list<PhaseDepActionListsPack...>>::perform_algorithm() {
   try {
     if (performing_action_ or get_terminate() or
-        halt_algorithm_until_next_phase_) {
+        terminate_algorithm_until_next_phase_) {
       return;
     }
 #ifdef SPECTRE_CHARM_PROJECTIONS
@@ -921,7 +913,7 @@ void DistributedObject<
         using actions_list = typename PhaseDep::action_list;
         if (phase_ == phase) {
           while (tmpl::size<actions_list>::value > 0 and not get_terminate() and
-                 not halt_algorithm_until_next_phase_ and
+                 not terminate_algorithm_until_next_phase_ and
                  iterate_over_actions<PhaseDep>(
                      std::make_index_sequence<
                          tmpl::size<actions_list>::value>{})) {
@@ -971,14 +963,15 @@ void DistributedObject<ParallelComponent,
     start_phase(const Parallel::Phase next_phase) {
   try {
     // terminate should be true since we exited a phase previously.
-    if (not get_terminate() and not halt_algorithm_until_next_phase_) {
+    if (not get_terminate() and not terminate_algorithm_until_next_phase_) {
       ERROR(
           "An algorithm must always be set to terminate at the beginning of a "
           "phase. Since this is not the case the previous phase did not end "
           "correctly. The previous phase is: "
           << phase_ << " and the next phase is: " << next_phase
           << ", The termination flag is: " << get_terminate()
-          << ", and the halt flag is: " << halt_algorithm_until_next_phase_);
+          << ", and the terminate until next phase flag is: "
+          << terminate_algorithm_until_next_phase_);
     }
     // set terminate to true if there are no actions in this PDAL
     set_terminate(number_of_actions_in_phase(next_phase) == 0);
@@ -997,7 +990,7 @@ void DistributedObject<ParallelComponent,
     } else {
       algorithm_step_ = 0;
     }
-    halt_algorithm_until_next_phase_ = false;
+    terminate_algorithm_until_next_phase_ = false;
     perform_algorithm();
   } catch (const std::exception& exception) {
     initiate_shutdown(exception);
@@ -1024,7 +1017,8 @@ DistributedObject<ParallelComponent, tmpl::list<PhaseDepActionListsPack...>>::
   const auto helper = [this, &take_next_action](auto iteration) {
     constexpr size_t iter = decltype(iteration)::value;
     if (not(take_next_action and not terminate_ and
-            not halt_algorithm_until_next_phase_ and algorithm_step_ == iter)) {
+            not terminate_algorithm_until_next_phase_ and
+            algorithm_step_ == iter)) {
       return;
     }
     using actions_list = typename PhaseDepActions::action_list;
@@ -1130,7 +1124,7 @@ bool DistributedObject<
     (void)Parallel::charmxx::RegisterInvokeIterableAction<
         ParallelComponent, ThisAction, PhaseIndex, DataBoxIndex>::registrar;
   }
-#endif // SPECTRE_CHARM_PROJECTIONS
+#endif  // SPECTRE_CHARM_PROJECTIONS
 
   AlgorithmExecution requested_execution{};
   std::optional<std::size_t> next_action_step{};
@@ -1155,8 +1149,8 @@ bool DistributedObject<
     case AlgorithmExecution::Pause:
       terminate_ = true;
       return true;
-    case AlgorithmExecution::Halt:
-      halt_algorithm_until_next_phase_ = true;
+    case AlgorithmExecution::Terminate:
+      terminate_algorithm_until_next_phase_ = true;
       terminate_ = true;
       return true;
     default:  // LCOV_EXCL_LINE

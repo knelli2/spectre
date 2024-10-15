@@ -16,6 +16,10 @@
 namespace Parallel::Actions {
 /// \brief Starts the next phase on the nodegroup and calls
 /// `ReceiveDataForElement` for each element on the node.
+///
+/// \details After `ReceiveDataForElement` has been called for each element,
+/// this returns `Parallel::PhaseExecution::Terminate` to not allow any more
+/// iterable actions to be run on the nodegroup.
 struct StartPhaseOnNodegroup {
   template <typename DbTagsList, typename... InboxTags, typename ArrayIndex,
             typename ActionList, typename ParallelComponent,
@@ -34,7 +38,7 @@ struct StartPhaseOnNodegroup {
       Parallel::threaded_action<ReceiveDataForElement<true>>(proxy_to_this_node,
                                                              element_id);
     }
-    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
   }
 };
 }  // namespace Parallel::Actions

@@ -124,7 +124,7 @@ class DgElementArrayMemberBase : PUP::able {
   std::size_t algorithm_step_ = 0;
 
   bool terminate_{true};
-  bool halt_algorithm_until_next_phase_{false};
+  bool terminate_algorithm_until_next_phase_{false};
 
   // Records the name of the next action to be called so that during deadlock
   // analysis we can print this out.

@@ -81,8 +81,8 @@ struct PhaseChangeAndTriggers : db::SimpleTag {
 }  // namespace Tags
 
 namespace TagsAndCombines {
-/// A tag for indicating that a halt was called by a trigger associated with
-/// `PhaseChange`s.
+/// A tag for indicating that a terminate was called by a trigger associated
+/// with `PhaseChange`s.
 ///
 /// This is needed to disambiguate different quiescence conditions in the main
 /// chare. It is automatically included in

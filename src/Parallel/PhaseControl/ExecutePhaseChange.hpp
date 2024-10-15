@@ -37,12 +37,12 @@ namespace Actions {
  * needed.
  *
  * This action is intended to be executed on every component that repeatedly
- * runs iterable actions that would need to halt during a phase change. This
- * action sends data to the Main chare via a reduction.
+ * runs iterable actions that would need to terminate during a phase change.
+ * This action sends data to the Main chare via a reduction.
  *
  * This action iterates over the `Tags::PhaseChangeAndTriggers`, sending
  * reduction data for the phase decision for each triggered `PhaseChange`, then
- * halts the algorithm execution so that the `Main` chare can make a phase
+ * terminating the algorithm execution so that the `Main` chare can make a phase
  * decision if any were triggered.
  *
  * Uses:
@@ -72,7 +72,7 @@ struct ExecutePhaseChange {
     }
     const auto& phase_change_and_triggers =
         Parallel::get<Tags::PhaseChangeAndTriggers>(cache);
-    bool should_halt = false;
+    bool should_terminate = false;
     for (const auto& trigger_and_phase_changes : phase_change_and_triggers) {
       const auto& trigger = trigger_and_phase_changes.trigger;
       if (trigger->is_triggered(box)) {
@@ -81,15 +81,15 @@ struct ExecutePhaseChange {
           phase_change->template contribute_phase_data<ParallelComponent>(
               make_not_null(&box), cache, array_index);
         }
-        should_halt = true;
+        should_terminate = true;
       }
     }
-    // if we halt, we need to make sure that the Main chare knows that it is
-    // because we are requesting phase change arbitration, regardless of what
+    // if we terminate, we need to make sure that the Main chare knows that it
+    // is because we are requesting phase change arbitration, regardless of what
     // data was actually sent to make that decision.
-    if (should_halt) {
+    if (should_terminate) {
       if constexpr (std::is_same_v<typename ParallelComponent::chare_type,
-                    Parallel::Algorithms::Array>) {
+                                   Parallel::Algorithms::Array>) {
         Parallel::contribute_to_phase_change_reduction<ParallelComponent>(
             tuples::TaggedTuple<TagsAndCombines::UsePhaseChangeArbitration>{
                 true},
@@ -101,8 +101,8 @@ struct ExecutePhaseChange {
             cache);
       }
     }
-    return {should_halt ? Parallel::AlgorithmExecution::Halt
-                        : Parallel::AlgorithmExecution::Continue,
+    return {should_terminate ? Parallel::AlgorithmExecution::Terminate
+                             : Parallel::AlgorithmExecution::Continue,
             std::nullopt};
   }
 };
@@ -117,8 +117,8 @@ struct ExecutePhaseChange {
  * `std::optional<std::pair<Parallel::Phase,
  * PhaseControl::ArbitrationStrategy>`. Any `std::nullopt` is skipped. If all
  * `PhaseChange`s provide `std::nullopt`, the phase will either keep its
- * current value (if the halt was caused by one of the triggers associated with
- * an  option-created `PhaseChange`), or this function will return a
+ * current value (if the terminate was caused by one of the triggers associated
+ * with an  option-created `PhaseChange`), or this function will return a
  * `std::nullopt` as well (otherwise), indicating that the phase should proceed
  * according to other information, such as global ordering.
  *

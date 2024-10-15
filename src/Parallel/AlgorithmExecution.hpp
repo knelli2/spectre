@@ -23,7 +23,7 @@ enum class AlgorithmExecution {
   Pause,
   /// Stop the execution of iterable actions and do not allow their execution
   /// until after a phase change. Simple actions will still execute.
-  Halt
+  Terminate
 };
 
 /// Return type for iterable actions.  The std::optional can be used to specify

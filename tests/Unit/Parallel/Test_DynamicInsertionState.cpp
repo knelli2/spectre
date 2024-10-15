@@ -83,7 +83,7 @@ struct Initialize {
       const ArrayIndex& /*array_index*/, const ActionList /*meta*/,
       const ParallelComponent* const /*meta*/) {
     Initialization::mutate_assign<simple_tags>(make_not_null(&box), 2, 0_st);
-    return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+    return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
   }
 };
 
@@ -122,7 +122,7 @@ struct CheckForTermination {
         make_not_null(&box));
 
     return {db::get<Iteration>(box) == number_of_iterations
-                ? Parallel::AlgorithmExecution::Halt
+                ? Parallel::AlgorithmExecution::Terminate
                 : Parallel::AlgorithmExecution::Continue,
             std::nullopt};
   }

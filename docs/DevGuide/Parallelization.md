@@ -527,7 +527,7 @@ specified as `tmpl::list`s in the iterable actions' member type
 aliases `inbox_tags`.  This collection represents data received from
 other chares using the `receive_data` function.
 
-Iterable actions can request that the algorithm be paused or halted
+Iterable actions can request that the algorithm be paused or terminated
 for the current phase, and control which action in the current PDAL
 will be executed next. This is all done via the return value from the
 `apply` function.  The `apply` function for iterable actions must

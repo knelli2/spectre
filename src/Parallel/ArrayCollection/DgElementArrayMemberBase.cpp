@@ -76,8 +76,8 @@ std::string DgElementArrayMemberBase<Dim>::print_state() const {
   os << "phase_bookmarks_ = " << phase_bookmarks_ << ";\n";
   os << "algorithm_step_ = " << algorithm_step_ << ";\n";
   os << "terminate_ = " << terminate_ << ";\n";
-  os << "halt_algorithm_until_next_phase_ = "
-     << halt_algorithm_until_next_phase_ << ";\n";
+  os << "terminate_algorithm_until_next_phase_ = "
+     << terminate_algorithm_until_next_phase_ << ";\n";
   os << "array_index_ = " << element_id_ << ";\n";
   return os.str();
 }
@@ -110,7 +110,7 @@ void DgElementArrayMemberBase<Dim>::pup(PUP::er& p) {
   p | phase_bookmarks_;
   p | algorithm_step_;
   p | terminate_;
-  p | halt_algorithm_until_next_phase_;
+  p | terminate_algorithm_until_next_phase_;
   p | deadlock_analysis_next_iterable_action_;
   p | element_id_;
   if (p.isUnpacking()) {

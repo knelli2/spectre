@@ -290,7 +290,7 @@ struct TerminateAndRestart {
               *phase_log += "Terminate Completion\n";
             },
             make_not_null(&box));
-        return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+        return {Parallel::AlgorithmExecution::Terminate, std::nullopt};
       }
     }
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};

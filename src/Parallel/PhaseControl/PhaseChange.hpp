@@ -58,7 +58,7 @@ enum ArbitrationStrategy {
  * 1. Parallel components must select and/or compute the runtime data necessary
  *    for choosing the next phase, then contribute it to a global reduction to
  *    the Main component.
- *    The components must then halt at a globally-valid state for the phase
+ *    The components must then terminate at a globally-valid state for the phase
  *    change.
  *    The requirements for the state will vary depending on the phase choices,
  *    so triggers must be selected appropriately for the `PhaseChange` object.

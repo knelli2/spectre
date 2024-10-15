@@ -231,15 +231,15 @@ void DgElementArrayMember<
   try {
     // terminate should be true since we exited a phase previously.
     if (not this->get_terminate() and
-        not this->halt_algorithm_until_next_phase_) {
+        not this->terminate_algorithm_until_next_phase_) {
       ERROR(
           "An algorithm must always be set to terminate at the beginning of a "
           "phase. Since this is not the case the previous phase did not end "
           "correctly. The previous phase is: "
           << this->phase_ << " and the next phase is: " << next_phase
           << ", The termination flag is: " << this->get_terminate()
-          << ", and the halt flag is: "
-          << this->halt_algorithm_until_next_phase_ << ' '
+          << ", and the terminate until next phase flag is: "
+          << this->terminate_algorithm_until_next_phase_ << ' '
           << this->element_id_);
     }
     // set terminate to true if there are no actions in this PDAL
@@ -264,7 +264,7 @@ void DgElementArrayMember<
     } else {
       this->algorithm_step_ = 0;
     }
-    this->halt_algorithm_until_next_phase_ = false;
+    this->terminate_algorithm_until_next_phase_ = false;
     perform_algorithm();
   } catch (const std::exception& exception) {
     initiate_shutdown(exception);
@@ -278,7 +278,7 @@ void DgElementArrayMember<Dim, Metavariables,
                           SimpleTagsFromOptions>::perform_algorithm() {
   try {
     if (this->performing_action_ or this->get_terminate() or
-        this->halt_algorithm_until_next_phase_) {
+        this->terminate_algorithm_until_next_phase_) {
       return;
     }
     const auto invoke_for_phase = [this](auto phase_dep_v) {
@@ -289,7 +289,7 @@ void DgElementArrayMember<Dim, Metavariables,
         while (
             tmpl::size<actions_list>::value > 0 and
             not this->get_terminate() and
-            not this->halt_algorithm_until_next_phase_ and
+            not this->terminate_algorithm_until_next_phase_ and
             iterate_over_actions<PhaseDep>(
                 std::make_index_sequence<tmpl::size<actions_list>::value>{})) {
         }
@@ -371,7 +371,7 @@ bool DgElementArrayMember<Dim, Metavariables,
   const auto helper = [this, &take_next_action](auto iteration) {
     constexpr size_t iter = decltype(iteration)::value;
     if (not(take_next_action and not this->terminate_ and
-            not this->halt_algorithm_until_next_phase_ and
+            not this->terminate_algorithm_until_next_phase_ and
             this->algorithm_step_ == iter)) {
       return;
     }
@@ -464,9 +464,9 @@ bool DgElementArrayMember<Dim, Metavariables,
           make_not_null(&cache), this->element_id_, true);
       return true;
     }
-    case AlgorithmExecution::Halt: {
-      // Need to make sure halt also gets propagated to the nodegroup
-      this->halt_algorithm_until_next_phase_ = true;
+    case AlgorithmExecution::Terminate: {
+      // Need to make sure terminate also gets propagated to the nodegroup
+      this->terminate_algorithm_until_next_phase_ = true;
       auto& cache = *Parallel::local_branch(global_cache_proxy_);
       Parallel::local_synchronous_action<
           Parallel::Actions::SetTerminateOnElement>(
