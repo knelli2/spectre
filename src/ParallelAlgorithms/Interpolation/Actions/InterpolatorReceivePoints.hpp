@@ -35,6 +35,7 @@ template <typename IdType, typename DataType>
 class IdPair;
 namespace intrp {
 namespace Tags {
+template <size_t Dim>
 struct NumberOfElements;
 template <typename Metavariables>
 struct InterpolatedVarsHolders;

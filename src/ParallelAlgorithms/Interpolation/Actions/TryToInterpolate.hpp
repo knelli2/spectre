@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/Variables.hpp"
@@ -200,13 +201,15 @@ void try_to_interpolate(
 
   // Send interpolated data only if interpolation has been done on all
   // of the local elements.
-  const auto& num_elements = db::get<Tags::NumberOfElements>(*box);
+  const auto& num_elements =
+      db::get<Tags::NumberOfElements<Metavariables::volume_dim>>(*box);
   if (vars_infos.at(temporal_id)
-          .interpolation_is_done_for_these_elements.size() == num_elements) {
+          .interpolation_is_done_for_these_elements.size() ==
+      num_elements.size()) {
     // Send data to InterpolationTarget, but only if the list of points is
     // non-empty.
     if (debug_print) {
-      ss << "finished interpolation on all " << num_elements
+      ss << "finished interpolation on all " << num_elements.size()
          << " elements on core " << Parallel::my_proc<size_t>(*cache) << ".";
     }
 
@@ -244,11 +247,19 @@ void try_to_interpolate(
         },
         box);
   } else if (debug_print) {
+    std::unordered_set<ElementId<Metavariables::volume_dim>> difference{};
+    for (const auto& element : num_elements) {
+      if (vars_infos.at(temporal_id)
+              .interpolation_is_done_for_these_elements.count(element) == 0) {
+        difference.insert(element);
+      }
+    }
     ss << "interpolation not finished on all local elements of core "
-       << Parallel::my_proc<size_t>(*cache) << ". Expected " << num_elements
-       << ", received "
+       << Parallel::my_proc<size_t>(*cache) << ". Expected "
+       << num_elements.size() << ", received "
        << vars_infos.at(temporal_id)
-              .interpolation_is_done_for_these_elements.size();
+              .interpolation_is_done_for_these_elements.size()
+       << ". Missing these elements: " << difference;
   }
 
   if (debug_print) {

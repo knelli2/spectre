@@ -209,8 +209,9 @@ struct InterpolatedVarsHolders : db::SimpleTag {
 };
 
 /// Number of local `Element`s.
+template <size_t Dim>
 struct NumberOfElements : db::SimpleTag {
-  using type = size_t;
+  using type = std::unordered_set<ElementId<Dim>>;
 };
 
 }  // namespace Tags
