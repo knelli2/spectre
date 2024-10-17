@@ -60,7 +60,7 @@ struct SendPointsToInterpolator {
             typename ArrayIndex, typename TemporalId>
   static void apply(db::DataBox<DbTags>& box,
                     Parallel::GlobalCache<Metavariables>& cache,
-                    const ArrayIndex& /*array_index*/,
+                    const ArrayIndex& array_index,
                     const TemporalId& temporal_id,
                     const size_t iteration = 0_st) {
     auto coords = InterpolationTarget_detail::block_logical_coords<
@@ -87,17 +87,15 @@ struct SendPointsToInterpolator {
            << " invalid points.";
       }
       if (coords.size() == invalid_points.at(temporal_id).size()) {
-        auto& receiver_proxy = Parallel::get_parallel_component<
-            InterpolationTarget<Metavariables, InterpolationTargetTag>>(cache);
         // just send empty vectors for the data and global offsets.
         std::vector<Variables<
             typename InterpolationTargetTag::vars_to_interpolate_to_target>>
             vars{};
         std::vector<std::vector<size_t>> global_offsets{};
-        Parallel::simple_action<
-            Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
-            receiver_proxy, vars, global_offsets, temporal_id,
-            Parallel::my_proc<size_t>(cache));
+        Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>::
+            template apply<ParallelComponent>(box, cache, array_index, vars,
+                                              global_offsets, temporal_id,
+                                              Parallel::my_proc<size_t>(cache));
 
         if (verbose_print) {
           ss << " All points invalid; notifying target.";
