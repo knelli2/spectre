@@ -125,6 +125,18 @@ std::string interpolator_output_prefix(const ElementId<Dim>& element_id,
   return ss.str();
 }
 
+template <typename InterpolationTargetTag, size_t Dim, typename TemporalId>
+std::string interpolator_output_prefix(const ElementId<Dim>& element_id,
+                                       const TemporalId& temporal_id) {
+  std::stringstream ss{};
+  ss << std::setprecision(std::numeric_limits<double>::digits10 + 4)
+     << std::scientific;
+  ss << "Interpolator, " << pretty_type::name<InterpolationTargetTag>() << ", "
+     << element_id << ", " << temporal_id << ", WC " << sys::wall_time();
+
+  return ss.str();
+}
+
 template <typename Action, typename InterpolationTargetTag, typename TemporalId>
 std::string target_output_prefix(const TemporalId& temporal_id) {
   std::stringstream ss{};

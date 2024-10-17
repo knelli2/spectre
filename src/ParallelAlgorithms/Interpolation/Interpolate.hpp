@@ -4,17 +4,22 @@
 #pragma once
 
 #include <cstddef>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
 #include "DataStructures/Variables.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/Spectral/Mesh.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/Local.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/AddTemporalIdsToInterpolationTarget.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceiveVolumeData.hpp"
+#include "ParallelAlgorithms/Interpolation/InterpolationTargetDetail.hpp"
+#include "ParallelAlgorithms/Interpolation/Tags.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -79,5 +84,19 @@ void interpolate(
   Parallel::simple_action<
       Actions::AddTemporalIdsToInterpolationTarget<InterpolationTargetTag>>(
       target, temporal_id);
+
+  std::stringstream ss{};
+  const bool debug_print =
+      Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Debug;
+  if (debug_print) {
+    ss << InterpolationTarget_detail::interpolator_output_prefix<
+              InterpolationTargetTag>(array_index, temporal_id)
+       << ": Sending volume data on core " << Parallel::my_proc<int>(cache)
+       << " to interpolator core "
+       << interpolator_id.value_or(Parallel::my_proc<int>(cache))
+       << " and sending points to target\n";
+
+    Parallel::printf("%s\n", ss.str());
+  }
 }
 }  // namespace intrp
