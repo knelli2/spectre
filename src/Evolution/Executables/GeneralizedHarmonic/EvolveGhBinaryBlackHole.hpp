@@ -83,6 +83,7 @@
 #include "Parallel/Invoke.hpp"
 #include "Parallel/Local.hpp"
 #include "Parallel/MemoryMonitor/MemoryMonitor.hpp"
+#include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Phase.hpp"
 #include "Parallel/PhaseControl/CheckpointAndExitAfterWallclock.hpp"
 #include "Parallel/PhaseControl/ExecutePhaseChange.hpp"
@@ -141,6 +142,8 @@
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceivePoints.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorReceiveVolumeData.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/InterpolatorRegisterElement.hpp"
+#include "ParallelAlgorithms/Interpolation/Actions/PrintInterpolationTargetForDeadlock.hpp"
+#include "ParallelAlgorithms/Interpolation/Actions/PrintInterpolatorForDeadlock.hpp"
 #include "ParallelAlgorithms/Interpolation/Actions/TryToInterpolate.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ObserveSurfaceData.hpp"
 #include "ParallelAlgorithms/Interpolation/Callbacks/ObserveTimeSeriesOnSurface.hpp"
@@ -674,6 +677,18 @@ struct EvolutionMetavars {
     Parallel::simple_action<PrintFunctionsOfTime>(
         Parallel::get_parallel_component<
             observers::ObserverWriter<EvolutionMetavars>>(cache));
+
+    Parallel::simple_action<deadlock::PrintInterpolator>(
+        Parallel::get_parallel_component<
+            intrp::Interpolator<EvolutionMetavars>>(cache));
+
+    tmpl::for_each<interpolation_target_tags>([&cache](const auto tag_v) {
+      using TargetTag = tmpl::type_from<decltype(tag_v)>;
+
+      Parallel::simple_action<deadlock::PrintInterpolationTarget>(
+          Parallel::get_parallel_component<
+              intrp::InterpolationTarget<EvolutionMetavars, TargetTag>>(cache));
+    });
 
     if (alg::count(deadlocked_components,
                    pretty_type::name<gh_dg_element_array>()) == 1) {
