@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <sstream>
 #include <utility>
 
 #include "DataStructures/DataBox/DataBox.hpp"
@@ -67,11 +68,24 @@ struct SendPointsToInterpolator {
     InterpolationTarget_detail::set_up_interpolation<InterpolationTargetTag>(
         make_not_null(&box), temporal_id, coords);
 
+    const bool verbose_print =
+        Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Verbose;
+    std::stringstream ss{};
+    if (verbose_print) {
+      ss << InterpolationTarget_detail::target_output_prefix<
+                SendPointsToInterpolator, InterpolationTargetTag>(temporal_id)
+         << ": Sending points to interpolator.";
+    }
+
     // If all target points are invalid, we need to notify the target as no
     // interpolation is done.
     const auto& invalid_points =
         db::get<Tags::IndicesOfInvalidInterpPoints<TemporalId>>(box);
     if (invalid_points.count(temporal_id) > 0) {
+      if (verbose_print) {
+        ss << " There are " << invalid_points.at(temporal_id).size()
+           << " invalid points.";
+      }
       if (coords.size() == invalid_points.at(temporal_id).size()) {
         auto& receiver_proxy = Parallel::get_parallel_component<
             InterpolationTarget<Metavariables, InterpolationTargetTag>>(cache);
@@ -84,6 +98,10 @@ struct SendPointsToInterpolator {
             Actions::InterpolationTargetReceiveVars<InterpolationTargetTag>>(
             receiver_proxy, vars, global_offsets, temporal_id,
             Parallel::my_proc<size_t>(cache));
+
+        if (verbose_print) {
+          ss << " All points invalid; notifying target.";
+        }
       }
     }
 
@@ -92,10 +110,7 @@ struct SendPointsToInterpolator {
     Parallel::simple_action<Actions::ReceivePoints<InterpolationTargetTag>>(
         receiver_proxy, temporal_id, std::move(coords), iteration);
     if (Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Verbose) {
-      Parallel::printf(
-          "%s, Sending points to interpolator.\n",
-          InterpolationTarget_detail::target_output_prefix<
-              SendPointsToInterpolator, InterpolationTargetTag>(temporal_id));
+      Parallel::printf("%s\n", ss.str());
     }
   }
 };
