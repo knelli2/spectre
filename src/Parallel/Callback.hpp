@@ -6,8 +6,11 @@
 
 #pragma once
 
+#include <iomanip>
+#include <ios>
 #include <optional>
 #include <pup.h>
+#include <sstream>
 #include <tuple>
 #include <utility>
 
@@ -15,8 +18,36 @@
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
+#include "Utilities/StlStreamDeclarations.hpp"
+#include "Utilities/TypeTraits/IsStreamable.hpp"
 
 namespace Parallel {
+namespace detail {
+template <typename... Args>
+std::string stream_args(const std::tuple<Args...>& args) {
+  std::stringstream ss{};
+  ss << std::setprecision(std::numeric_limits<double>::digits10 + 4)
+     << std::scientific;
+  ss << "(";
+
+  tmpl::for_each<tmpl::make_sequence<tmpl::size_t<0>,
+                                     tmpl::size<tmpl::list<Args...>>::value>>(
+      [&](const auto index_v) {
+        constexpr size_t index = tmpl::type_from<decltype(index_v)>::value;
+
+        if constexpr (tt::is_streamable_v<std::ostream,
+                                          decltype(std::get<index>(args))>) {
+          using ::operator<<;
+          ss << std::get<index>(args) << ", ";
+        }
+      });
+
+  ss << ")";
+
+  return ss.str();
+}
+}  // namespace detail
+
 /// An abstract base class, whose derived class holds a function that
 /// can be invoked at a later time.  The function is intended to be
 /// invoked only once.
@@ -80,7 +111,8 @@ class SimpleActionCallback : public Callback {
 
   std::string name() const override {
     return "SimpleActionCallback(" + pretty_type::get_name<SimpleAction>() +
-           "," + pretty_type::name<Proxy>() + ")";
+           "," + pretty_type::name<Proxy>() +
+           ",Args=" + detail::stream_args(args_) + ")";
   }
 
  private:
@@ -170,7 +202,8 @@ class ThreadedActionCallback : public Callback {
 
   std::string name() const override {
     return "ThreadedActionCallback(" + pretty_type::get_name<ThreadedAction>() +
-           "," + pretty_type::name<Proxy>() + ")";
+           "," + pretty_type::name<Proxy>() +
+           ",Args=" + detail::stream_args(args_) + ")";
   }
 
  private:
