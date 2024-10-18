@@ -534,23 +534,6 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
             std::vector<std::unique_ptr<Callback>>(1);
         callbacks.at(array_component_id)[0] = std::move(optional_callback);
       }
-
-      // if (callbacks.count(array_component_id) != 1) {
-      // } else {
-      //   const std::optional<bool> maybe_are_equal =
-      //    callbacks.at(array_component_id)->is_equal_to(*optional_callback);
-      //   if (not maybe_are_equal.value_or(false)) {
-      //     ERROR("Callbacks are not equal for tag "
-      //           << db::tag_name<GlobalCacheTag>() << ". "
-      //           << (maybe_are_equal.has_value()
-      //                   ? "Args were not correct."
-      //                   : "Downcast of Callback pointer failed.")
-      //           << "\n Existing callback name: "
-      //           << callbacks.at(array_component_id)->name()
-      //           << "\n Incoming callback name: " <<
-      //           optional_callback->name());
-      //   }
-      // }
     }
 
     // We must check if the tag is ready again. Consider the following example:
@@ -641,24 +624,24 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
     std::get<1>(tuples::get<tag>(mutable_global_cache_)).clear();
   }
 
-  // std::stringstream ss{};
-  // ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
-  //    << my_node() << ". ";
-  // ss << "Args = (" << args << "). Calling " << callbacks.size()
-  //    << " callbacks:\n";
+  std::stringstream ss{};
+  ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
+     << my_node() << ". ";
+  ss << "Args = (" << args << "). Calling " << callbacks.size()
+     << " callbacks:\n";
 
   // Invoke the callbacks.  Any new callbacks that are added to the
   // list (if a callback calls mutable_cache_item_is_ready) will be
   // saved and will not be invoked here.
   for (auto& [array_component_id, vec_callbacks] : callbacks) {
     for (auto& callback : vec_callbacks) {
-      // ss << " ArrayComponentId " << array_component_id << ": "
-      //    << callback->name() << "\n";
+      ss << " ArrayComponentId " << array_component_id << ": "
+         << callback->name() << "\n";
       callback->invoke();
     }
   }
 
-  // Parallel::printf("%s\n", ss.str());
+  Parallel::printf("%s\n", ss.str());
 }
 
 #if defined(__GNUC__) && !defined(__clang__)
