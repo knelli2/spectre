@@ -155,8 +155,8 @@ class Trigger : public DenseTrigger {
                     new Parallel::ThreadedActionCallback<
                         Parallel::Actions::PerformAlgorithmOnElement<false>,
                         decltype(proxy[element_location]),
-                        std::decay_t<decltype(array_index)>>{
-                        proxy[element_location], array_index});
+                        std::decay_t<decltype(array_index)>, double>{
+                        proxy[element_location], array_index, time});
               } else {
                 return std::unique_ptr<Parallel::Callback>(
                     new Parallel::PerformAlgorithmCallback(proxy[array_index]));

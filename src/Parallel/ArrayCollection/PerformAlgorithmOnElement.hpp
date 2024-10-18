@@ -33,7 +33,10 @@ struct PerformAlgorithmOnElement {
                     const ArrayIndex& /*array_index*/,
                     const gsl::not_null<Parallel::NodeLock*> /*node_lock*/,
                     const DistributedObject* /*distributed_object*/,
-                    const ElementId<Dim>& element_to_execute_on) {
+                    const ElementId<Dim>& element_to_execute_on,
+                    // Unused, but useful to help for debugging Parallel
+                    // threaded action callbacks
+                    const double /*time*/ = -1.0) {
     const size_t my_node = Parallel::my_node<size_t>(cache);
     auto& my_proxy = Parallel::get_parallel_component<ParallelComponent>(cache);
 

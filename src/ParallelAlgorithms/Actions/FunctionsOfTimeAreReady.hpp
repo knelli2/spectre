@@ -15,6 +15,8 @@
 
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
+#include "Domain/Structure/ElementId.hpp"
+#include "IO/Logging/Verbosity.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "Parallel/ArrayCollection/IsDgElementCollection.hpp"
 #include "Parallel/ArrayCollection/PerformAlgorithmOnElement.hpp"
@@ -40,6 +42,9 @@ namespace tuples {
 template <class... Tags>
 class TaggedTuple;
 }  // namespace tuples
+namespace control_system::Tags {
+struct Verbosity;
+}  // namespace control_system::Tags
 /// \endcond
 
 namespace domain {
@@ -58,7 +63,8 @@ bool functions_of_time_are_ready_impl(
         [&]() -> Parallel::ArrayComponentId {
       if constexpr (Parallel::is_dg_element_collection_v<Component>) {
         static_assert(
-            sizeof...(args) == 1,
+            std::is_same_v<std::tuple<ElementId<3>, double>,
+                           std::tuple<std::decay_t<Args>...>>,
             "This currently assumes the only argument is the ElementId. If you "
             "need extra arguments, this can be generalized. We need the "
             "ElementId instead of the array_index (which is the nodegroup ID) "
@@ -68,10 +74,8 @@ bool functions_of_time_are_ready_impl(
             "registered, while we need 1 callback for each element. An "
             "alternative approach would be to have the callback be a broadcast "
             "to all elements instead of one specific one.");
-        static_assert((std::is_same_v<ElementId<Metavariables::volume_dim>,
-                                      std::decay_t<Args>> and
-                       ...));
-        return Parallel::make_array_component_id<Component>(args...);
+        return Parallel::make_array_component_id<Component>(
+            std::get<0>(std::tie(args...)));
       } else {
         return Parallel::make_array_component_id<Component>(array_index);
       }
@@ -225,11 +229,20 @@ struct CheckFunctionsOfTimeAreReady {
              "Expected to be running on node "
                  << Parallel::my_node<int>(cache)
                  << " but the record says it is on node " << element_location);
+      const double time = db::get<::Tags::Time>(box);
       ready = domain::functions_of_time_are_ready_threaded_action_callback<
           domain::Tags::FunctionsOfTime,
           Parallel::Actions::PerformAlgorithmOnElement<false>>(
-          cache, element_location, component, db::get<::Tags::Time>(box),
-          std::nullopt, array_index);
+          cache, element_location, component, time, std::nullopt, array_index,
+          time);
+
+      if ((not ready) and Parallel::get<control_system::Tags::Verbosity>(
+                              cache) >= ::Verbosity::Debug) {
+        Parallel::printf(
+            "CheckFoTAction, %s: Functions of time are not ready at time "
+            "%.16e. Registering threaded action callback\n",
+            array_index, db::get<::Tags::Time>(box));
+      }
     } else {
       ready = functions_of_time_are_ready_algorithm_callback<
           domain::Tags::FunctionsOfTime>(cache, array_index, component,
@@ -271,11 +284,24 @@ struct CheckFunctionsOfTimeAreReadyPostprocessor {
                   Parallel::Tags::ElementLocations<Dim>>>(
               Parallel::get_parallel_component<ParallelComponent>(cache))
               ->at(array_index));
-      return domain::functions_of_time_are_ready_threaded_action_callback<
-          domain::Tags::FunctionsOfTime,
-          Parallel::Actions::PerformAlgorithmOnElement<false>>(
-          cache, element_location, component, db::get<::Tags::Time>(*box),
-          std::nullopt, array_index);
+      const double time = db::get<::Tags::Time>(*box);
+      const bool ready =
+          domain::functions_of_time_are_ready_threaded_action_callback<
+              domain::Tags::FunctionsOfTime,
+              Parallel::Actions::PerformAlgorithmOnElement<false>>(
+              cache, element_location, component, time, std::nullopt,
+              array_index, time);
+
+      if ((not ready) and Parallel::get<control_system::Tags::Verbosity>(
+                              cache) >= ::Verbosity::Debug) {
+        Parallel::printf(
+            "CheckFoTPostprocessor, %s: Functions of time are not ready at "
+            "time "
+            "%.16e. Registering threaded action callback\n",
+            array_index, time);
+      }
+
+      return ready;
     } else {
       return functions_of_time_are_ready_algorithm_callback<
           domain::Tags::FunctionsOfTime>(cache, array_index, component,
