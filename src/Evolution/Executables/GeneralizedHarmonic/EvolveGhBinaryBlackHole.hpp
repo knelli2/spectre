@@ -678,6 +678,12 @@ struct EvolutionMetavars {
         Parallel::get_parallel_component<
             observers::ObserverWriter<EvolutionMetavars>>(cache));
 
+    {
+      auto cache_proxy = cache.get_this_proxy();
+
+      cache_proxy.print_mutable_cache_callbacks();
+    }
+
     Parallel::simple_action<deadlock::PrintInterpolator>(
         Parallel::get_parallel_component<
             intrp::Interpolator<EvolutionMetavars>>(cache));

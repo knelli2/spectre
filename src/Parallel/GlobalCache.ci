@@ -30,6 +30,7 @@ module GlobalCache {
     entry void compute_size_for_memory_monitor(double time);
     entry void set_resource_info(
         const Parallel::ResourceInfo<Metavariables>& resource_info);
+    entry void print_mutable_cache_callbacks();
   }
   }  // namespace Parallel
 }

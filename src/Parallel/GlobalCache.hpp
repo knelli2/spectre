@@ -349,6 +349,8 @@ class GlobalCache
   void set_resource_info(
       const Parallel::ResourceInfo<Metavariables>& resource_info);
 
+  void print_mutable_cache_callbacks();
+
   /// Retrieve the resource_info
   const Parallel::ResourceInfo<Metavariables>& get_resource_info() const {
     return resource_info_;
@@ -627,7 +629,11 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
   std::stringstream ss{};
   ss << "Mutating tag " << pretty_type::name<GlobalCacheTag>() << " on node "
      << my_node() << ". ";
-  ss << "Args = (" << args << "). Calling " << callbacks.size()
+  ss << "Args = (" << args << "). Calling "
+     << alg::accumulate(callbacks, 0_st,
+                        [](const size_t cur_size, const auto& v) {
+                          return cur_size + v.second.size();
+                        })
      << " callbacks:\n";
 
   // Invoke the callbacks.  Any new callbacks that are added to the
@@ -682,6 +688,36 @@ void GlobalCache<Metavariables>::set_resource_info(
   resource_info_ = resource_info;
   resource_info_has_been_set_ = true;
 }
+
+template <typename Metavariables>
+void GlobalCache<Metavariables>::print_mutable_cache_callbacks() {
+  tmpl::for_each<typename MutableTagsStorage::tags_list>([this](auto tag_v) {
+    using Tag = tmpl::type_from<decltype(tag_v)>;
+
+    std::stringstream ss{};
+
+    const auto& callbacks =
+        std::get<1>(tuples::get<Tag>(mutable_global_cache_));
+
+    ss << "For tag " << pretty_type::name<typename Tag::tag>() << " on node "
+       << this->my_node() << ". Callbacks ("
+       << alg::accumulate(callbacks, 0_st,
+                          [](const size_t cur_size, const auto& v) {
+                            return cur_size + v.second.size();
+                          })
+       << "):\n";
+
+    for (const auto& [array_component_id, vec_callbacks] : callbacks) {
+      for (const auto& callback : vec_callbacks) {
+        ss << "  ArrayComponentId " << array_component_id << ": "
+           << callback->name() << "\n";
+      }
+    }
+
+    Parallel::printf("%s\n", ss.str());
+  });
+}
+
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif  // defined(__GNUC__) && !defined(__clang__)
