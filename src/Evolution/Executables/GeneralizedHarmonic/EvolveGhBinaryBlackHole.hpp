@@ -20,6 +20,7 @@
 #include "ControlSystem/Systems/Shape.hpp"
 #include "ControlSystem/Systems/Size.hpp"
 #include "ControlSystem/Systems/Translation.hpp"
+#include "ControlSystem/Tags/MeasurementTimescales.hpp"
 #include "ControlSystem/Trigger.hpp"
 #include "DataStructures/DataBox/PrefixHelpers.hpp"
 #include "DataStructures/DataBox/Tag.hpp"
@@ -662,12 +663,16 @@ struct EvolutionMetavars {
                       const ArrayIndex& /*array_index*/) {
       const auto& functions_of_time =
           Parallel::get<::domain::Tags::FunctionsOfTime>(cache);
+      const auto& measurement_timescales =
+          Parallel::get<control_system::Tags::MeasurementTimescales>(cache);
 
-      const std::string time_bounds =
+      const std::string fot_time_bounds =
           ::domain::FunctionsOfTime::output_time_bounds(functions_of_time);
+      const std::string measurement_time_bounds =
+          ::domain::FunctionsOfTime::output_time_bounds(measurement_timescales);
 
-      Parallel::printf("Node %zu\n%s\n", Parallel::my_node<size_t>(cache),
-                       time_bounds);
+      Parallel::printf("Node %zu\n%s\n\n%s\n", Parallel::my_node<size_t>(cache),
+                       fot_time_bounds, measurement_time_bounds);
     }
   };
 
