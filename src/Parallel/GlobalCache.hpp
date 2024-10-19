@@ -495,6 +495,8 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
     optional_callback->register_with_charm();
     // Second mutex is for vector of callbacks
     std::mutex& mutex = tuples::get<MutexTag<tag>>(mutexes_).second;
+    std::unique_ptr<Callback> clone_of_optional_callback =
+        optional_callback->get_clone();
     {
       // Scoped for lock guard
       const std::lock_guard<std::mutex> lock(mutex);
@@ -575,7 +577,26 @@ bool GlobalCache<Metavariables>::mutable_cache_item_is_ready(
                          std::vector<std::unique_ptr<Callback>>>& callbacks =
           std::get<1>(tuples::get<tag>(mutable_global_cache_));
 
-      callbacks.erase(array_component_id);
+      // It's possible that no new callbacks were registered, so make sure this
+      // array component id still has callbacks before trying to remove them.
+      if (callbacks.contains(array_component_id)) {
+        // QUESTION: Can this actually happen if we didn't register a callback?
+        if (callbacks.at(array_component_id).empty()) {
+          callbacks.erase(array_component_id);
+        } else {
+          // Find the duplicate callback if there is one
+          auto& vec_callbacks = callbacks.at(array_component_id);
+          auto it_to_erase = vec_callbacks.begin();
+          for (; it_to_erase != vec_callbacks.end(); it_to_erase++) {
+            if ((*it_to_erase)
+                    ->is_equal_to(*clone_of_optional_callback)
+                    .value_or(false)) {
+              vec_callbacks.erase(it_to_erase);
+              break;
+            }
+          }
+        }
+      }
     }
 
     return cache_item_is_ready;

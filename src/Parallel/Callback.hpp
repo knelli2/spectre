@@ -8,6 +8,7 @@
 
 #include <iomanip>
 #include <ios>
+#include <memory>
 #include <optional>
 #include <pup.h>
 #include <sstream>
@@ -65,6 +66,7 @@ class Callback : public PUP::able {
   virtual void register_with_charm() = 0;
   virtual std::optional<bool> is_equal_to(const Callback& rhs) const = 0;
   virtual std::string name() const = 0;
+  virtual std::unique_ptr<Callback> get_clone() = 0;
 };
 
 /// Wraps a call to a simple action and its arguments.
@@ -77,6 +79,8 @@ class SimpleActionCallback : public Callback {
   // NOLINTNEXTLINE(google-explicit-constructor)
   SimpleActionCallback(Proxy proxy, std::decay_t<Args>... args)
       : proxy_(proxy), args_(std::move(args)...) {}
+  SimpleActionCallback(Proxy proxy, std::tuple<std::decay_t<Args>...> args)
+      : proxy_(proxy), args_(std::move(args)) {}
   explicit SimpleActionCallback(CkMigrateMessage* msg) : Callback(msg) {}
   using PUP::able::register_constructor;
   void invoke() override {
@@ -113,6 +117,11 @@ class SimpleActionCallback : public Callback {
     return "SimpleActionCallback(" + pretty_type::get_name<SimpleAction>() +
            "," + pretty_type::name<Proxy>() +
            ",Args=" + detail::stream_args(args_) + ")";
+  }
+
+  std::unique_ptr<Callback> get_clone() override {
+    return std::make_unique<SimpleActionCallback<SimpleAction, Proxy, Args...>>(
+        proxy_, args_);
   }
 
  private:
@@ -153,6 +162,10 @@ class SimpleActionCallback<SimpleAction, Proxy> : public Callback {
            "," + pretty_type::name<Proxy>() + ")";
   }
 
+  std::unique_ptr<Callback> get_clone() override {
+    return std::make_unique<SimpleActionCallback<SimpleAction, Proxy>>(proxy_);
+  }
+
  private:
   std::decay_t<Proxy> proxy_{};
 };
@@ -167,6 +180,8 @@ class ThreadedActionCallback : public Callback {
   // NOLINTNEXTLINE(google-explicit-constructor)
   ThreadedActionCallback(Proxy proxy, std::decay_t<Args>... args)
       : proxy_(proxy), args_(std::move(args)...) {}
+  ThreadedActionCallback(Proxy proxy, std::tuple<std::decay_t<Args>...> args)
+      : proxy_(proxy), args_(std::move(args)) {}
   explicit ThreadedActionCallback(CkMigrateMessage* msg) : Callback(msg) {}
   using PUP::able::register_constructor;
   void invoke() override {
@@ -204,6 +219,11 @@ class ThreadedActionCallback : public Callback {
     return "ThreadedActionCallback(" + pretty_type::get_name<ThreadedAction>() +
            "," + pretty_type::name<Proxy>() +
            ",Args=" + detail::stream_args(args_) + ")";
+  }
+
+  std::unique_ptr<Callback> get_clone() override {
+    return std::make_unique<
+        ThreadedActionCallback<ThreadedAction, Proxy, Args...>>(proxy_, args_);
   }
 
  private:
@@ -245,6 +265,11 @@ class ThreadedActionCallback<ThreadedAction, Proxy> : public Callback {
            "," + pretty_type::name<Proxy>() + ")";
   }
 
+  std::unique_ptr<Callback> get_clone() override {
+    return std::make_unique<ThreadedActionCallback<ThreadedAction, Proxy>>(
+        proxy_);
+  }
+
  private:
   std::decay_t<Proxy> proxy_{};
 };
@@ -279,6 +304,10 @@ class PerformAlgorithmCallback : public Callback {
 
   std::string name() const override {
     return "PerformAlgorithmCallback(" + pretty_type::name<Proxy>() + ")";
+  }
+
+  std::unique_ptr<Callback> get_clone() override {
+    return std::make_unique<PerformAlgorithmCallback<Proxy>>(proxy_);
   }
 
  private:
