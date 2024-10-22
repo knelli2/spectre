@@ -79,6 +79,8 @@ struct PrintElementInfo {
 
     const bool terminated = local_object.get_terminate();
 
+    const std::string file_name = "deadlock/dg_element_array.out";
+
     std::stringstream ss{};
     ss << std::scientific << std::setprecision(16);
     ss << "Element " << array_index
@@ -139,7 +141,7 @@ struct PrintElementInfo {
       ss << "\n";
     }
 
-    Parallel::printf("%s", ss.str());
+    Parallel::fprintf(file_name, "%s", ss.str());
   }
 };
 }  // namespace deadlock

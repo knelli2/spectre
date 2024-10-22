@@ -51,6 +51,8 @@ struct PrintInterpolationTarget {
          << ", invalid points received " << invalid_size << ". ";
     };
 
+    const std::string file_name = "deadlock/interpolation_targets.out";
+
     if constexpr (TargetTag::compute_target_points::is_sequential::value) {
       ss << pretty_type::name<TargetTag>() << ", ";
 
@@ -69,14 +71,14 @@ struct PrintInterpolationTarget {
 
       ss << "Pending ids " << pending_temporal_ids;
 
-      Parallel::printf("%s\n", ss.str());
+      Parallel::fprintf(file_name, "%s\n", ss.str());
     } else {
       const auto& temporal_ids =
           db::get<intrp::Tags::TemporalIds<TemporalId>>(box);
 
       if (temporal_ids.empty()) {
         ss << pretty_type::name<TargetTag>() << ", No temporal ids.";
-        Parallel::printf("%s\n", ss.str());
+        Parallel::fprintf(file_name, "%s\n", ss.str());
         return;
       }
 
@@ -87,7 +89,7 @@ struct PrintInterpolationTarget {
 
         stream_points(temporal_id);
 
-        Parallel::printf("%s\n", ss.str());
+        Parallel::fprintf(file_name, "%s\n", ss.str());
       }
     }
   }

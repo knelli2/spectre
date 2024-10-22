@@ -24,9 +24,11 @@ struct PrintCurrentMeasurement {
     const int current_measurement =
         db::get<control_system::Tags::CurrentNumberOfMeasurements>(box);
 
-    Parallel::printf("%s: Current measurement = %d\n",
-                     pretty_type::name<ParallelComponent>(),
-                     current_measurement);
+    const std::string file_name = "deadlock/control_systems.out";
+
+    Parallel::fprintf(file_name, "%s: Current measurement = %d\n",
+                      pretty_type::name<ParallelComponent>(),
+                      current_measurement);
   }
 };
 }  // namespace control_system::Actions

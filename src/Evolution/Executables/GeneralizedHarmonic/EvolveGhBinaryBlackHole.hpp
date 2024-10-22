@@ -185,6 +185,7 @@
 #include "Time/Triggers/TimeTriggers.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Utilities/FileSystem.hpp"
 #include "Utilities/Functional.hpp"
 #include "Utilities/GetOutput.hpp"
 #include "Utilities/NoSuchType.hpp"
@@ -671,14 +672,24 @@ struct EvolutionMetavars {
       const std::string measurement_time_bounds =
           ::domain::FunctionsOfTime::output_time_bounds(measurement_timescales);
 
-      Parallel::printf("Node %zu\n%s\n\n%s\n", Parallel::my_node<size_t>(cache),
-                       fot_time_bounds, measurement_time_bounds);
+      const std::string file_name = "deadlock/functions_of_time.out";
+
+      Parallel::fprintf(file_name, "Node %zu\n%s\n\n%s\n",
+                        Parallel::my_node<size_t>(cache), fot_time_bounds,
+                        measurement_time_bounds);
     }
   };
 
   static void run_deadlock_analysis_simple_actions(
       Parallel::GlobalCache<EvolutionMetavars>& cache,
       const std::vector<std::string>& deadlocked_components) {
+
+    if (file_system::check_if_dir_exists("deadlock")) {
+        file_system::rm("deadlock", true);
+    }
+
+    file_system::create_directory("deadlock");
+
     Parallel::simple_action<PrintFunctionsOfTime>(
         Parallel::get_parallel_component<
             observers::ObserverWriter<EvolutionMetavars>>(cache));

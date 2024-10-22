@@ -735,7 +735,9 @@ void GlobalCache<Metavariables>::print_mutable_cache_callbacks() {
       }
     }
 
-    Parallel::printf("%s\n", ss.str());
+    const std::string file_name = "deadlock/mutable_cache_callbacks.out";
+
+    Parallel::fprintf(file_name, "%s\n", ss.str());
   });
 }
 

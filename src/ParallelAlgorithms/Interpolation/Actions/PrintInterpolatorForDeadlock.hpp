@@ -28,6 +28,9 @@ struct PrintInterpolator {
     tmpl::for_each<target_tags>([&](const auto tag_v) {
       using target_tag = tmpl::type_from<decltype(tag_v)>;
 
+      const std::string file_name = "deadlock/interpolator_target" +
+                                    pretty_type::name<target_tag>() + ".out";
+
       // Only need to print the sequential targets (aka horizons)
       if constexpr (target_tag::compute_target_points::is_sequential::value) {
         std::stringstream ss{};
@@ -64,7 +67,7 @@ struct PrintInterpolator {
 
           ss << difference;
 
-          Parallel::printf("%s\n", ss.str());
+          Parallel::fprintf(file_name, "%s\n", ss.str());
         }
       }
     });
