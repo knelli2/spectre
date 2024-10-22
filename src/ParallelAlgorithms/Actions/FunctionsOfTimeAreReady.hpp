@@ -26,10 +26,13 @@
 #include "Parallel/GlobalCache.hpp"
 #include "Parallel/Info.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
+#include "Parallel/Printf/Printf.hpp"
 #include "ParallelAlgorithms/Actions/GetItemFromDistributedObject.hpp"
 #include "Utilities/Algorithm.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
+#include "Utilities/MakeString.hpp"
 #include "Utilities/StdHelpers.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 
 /// \cond
 namespace Tags {
@@ -81,7 +84,17 @@ bool functions_of_time_are_ready_impl(
       }
     }();
 
-    return Parallel::mutable_cache_item_is_ready<CacheTag>(
+    const std::string element_string = [&]() -> std::string {
+      if constexpr (Parallel::is_dg_element_collection_v<Component>) {
+        return MakeString{} << std::get<0>(std::tie(args...));
+      } else {
+        return MakeString{} << array_index;
+      }
+    }();
+
+    const double walltime_before_check = sys::wall_time();
+
+    const bool ready = Parallel::mutable_cache_item_is_ready<CacheTag>(
         cache, array_component_id,
         [&functions_to_check, &proxy, &time,
          &args...](const std::unordered_map<
@@ -112,6 +125,20 @@ bool functions_of_time_are_ready_impl(
           }
           return std::unique_ptr<Parallel::Callback>{};
         });
+
+    const double walltime_after_check = sys::wall_time();
+
+    Parallel::fprintf(
+        "elements/" + element_string + ".log",
+        "Element %s checking tag %s at time %.16e. %s. WC before "
+        "check: %.16e, WC after check: %.16e\n",
+        element_string, pretty_type::name<CacheTag>(), time,
+        ready ? "Ready"
+              : "Not ready, registered callback " +
+                    Callback(proxy, std::forward<Args>(args)...).name(),
+        walltime_before_check, walltime_after_check);
+
+    return ready;
   } else {
     (void)cache;
     (void)array_index;

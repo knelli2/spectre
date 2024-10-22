@@ -25,8 +25,10 @@
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/GetOutput.hpp"
 #include "Utilities/Gsl.hpp"
+#include "Utilities/MakeString.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TMPL.hpp"
 
 /// \cond
@@ -123,6 +125,7 @@ class Trigger : public DenseTrigger {
 
     if (not measurement_times->next_measurement().has_value()) {
       auto& proxy = ::Parallel::get_parallel_component<Component>(cache);
+      const double walltime_before_check = sys::wall_time();
       const bool is_ready = Parallel::mutable_cache_item_is_ready<
           control_system::Tags::MeasurementTimescales>(
           cache, Parallel::make_array_component_id<Component>(array_index),
@@ -164,6 +167,37 @@ class Trigger : public DenseTrigger {
             }
             return std::unique_ptr<Parallel::Callback>{};
           });
+
+      const double walltime_after_check = sys::wall_time();
+      const std::string element_string = MakeString{} << array_index;
+      const std::string callback_name = [&]() {
+        if constexpr (Parallel::is_dg_element_collection_v<Component>) {
+          const auto element_location = static_cast<int>(
+              Parallel::local_synchronous_action<
+                  Parallel::Actions::GetItemFromDistributedOject<
+                      Parallel::Tags::ElementLocations<Dim>>>(
+                  Parallel::get_parallel_component<Component>(cache))
+                  ->at(array_index));
+          return Parallel::ThreadedActionCallback<
+                     Parallel::Actions::PerformAlgorithmOnElement<false>,
+                     decltype(proxy[element_location]),
+                     std::decay_t<decltype(array_index)>, double>{
+              proxy[element_location], array_index, time}
+              .name();
+        } else {
+          return Parallel::PerformAlgorithmCallback(proxy[array_index]).name();
+        }
+      }();
+
+      Parallel::fprintf("elements/" + element_string + ".log",
+                        "Element %s checking tag MeasurementTimescales at time "
+                        "%.16e. %s. WC before "
+                        "check: %.16e, WC after check: %.16e\n",
+                        element_string, time,
+                        is_ready
+                            ? "Ready"
+                            : "Not ready, registered callback " + callback_name,
+                        walltime_before_check, walltime_after_check);
 
       if (not is_ready) {
         if (Parallel::get<Tags::Verbosity>(cache) >= ::Verbosity::Debug) {

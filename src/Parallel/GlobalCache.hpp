@@ -662,8 +662,8 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
   // saved and will not be invoked here.
   for (auto& [array_component_id, vec_callbacks] : callbacks) {
     for (auto& callback : vec_callbacks) {
-      ss << " ArrayComponentId " << array_component_id << ": "
-         << callback->name() << "\n";
+      ss << " WC=" << sys::wall_time() << ", ArrayComponentId "
+         << array_component_id << ": " << callback->name() << "\n";
       callback->invoke();
     }
   }

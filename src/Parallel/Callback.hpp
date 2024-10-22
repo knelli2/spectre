@@ -13,14 +13,21 @@
 #include <pup.h>
 #include <sstream>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "Parallel/Invoke.hpp"
+#include "Parallel/Printf/Printf.hpp"
+#include "Utilities/MakeString.hpp"
 #include "Utilities/PrettyType.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/Serialization/RegisterDerivedClassesWithCharm.hpp"
 #include "Utilities/StlStreamDeclarations.hpp"
+#include "Utilities/System/ParallelInfo.hpp"
 #include "Utilities/TypeTraits/IsStreamable.hpp"
+
+template <size_t VolumeDim>
+class ElementId;
 
 namespace Parallel {
 namespace detail {
@@ -185,11 +192,26 @@ class ThreadedActionCallback : public Callback {
   explicit ThreadedActionCallback(CkMigrateMessage* msg) : Callback(msg) {}
   using PUP::able::register_constructor;
   void invoke() override {
+    const double walltime_before_call = sys::wall_time();
     std::apply(
         [this](auto&&... args) {
           Parallel::threaded_action<ThreadedAction>(proxy_, args...);
         },
         std::move(args_));
+    const double walltime_after_call = sys::wall_time();
+
+    if constexpr (std::is_same_v<ElementId<3>,
+                                 std::decay_t<decltype(std::get<0>(args_))>> and
+                  std::is_same_v<double,
+                                 std::decay_t<decltype(std::get<1>(args_))>>) {
+      const std::string element_string = MakeString{} << std::get<0>(args_);
+      Parallel::fprintf("elements/" + element_string + ".log",
+                        "Element %s calling callback %s at time "
+                        "%.16e. WC before "
+                        "call: %.16e, WC after call: %.16e\n",
+                        element_string, name(), std::get<1>(args_),
+                        walltime_before_call, walltime_after_call);
+    }
   }
   void pup(PUP::er& p) override {
     p | proxy_;
