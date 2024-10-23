@@ -33,6 +33,7 @@
 
 /// \cond
 namespace Tags {
+struct ElementState;
 struct TimeStep;
 struct EventsAndDenseTriggers;
 }  // namespace Tags
@@ -63,9 +64,10 @@ struct InitializeMeasurements {
                       metafunctions::control_systems_with_measurement<
                           tmpl::pin<ControlSystems>, tmpl::_1>>;
 
-  using simple_tags =
+  using simple_tags = tmpl::push_back<
       tmpl::transform<control_system_groups,
-                      tmpl::bind<Tags::FutureMeasurements, tmpl::_1>>;
+                      tmpl::bind<Tags::FutureMeasurements, tmpl::_1>>,
+      ::Tags::ElementState>;
   using const_global_cache_tags = tmpl::list<Tags::MeasurementsPerUpdate>;
   using mutable_global_cache_tags =
       tmpl::list<control_system::Tags::MeasurementTimescales>;

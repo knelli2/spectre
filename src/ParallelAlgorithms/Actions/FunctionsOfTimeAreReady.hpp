@@ -16,6 +16,7 @@
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Structure/ElementId.hpp"
+#include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
 #include "Parallel/ArrayCollection/IsDgElementCollection.hpp"
@@ -276,6 +277,16 @@ struct CheckFunctionsOfTimeAreReady {
                                          db::get<::Tags::Time>(box));
     }
 
+    db::mutate<::Tags::ElementState>(
+        [&](const gsl::not_null<::ElementState*> state) {
+          if (ready) {
+            *state = ::ElementState::ChuggingAlong;
+          } else {
+            *state = ::ElementState::WaitingForFoTInAction;
+          }
+        },
+        make_not_null(&box));
+
     return {ready ? Parallel::AlgorithmExecution::Continue
                   : Parallel::AlgorithmExecution::Retry,
             std::nullopt};
@@ -328,11 +339,33 @@ struct CheckFunctionsOfTimeAreReadyPostprocessor {
             array_index, time);
       }
 
+      db::mutate<::Tags::ElementState>(
+          [&](const gsl::not_null<::ElementState*> state) {
+            if (ready) {
+              *state = ::ElementState::ChuggingAlong;
+            } else {
+              *state = ::ElementState::WaitingForFoTInPostProcessor;
+            }
+          },
+          box);
+
       return ready;
     } else {
-      return functions_of_time_are_ready_algorithm_callback<
+      const bool ready = functions_of_time_are_ready_algorithm_callback<
           domain::Tags::FunctionsOfTime>(cache, array_index, component,
                                          db::get<::Tags::Time>(*box));
+
+      db::mutate<::Tags::ElementState>(
+          [&](const gsl::not_null<::ElementState*> state) {
+            if (ready) {
+              *state = ::ElementState::ChuggingAlong;
+            } else {
+              *state = ::ElementState::WaitingForFoTInPostProcessor;
+            }
+          },
+          box);
+
+      return ready;
     }
   }
 };

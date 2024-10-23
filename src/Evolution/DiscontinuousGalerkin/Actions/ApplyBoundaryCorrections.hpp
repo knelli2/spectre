@@ -28,6 +28,7 @@
 #include "Domain/Tags/NeighborMesh.hpp"
 #include "Evolution/BoundaryCorrectionTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/BoundaryData.hpp"
+#include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "Evolution/DiscontinuousGalerkin/InboxTags.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarData.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarDataHolder.hpp"
@@ -644,13 +645,37 @@ struct ApplyBoundaryCorrections {
       const ArrayIndex& /*array_index*/,
       const ParallelComponent* const /*component*/) {
     if constexpr (local_time_stepping) {
-      return receive_boundary_data_local_time_stepping<
+      const bool ready = receive_boundary_data_local_time_stepping<
           Parallel::is_dg_element_collection_v<ParallelComponent>, System,
           VolumeDim, DenseOutput>(box, inboxes);
+
+      db::mutate<::Tags::ElementState>(
+          [&](const gsl::not_null<::ElementState*> state) {
+            if (ready) {
+              *state = ::ElementState::ChuggingAlong;
+            } else {
+              *state = ::ElementState::WaitingForBoundaryDataInPostProcessor;
+            }
+          },
+          box);
+
+      return ready;
     } else {
-      return receive_boundary_data_global_time_stepping<
+      const bool ready = receive_boundary_data_global_time_stepping<
           Parallel::is_dg_element_collection_v<ParallelComponent>,
           Metavariables>(box, inboxes);
+
+      db::mutate<::Tags::ElementState>(
+          [&](const gsl::not_null<::ElementState*> state) {
+            if (ready) {
+              *state = ::ElementState::ChuggingAlong;
+            } else {
+              *state = ::ElementState::WaitingForBoundaryDataInPostProcessor;
+            }
+          },
+          box);
+
+      return ready;
     }
   }
 
@@ -1025,6 +1050,12 @@ struct ApplyBoundaryCorrectionsToTimeDerivative {
     const Element<volume_dim>& element =
         db::get<domain::Tags::Element<volume_dim>>(box);
 
+    db::mutate<::Tags::ElementState>(
+        [](const gsl::not_null<::ElementState*> state) {
+          *state = ::ElementState::ChuggingAlong;
+        },
+        make_not_null(&box));
+
     if (UNLIKELY(element.number_of_neighbors() == 0)) {
       // We have no neighbors, yay!
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
@@ -1033,6 +1064,11 @@ struct ApplyBoundaryCorrectionsToTimeDerivative {
     if (not receive_boundary_data_global_time_stepping<
             Parallel::is_dg_element_collection_v<ParallelComponent>,
             Metavariables>(make_not_null(&box), make_not_null(&inboxes))) {
+      db::mutate<::Tags::ElementState>(
+          [](const gsl::not_null<::ElementState*> state) {
+            *state = ::ElementState::WaitingForBoundaryDataInAction;
+          },
+          make_not_null(&box));
       return {Parallel::AlgorithmExecution::Retry, std::nullopt};
     }
 
@@ -1085,6 +1121,12 @@ struct ApplyLtsBoundaryCorrections {
     const Element<volume_dim>& element =
         db::get<domain::Tags::Element<volume_dim>>(box);
 
+    db::mutate<::Tags::ElementState>(
+        [](const gsl::not_null<::ElementState*> state) {
+          *state = ::ElementState::ChuggingAlong;
+        },
+        make_not_null(&box));
+
     if (UNLIKELY(element.number_of_neighbors() == 0)) {
       // We have no neighbors, yay!
       return {Parallel::AlgorithmExecution::Continue, std::nullopt};
@@ -1093,6 +1135,11 @@ struct ApplyLtsBoundaryCorrections {
     if (not receive_boundary_data_local_time_stepping<
             Parallel::is_dg_element_collection_v<ParallelComponent>, System,
             VolumeDim, false>(make_not_null(&box), make_not_null(&inboxes))) {
+      db::mutate<::Tags::ElementState>(
+          [](const gsl::not_null<::ElementState*> state) {
+            *state = ::ElementState::WaitingForBoundaryDataInAction;
+          },
+          make_not_null(&box));
       return {Parallel::AlgorithmExecution::Retry, std::nullopt};
     }
 

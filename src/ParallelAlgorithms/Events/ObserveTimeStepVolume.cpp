@@ -18,6 +18,7 @@
 #include "Domain/ElementMap.hpp"
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/Tags.hpp"
+#include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "IO/H5/TensorData.hpp"
 #include "IO/Observer/ObservationId.hpp"
 #include "IO/Observer/TypeOfObservation.hpp"
@@ -127,11 +128,12 @@ template <size_t VolumeDim>
 std::vector<TensorComponent> ObserveTimeStepVolume<VolumeDim>::assemble_data(
     const double time, const domain::FunctionsOfTimeMap& functions_of_time,
     const Domain<VolumeDim>& domain, const ElementId<VolumeDim>& element_id,
-    const TimeDelta& time_step, const double minimum_grid_spacing) const {
+    const TimeDelta& time_step, const double minimum_grid_spacing,
+    const ::ElementState state) const {
   constexpr auto num_corners = two_to_the(VolumeDim);
 
   std::vector<TensorComponent> components{};
-  components.reserve(VolumeDim + 2);
+  components.reserve(VolumeDim + 3);
 
   if (coordinates_floating_point_type_ == ::FloatingPointType::Float) {
     map_corners<std::vector<float>>(&components, time, functions_of_time,
@@ -158,6 +160,7 @@ std::vector<TensorComponent> ObserveTimeStepVolume<VolumeDim>::assemble_data(
   add_constant("Time step", time_step.value());
   add_constant("Slab fraction", time_step.fraction().value());
   add_constant("Minimum grid spacing", minimum_grid_spacing);
+  add_constant("Element state", static_cast<double>(static_cast<int>(state)));
 
   return components;
 }

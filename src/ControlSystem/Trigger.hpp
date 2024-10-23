@@ -12,6 +12,7 @@
 #include "ControlSystem/CombinedName.hpp"
 #include "ControlSystem/FutureMeasurements.hpp"
 #include "ControlSystem/Metafunctions.hpp"
+#include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "Parallel/ArrayCollection/IsDgElementCollection.hpp"
 #include "Parallel/ArrayCollection/PerformAlgorithmOnElement.hpp"
@@ -109,7 +110,8 @@ class Trigger : public DenseTrigger {
   }
 
   using next_check_time_return_tags =
-      tmpl::list<control_system::Tags::FutureMeasurements<ControlSystems>>;
+      tmpl::list<control_system::Tags::FutureMeasurements<ControlSystems>,
+                 ::Tags::ElementState>;
   using next_check_time_argument_tags = tmpl::list<::Tags::Time>;
 
   template <typename Metavariables, size_t Dim, typename Component>
@@ -118,7 +120,8 @@ class Trigger : public DenseTrigger {
       const ElementId<Dim>& array_index, const Component* /*component*/,
       const gsl::not_null<control_system::FutureMeasurements*>
           measurement_times,
-      const double time) {
+      const gsl::not_null<ElementState*> state, const double time) {
+    *state = ::ElementState::ChuggingAlong;
     if (measurement_times->next_measurement() == std::optional(time)) {
       measurement_times->pop_front();
     }
@@ -207,6 +210,7 @@ class Trigger : public DenseTrigger {
               get_output(array_index), time,
               pretty_type::list_of_names<ControlSystems>());
         }
+        *state = ::ElementState::WaitingForMeasurementTimescales;
         return std::nullopt;
       }
     }
