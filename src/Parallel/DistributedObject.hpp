@@ -321,7 +321,7 @@ class DistributedObject<ParallelComponent,
   /// Start execution of the phase-dependent action list in `next_phase`. If
   /// `next_phase` has already been visited, execution will resume at the point
   /// where the previous execution of the same phase left off.
-  void start_phase(const Parallel::Phase next_phase);
+  void start_phase(const Parallel::Phase next_phase, bool force = false);
 
   /// Get the current phase
   Phase phase() const { return phase_; }
@@ -968,8 +968,11 @@ void DistributedObject<ParallelComponent,
 template <typename ParallelComponent, typename... PhaseDepActionListsPack>
 void DistributedObject<ParallelComponent,
                        tmpl::list<PhaseDepActionListsPack...>>::
-    start_phase(const Parallel::Phase next_phase) {
+    start_phase(const Parallel::Phase next_phase, const bool force) {
   try {
+    if (force) {
+      set_terminate(true);
+    }
     // terminate should be true since we exited a phase previously.
     if (not get_terminate() and not halt_algorithm_until_next_phase_) {
       ERROR(

@@ -50,7 +50,7 @@ class DgElementArrayMemberBase : PUP::able {
   /// Start execution of the phase-dependent action list in `next_phase`. If
   /// `next_phase` has already been visited, execution will resume at the point
   /// where the previous execution of the same phase left off.
-  virtual void start_phase(Parallel::Phase next_phase) = 0;
+  virtual void start_phase(Parallel::Phase next_phase, bool force = false) = 0;
 
   /// Get the current phase
   Parallel::Phase phase() const;
