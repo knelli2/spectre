@@ -67,6 +67,10 @@ def fit_to_a_cubic(times, coefs, match_time, zero_coefs_eps):
     return fit_ahc, fit_dt_ahc, fit_dt2_ahc
 
 
+# TODO: See Ringdown.py for planned edits of this function. Also type all the
+# functio arguments
+
+
 def compute_ahc_coefs_in_ringdown_distorted_frame(
     ahc_reductions_path,
     ahc_subfile,
@@ -112,6 +116,10 @@ def compute_ahc_coefs_in_ringdown_distorted_frame(
 
     # Transform AhC coefs to ringdown distorted frame and get other data
     # needed to start a ringdown, such as initial values for functions of time
+
+    # TODO: Actually, it's the C++ function that should take the map of FoT
+    # names to std::array<DataVector> for the values, and this C++ function
+    # should determine which it needs to use from the given inputs
     coefs_at_different_times = np.array(
         Ringdown.strahlkorper_coefs_in_ringdown_distorted_frame(
             ahc_reductions_path,

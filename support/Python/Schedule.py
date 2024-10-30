@@ -131,6 +131,9 @@ def _numpy_representer(
     return dumper.represent_scalar("tag:yaml.org,2002:float", str(value))
 
 
+# TODO: Probably have to add a representer here
+
+
 def schedule(
     input_file_template: Union[str, Path],
     scheduler: Optional[Union[str, Sequence]],
@@ -667,6 +670,7 @@ def schedule(
             yaml_dumper = yaml.SafeDumper
             yaml_dumper.add_multi_representer(Path, _path_representer)
             yaml_dumper.add_multi_representer(np.float64, _numpy_representer)
+            # TODO: and add it here
             yaml.dump(context, open_context_file, Dumper=yaml_dumper)
 
     # Submit

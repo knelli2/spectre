@@ -47,6 +47,9 @@ std::vector<DataVector> strahlkorper_coefs_in_ringdown_distorted_frame(
   // Create a time-dependent domain; only the the time-dependent map options
   // matter; the domain is just a spherical shell with inner and outer
   // radii chosen so any conceivable common horizon will fit between them.
+  // TODO: Based on the FoTs in the map passed in, you can make this nullopt or
+  // the correct options. Basically, if the inspiral didn't have a certain map,
+  // then we don't have to add it here
   const domain::creators::sphere::TimeDependentMapOptions::ExpansionMapOptions
       expansion_map_options{exp_func_and_2_derivs, settling_timescale,
                             exp_outer_bdry_func_and_2_derivs,

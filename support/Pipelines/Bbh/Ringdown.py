@@ -163,6 +163,12 @@ def start_ringdown(
         polynomial_order=polynomial_order,
     )
 
+    # TODO CLEANUP: Rewrite (and probably move) functions_of_time_from_volume to
+    # take an  h5 file, subfile, and time (and maybe a list of names we want
+    # that defaults to None which means all FoTs), grab the last observation id,
+    # checks that all FoTs are valid at the given time, and then return a dict
+    # of FoT name and func_and_2_derivs. Then the below code can be removed
+
     # Compute ringdown shape coefficients and function of time info
     # for ringdown
     with spectre_h5.H5File(str(fot_vol_h5_path), "r") as h5file:
@@ -186,6 +192,21 @@ def start_ringdown(
     ) = functions_of_time_from_volume(
         str(fot_vol_h5_path), fot_vol_subfile, match_time, which_obs_id
     )
+
+    # TODO NEW: Add new funtion that does the iterative pocedure in SpEC to find
+    # the rminfac (aka the excision radius for the ringdown domain). You'll need
+    # the FoTs and several other params for this function.
+
+    # TODO NEW: We'll also need a new feature to the Wedge
+    # ShapeMapTransitionFunction that allows for points within the excision, by
+    # I'll (Kyle) add that
+
+    # TODO CLEANUP: Edit compute_ahc_coefs_in_ringdown_distorted_frame to just
+    # take the FoT dict from above and then it decides which ones it needs. That
+    # way you don't have to keep passing more args as we add more FoTs. This
+    # definitely  needs to come after we figure out the ringdown translation
+    # FoT, but I'm not sure yet if we do that concurrently with the iterative
+    # pocedure above, or if it's separate.
 
     ringdown_ylm_coefs, ringdown_ylm_legend = (
         compute_ahc_coefs_in_ringdown_distorted_frame(
@@ -227,6 +248,7 @@ def start_ringdown(
             version=0,
         )
         ahc_dt2_datfile.append(ringdown_ylm_coefs[2])
+
     logger.info("Obtained ringdown coefs")
     # Print out coefficients for insertion into BBH domain
     logger.info("Expansion: " + str(expansion_func_with_2_derivs))
@@ -237,6 +259,11 @@ def start_ringdown(
     logger.info("Match time: " + str(match_time))
     logger.info("Settling timescale: " + str(settling_timescale))
     logger.info("Lmax: " + str(int(ringdown_ylm_coefs[0][4])))
+
+    # TODO CLEANUP: It'd be nice to not have so many options. I think it's
+    # possible to have yaml handle writing ndarray as a list (or list of lists).
+    # We'd have to edit Schedul.py for this I believe. Then you can just have
+    # one key called "Rotation" and it'll do everything for you
 
     ringdown_params["MatchTime"] = match_time
     ringdown_params["ShapeMapLMax"] = int(ringdown_ylm_coefs[0][4])

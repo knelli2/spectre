@@ -15,6 +15,9 @@ from spectre.Domain import deserialize_functions_of_time
 
 logger = logging.getLogger(__name__)
 
+# TODO: See Ringdown.py for planned edits of this file. Also, type all the
+# function arguments
+
 
 # Transform AhC coefs to ringdown distorted frame and get other data
 # needed to start a ringdown, such as initial values for functions of time
