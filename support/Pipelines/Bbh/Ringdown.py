@@ -193,14 +193,6 @@ def start_ringdown(
         str(fot_vol_h5_path), fot_vol_subfile, match_time, which_obs_id
     )
 
-    # TODO NEW: Add new funtion that does the iterative pocedure in SpEC to find
-    # the rminfac (aka the excision radius for the ringdown domain). You'll need
-    # the FoTs and several other params for this function.
-
-    # TODO NEW: We'll also need a new feature to the Wedge
-    # ShapeMapTransitionFunction that allows for points within the excision, by
-    # I'll (Kyle) add that
-
     # TODO CLEANUP: Edit compute_ahc_coefs_in_ringdown_distorted_frame to just
     # take the FoT dict from above and then it decides which ones it needs. That
     # way you don't have to keep passing more args as we add more FoTs. This
@@ -221,6 +213,16 @@ def start_ringdown(
             zero_coefs_eps,
         )
     )
+
+    # TODO NEW: Add new funtion that does the iterative pocedure in SpEC to find
+    # the rminfac (aka the excision radius for the ringdown domain). You'll need
+    # the FoTs and several other params for this function. This must come after
+    # compute_ahc_coefs_in_ringdown_distorted_frame since the iterative
+    # procedure needs the full grid->distorted->inertial
+
+    # TODO NEW: We'll also need a new feature to the Wedge
+    # ShapeMapTransitionFunction that allows for points within the excision, by
+    # I'll (Kyle) add that
 
     # Setting up and writing the distorted coefficients output file.
     output_subfile_ahc = output_subfile_prefix + "AhC_Ylm"
