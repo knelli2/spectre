@@ -44,6 +44,10 @@ namespace tuples {
 template <typename... Tags>
 class TaggedTuple;
 }  // namespace tuples
+namespace control_system::Tags {
+template <typename Group>
+struct CurrentSetOfMeasurements;
+}  // namespace control_system::Tags
 /// \endcond
 
 namespace control_system::Actions {
@@ -65,8 +69,12 @@ struct InitializeMeasurements {
                           tmpl::pin<ControlSystems>, tmpl::_1>>;
 
   using simple_tags = tmpl::push_back<
-      tmpl::transform<control_system_groups,
-                      tmpl::bind<Tags::FutureMeasurements, tmpl::_1>>,
+      tmpl::append<
+          tmpl::transform<control_system_groups,
+                          tmpl::bind<Tags::FutureMeasurements, tmpl::_1>>,
+          tmpl::transform<
+              control_system_groups,
+              tmpl::bind<Tags::CurrentSetOfMeasurements, tmpl::_1>>>,
       ::Tags::ElementState>;
   using const_global_cache_tags = tmpl::list<Tags::MeasurementsPerUpdate>;
   using mutable_global_cache_tags =
@@ -90,8 +98,10 @@ struct InitializeMeasurements {
       const bool active =
           timescales.at(combined_name<group>())->func(initial_time)[0][0] !=
           std::numeric_limits<double>::infinity();
-      db::mutate<Tags::FutureMeasurements<group>>(
-          [&](const gsl::not_null<FutureMeasurements*> measurements) {
+      db::mutate<Tags::FutureMeasurements<group>,
+                 Tags::CurrentSetOfMeasurements<group>>(
+          [&](const gsl::not_null<FutureMeasurements*> measurements,
+              const gsl::not_null<int*> current_set_of_measurements) {
             if (active) {
               *measurements = FutureMeasurements(
                   static_cast<size_t>(measurements_per_update), initial_time);
@@ -99,6 +109,8 @@ struct InitializeMeasurements {
               *measurements = FutureMeasurements(
                   1, std::numeric_limits<double>::infinity());
             }
+
+            *current_set_of_measurements = -1;
           },
           make_not_null(&box));
     });

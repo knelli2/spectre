@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <exception>
 #include <memory>
 #include <optional>
 #include <pup.h>
@@ -12,6 +13,7 @@
 #include "ControlSystem/CombinedName.hpp"
 #include "ControlSystem/FutureMeasurements.hpp"
 #include "ControlSystem/Metafunctions.hpp"
+#include "DataStructures/DataBox/Tag.hpp"
 #include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "Parallel/ArrayCollection/IsDgElementCollection.hpp"
@@ -41,6 +43,10 @@ template <typename ControlSystems>
 struct FutureMeasurements;
 struct MeasurementTimescales;
 struct Verbosity;
+template <typename Group>
+struct CurrentSetOfMeasurements : db::SimpleTag {
+  using type = int;
+};
 }  // namespace control_system::Tags
 /// \endcond
 
@@ -109,9 +115,10 @@ class Trigger : public DenseTrigger {
     return triggered;
   }
 
-  using next_check_time_return_tags =
-      tmpl::list<control_system::Tags::FutureMeasurements<ControlSystems>,
-                 ::Tags::ElementState>;
+  using next_check_time_return_tags = tmpl::list<
+      control_system::Tags::FutureMeasurements<ControlSystems>,
+      ::Tags::ElementState,
+      control_system::Tags::CurrentSetOfMeasurements<ControlSystems>>;
   using next_check_time_argument_tags = tmpl::list<::Tags::Time>;
 
   template <typename Metavariables, size_t Dim, typename Component>
@@ -120,7 +127,9 @@ class Trigger : public DenseTrigger {
       const ElementId<Dim>& array_index, const Component* /*component*/,
       const gsl::not_null<control_system::FutureMeasurements*>
           measurement_times,
-      const gsl::not_null<ElementState*> state, const double time) {
+      const gsl::not_null<ElementState*> state,
+      const gsl::not_null<int*> current_set_of_measurements,
+      const double time) {
     *state = ::ElementState::ChuggingAlong;
     if (measurement_times->next_measurement() == std::optional(time)) {
       measurement_times->pop_front();
@@ -210,9 +219,16 @@ class Trigger : public DenseTrigger {
               get_output(array_index), time,
               pretty_type::list_of_names<ControlSystems>());
         }
-        *state = ::ElementState::WaitingForMeasurementTimescales;
+        try {
+          *state = static_cast<::ElementState>(*current_set_of_measurements);
+        } catch (const std::exception&) {
+          ERROR("Ya need more measurement enums! "
+                << *current_set_of_measurements);
+        }
         return std::nullopt;
       }
+
+      *current_set_of_measurements -= 1;
     }
 
     const double next_trigger = *measurement_times->next_measurement();

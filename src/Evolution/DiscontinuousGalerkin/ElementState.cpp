@@ -21,7 +21,7 @@ std::ostream& operator<<(std::ostream& os, const ElementState ordering) {
       return os << "WaitingForFoTInAction";
     case ElementState::WaitingForFoTInPostProcessor:
       return os << "WaitingForFoTInPostProcessor";
-    case ElementState::WaitingForMeasurementTimescales:
+    case ElementState::WaitingForMeasurementTimescales1:
       return os << "WaitingForMeasurementTimescales";
     default:
       ERROR("Unknown ElementState");
@@ -43,7 +43,7 @@ ElementState Options::create_from_yaml<ElementState>::create<void>(
   } else if (ordering == "WaitingForFoTInPostProcessor") {
     return ElementState::WaitingForFoTInPostProcessor;
   } else if (ordering == "WaitingForMeasurementTimescales") {
-    return ElementState::WaitingForMeasurementTimescales;
+    return ElementState::WaitingForMeasurementTimescales1;
   }
   PARSE_ERROR(options.context(), "ElementState wrong");
 }
