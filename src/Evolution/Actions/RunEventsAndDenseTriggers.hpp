@@ -11,6 +11,8 @@
 #include "DataStructures/Tensor/Tensor.hpp"
 #include "DataStructures/Variables.hpp"
 #include "Parallel/AlgorithmExecution.hpp"
+#include "Parallel/ArrayCollection/IsDgElementCollection.hpp"
+#include "ParallelAlgorithms/Actions/GetItemFromDistributedObject.hpp"
 #include "ParallelAlgorithms/Amr/Protocols/Projector.hpp"
 #include "ParallelAlgorithms/EventsAndDenseTriggers/EventsAndDenseTriggers.hpp"
 #include "ParallelAlgorithms/EventsAndDenseTriggers/Tags.hpp"
@@ -292,6 +294,34 @@ struct RunEventsAndDenseTriggers {
       }
 
       events_and_dense_triggers.run_events(box, cache, array_index, component);
+
+      // It is possible that one of the events is the Completion event, which
+      // sets the terminate_ flag of the element to `true`. If this is the case,
+      // then we don't want to restart the algorithm at all, so we Halt here.
+      if (UNLIKELY([&]() -> bool {
+            if constexpr (Parallel::is_dg_element_collection_v<
+                              ParallelComponent>) {
+              auto& element =
+                  Parallel::local_synchronous_action<
+                      Parallel::Actions::GetItemFromDistributedOject<
+                          typename ParallelComponent::element_collection_tag>>(
+                      Parallel::get_parallel_component<ParallelComponent>(
+                          cache))
+                      ->at(array_index);
+              return element.get_terminate();
+            } else {
+              auto* element = Parallel::local(
+                  Parallel::get_parallel_component<ParallelComponent>(
+                      cache)[array_index]);
+              ASSERT(element != nullptr,
+                     "Cannot access local element "
+                         << array_index << " in RunEventsAndDenseTriggers");
+              return element->get_terminate();
+            }
+          }())) {
+        return {Parallel::AlgorithmExecution::Halt, std::nullopt};
+      }
+
       if (not events_and_dense_triggers.reschedule(make_not_null(&box), cache,
                                                    array_index, component)) {
         return {Parallel::AlgorithmExecution::Retry, std::nullopt};
@@ -313,7 +343,7 @@ struct InitializeRunEventsAndDenseTriggers {
       const ArrayIndex& /*array_index*/, const ActionList /*meta*/,
       const ParallelComponent* const /*component*/) {
     ::Initialization::mutate_assign<simple_tags>(make_not_null(&box),
-                                               std::nullopt);
+                                                 std::nullopt);
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };
