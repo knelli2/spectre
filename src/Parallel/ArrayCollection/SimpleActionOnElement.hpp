@@ -10,6 +10,7 @@
 #include "Domain/Structure/ElementId.hpp"
 #include "Parallel/ArrayCollection/Tags/ElementLocations.hpp"
 #include "Parallel/GlobalCache.hpp"
+#include "Parallel/Info.hpp"
 #include "Parallel/Invoke.hpp"
 #include "Parallel/NodeLock.hpp"
 #include "Utilities/Gsl.hpp"
@@ -79,9 +80,10 @@ struct SimpleActionOnElement {
         Parallel::Tags::ElementLocations<Metavariables::volume_dim>>(
         make_not_null(&box));
     for (const auto& [element_id, node_id] : element_locations) {
-      Parallel::threaded_action<
-          Parallel::Actions::SimpleActionOnElement<SimpleActionToCall, Block>>(
-          my_proxy[node_id], element_id, args...);
+      if (node_id == Parallel::my_node<size_t>(cache)) {
+        Parallel::threaded_action<Parallel::Actions::SimpleActionOnElement<
+            SimpleActionToCall, Block>>(my_proxy[node_id], element_id, args...);
+      }
     }
   }
 };
