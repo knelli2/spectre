@@ -89,7 +89,7 @@ struct ReceiveDataForElement {
                           << Parallel::my_node<size_t>(cache););
       auto& element = element_collection->at(element_to_execute_on);
       const std::lock_guard element_lock(element.element_lock());
-      element.start_phase(current_phase, true);
+      element.start_phase(current_phase);
     } else {
       auto& element = element_collection->at(element_to_execute_on);
       std::unique_lock element_lock(element.element_lock(), std::defer_lock);
