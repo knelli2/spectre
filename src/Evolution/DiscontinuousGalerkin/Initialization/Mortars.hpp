@@ -25,6 +25,7 @@
 #include "Domain/Structure/OrientationMap.hpp"
 #include "Domain/Tags.hpp"
 #include "Evolution/DiscontinuousGalerkin/InboxTags.hpp"
+#include "Evolution/DiscontinuousGalerkin/ElementState.hpp"
 #include "Evolution/DiscontinuousGalerkin/Initialization/QuadratureTag.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarData.hpp"
 #include "Evolution/DiscontinuousGalerkin/MortarDataHolder.hpp"
@@ -205,7 +206,7 @@ struct Mortars {
       Tags::MortarDataHistory<
           Dim, typename db::add_tag_prefix<
                    ::Tags::dt, typename System::variables_tag>::type>,
-      evolution::dg::Tags::BoundaryData<Dim>>;
+      evolution::dg::Tags::BoundaryData<Dim>, ::Tags::ElementState>;
   using compute_tags = tmpl::list<>;
 
   template <typename DbTagsList, typename... InboxTags, typename Metavariables,
@@ -239,7 +240,8 @@ struct Mortars {
         make_not_null(&box), std::move(mortar_data), std::move(mortar_meshes),
         std::move(mortar_sizes), std::move(mortar_next_temporal_ids),
         std::move(normal_covector_quantities), std::move(boundary_data_history),
-        typename evolution::dg::Tags::BoundaryData<Dim>::type{});
+        typename evolution::dg::Tags::BoundaryData<Dim>::type{},
+        ::ElementState::ChuggingAlong);
     return {Parallel::AlgorithmExecution::Continue, std::nullopt};
   }
 };

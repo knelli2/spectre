@@ -33,8 +33,7 @@ class CoordinateMap;
 }  // namespace domain
 /// \endcond
 
-namespace domain {
-namespace creators {
+namespace domain::creators {
 /// Create a 2D Domain consisting of four rotated Blocks.
 /// - The lower left block has its logical \f$\xi\f$-axis aligned with
 /// the grid x-axis.
@@ -88,7 +87,10 @@ class RotatedRectangles : public DomainCreator<2> {
   };
 
   struct InitialRefinement {
-    using type = std::array<size_t, 2>;
+    using type =
+        std::variant<size_t, std::array<size_t, 2>,
+                     std::vector<std::array<size_t, 2>>,
+                     std::unordered_map<std::string, std::array<size_t, 2>>>;
     static constexpr Options::String help = {
         "Initial refinement level in [x, y]."};
   };
@@ -132,14 +134,15 @@ class RotatedRectangles : public DomainCreator<2> {
   RotatedRectangles(
       typename LowerBound::type lower_xy, typename Midpoint::type midpoint_xy,
       typename UpperBound::type upper_xy,
-      typename InitialRefinement::type initial_refinement_level_xy,
+      const typename InitialRefinement::type& initial_refinement_level_xy,
       typename InitialGridPoints::type initial_number_of_grid_points_in_xy,
-      typename IsPeriodicIn::type is_periodic_in);
+      typename IsPeriodicIn::type is_periodic_in,
+      const Options::Context& context = {});
 
   RotatedRectangles(
       typename LowerBound::type lower_xy, typename Midpoint::type midpoint_xy,
       typename UpperBound::type upper_xy,
-      typename InitialRefinement::type initial_refinement_level_xy,
+      const typename InitialRefinement::type& initial_refinement_level_xy,
       typename InitialGridPoints::type initial_number_of_grid_points_in_xy,
       std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
           boundary_condition,
@@ -170,12 +173,13 @@ class RotatedRectangles : public DomainCreator<2> {
   typename UpperBound::type upper_xy_{
       {std::numeric_limits<double>::signaling_NaN()}};
   typename IsPeriodicIn::type is_periodic_in_{{false, false}};
-  typename InitialRefinement::type initial_refinement_level_xy_{
-      {std::numeric_limits<size_t>::max()}};
+  std::vector<std::array<size_t, 2>> initial_refinement_level_xy_;
   typename InitialGridPoints::type initial_number_of_grid_points_in_xy_{
       {{{std::numeric_limits<size_t>::max()}}}};
   std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>
       boundary_condition_;
+  std::vector<std::string> block_names_;
+  std::unordered_map<std::string, std::unordered_set<std::string>>
+      block_groups_;
 };
-}  // namespace creators
-}  // namespace domain
+}  // namespace domain::creators

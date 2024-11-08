@@ -134,11 +134,11 @@ struct EvolutionMetavars {
 
   using system = ScalarWave::System<Dim>;
   using temporal_id = Tags::TimeStepId;
-  using TimeStepperBase = TimeStepper;
+  using TimeStepperBase = LtsTimeStepper;
 
   static constexpr bool local_time_stepping =
       TimeStepperBase::local_time_stepping;
-  static constexpr bool use_dg_element_collection = false;
+  static constexpr bool use_dg_element_collection = true;
 
   using analytic_solution_fields = typename system::variables_tag::tags_list;
   using deriv_compute = ::Tags::DerivCompute<
