@@ -13,6 +13,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
 import click
 import numpy as np
 import rich
+import scipy
 
 import spectre.IO.H5 as spectre_h5
 from spectre.DataStructures import DataVector
@@ -482,6 +483,85 @@ class Kernel:
         return parse_kernel_output(output, self.output_name, num_points)
 
 
+def compute_norms(
+    volfiles: Union[spectre_h5.H5Vol, Iterable[spectre_h5.H5Vol]],
+    tensors_to_norm: Sequence[str],
+    force: bool = False,
+) -> Union[None, Dict[str, Sequence[float]]]:
+    if isinstance(volfiles, spectre_h5.H5Vol):
+        volfiles = [volfiles]
+    volfiles = list(volfiles)
+
+    file_tensor_components = volfiles[0].list_tensor_components(
+        volfiles[0].list_observation_ids()[0]
+    )
+
+    file_tensors = {}
+    for file_tensor_component in file_tensor_components:
+        tensor_name = file_tensor_component.rsplit("_", 1)[0]
+        if tensor_name not in tensors_to_norm:
+            continue
+
+        component_names = file_tensors.setdefault(tensor_name, [])
+        component_names.append(file_tensor_component)
+
+    print(tensors_to_norm)
+    print(file_tensors)
+
+    if len(file_tensors.keys()) != len(tensors_to_norm):
+        missing_tensors = [
+            tensor for tensor in tensors_to_norm if tensor not in file_tensors
+        ]
+        raise click.UsageError(
+            f"Missing tensors {missing_tensors} from volume file"
+        )
+
+    all_norms: Dict[str, Sequence[float]] = {}
+    total_points: Sequence[int] = []
+
+    for volfile in volfiles:
+        all_observation_ids = volfile.list_observation_ids()
+        num_obs = len(all_observation_ids)
+        if "Time" not in all_norms:
+            all_norms["Time"] = [
+                volfile.get_observation_value(obs_id)
+                for obs_id in all_observation_ids
+            ]
+
+        if not total_points:
+            total_points = [0] * len(all_observation_ids)
+
+        for i_obs, obs_id in enumerate(all_observation_ids):
+            all_tensor_data = {
+                tensor_name: np.array(
+                    [
+                        volfile.get_tensor_component(
+                            obs_id, component_name
+                        ).data
+                        for component_name in tensor_components
+                    ]
+                )
+                for tensor_name, tensor_components in file_tensors.items()
+            }
+            total_points[i_obs] += np.sum(
+                np.prod(volfile.get_extents(obs_id), axis=1)
+            )
+
+            for tensor, data in all_tensor_data.items():
+                tensor_norm = all_norms.setdefault(
+                    tensor,
+                    np.zeros(num_obs),
+                )
+                tensor_norm[i_obs] += np.sum(np.square(data))
+
+    for tensor, norm in all_norms.items():
+        if tensor == "Time":
+            continue
+        all_norms[tensor] = np.sqrt(norm) / np.array(total_points)
+
+    return all_norms
+
+
 def transform_volume_data(
     volfiles: Union[spectre_h5.H5Vol, Iterable[spectre_h5.H5Vol]],
     kernels: Sequence[Kernel],
@@ -762,7 +842,19 @@ def parse_kernels(kernels, exec_files, map_input_names, interactive=False):
         "Compute the volume integral over the kernels instead of "
         "writing them back into the data files. "
         "Specify '--output' / '-o' to write the integrals to "
-        "a file."
+        "a file. Mutually exclusive with '--norm'."
+    ),
+)
+@click.option(
+    "--norm",
+    "tensors_to_norm",
+    multiple=True,
+    type=str,
+    help=(
+        "Take L2-norm over all tensor components for this tensor. Specify"
+        " '--output' / '-o' to write the norms to a file. Mututally exclusive"
+        " with '--integrate'. No need to specify kernels if this is specified"
+        " since they are not used. Can be specified multiple times."
     ),
 )
 @click.option(
@@ -793,6 +885,7 @@ def transform_volume_data_command(
     exec_files,
     map_input_names,
     integrate,
+    tensors_to_norm,
     output,
     output_subfile,
     force,
@@ -837,9 +930,17 @@ def transform_volume_data_command(
     function for the 'shift' argument.
     """
     open_h5_files = [
-        spectre_h5.H5File(filename, "r" if integrate else "a")
+        spectre_h5.H5File(
+            filename, "r" if (integrate or tensors_to_norm) else "a"
+        )
         for filename in h5files
     ]
+
+    if integrate and tensors_to_norm:
+        raise click.UsageError(
+            "Can either integrate, or take norms of tensors, but not both at"
+            " the same time."
+        )
 
     # Print available subfile names and exit
     if not subfile_name:
@@ -861,8 +962,9 @@ def transform_volume_data_command(
     volfiles = [h5file.get_vol(subfile_name) for h5file in open_h5_files]
 
     # Load kernels
-    if not kernels:
+    if (not tensors_to_norm) and not kernels:
         raise click.UsageError("No '--kernel' / '-k' specified.")
+
     kernels = list(
         parse_kernels(kernels, exec_files, map_input_names, interactive=True)
     )
@@ -880,19 +982,24 @@ def transform_volume_data_command(
     task_id = progress.add_task("Applying to files")
     volfiles_progress = progress.track(volfiles, task_id=task_id)
     with progress:
-        integrals = transform_volume_data(
-            volfiles_progress,
-            kernels=kernels,
-            integrate=integrate,
-            force=force,
-            **kwargs,
-        )
+        if tensors_to_norm:
+            integrals_or_norms = compute_norms(
+                volfiles_progress, tensors_to_norm=tensors_to_norm, force=force
+            )
+        else:
+            integrals_or_norms = transform_volume_data(
+                volfiles_progress,
+                kernels=kernels,
+                integrate=integrate,
+                force=force,
+                **kwargs,
+            )
         progress.update(task_id, completed=len(volfiles))
 
     # Write integrals to output file or print to terminal
-    if integrate:
-        integral_values = np.stack(list(integrals.values())).T
-        integral_names = list(integrals.keys())
+    if integrate or tensors_to_norm:
+        values = np.stack(list(integrals_or_norms.values())).T
+        names = list(integrals_or_norms.keys())
         if output:
             if output.endswith(".h5"):
                 if not output_subfile:
@@ -906,21 +1013,20 @@ def transform_volume_data_command(
                     output_subfile = output_subfile[:-4]
                 with spectre_h5.H5File(output, "a") as open_output_file:
                     integrals_file = open_output_file.insert_dat(
-                        output_subfile, legend=integral_names, version=1
+                        output_subfile, legend=names, version=1
                     )
-                    integrals_file.append(integral_values)
+                    integrals_file.append(values)
             else:
-                np.savetxt(
-                    output, integral_values, header=",".join(integral_names)
-                )
+                np.savetxt(output, values, header=",".join(names))
         else:
             import rich.table
 
-            table = rich.table.Table(*integral_names, box=None)
-            for i in range(len(integral_values)):
-                table.add_row(*[f"{v:g}" for v in integral_values[i]])
+            table = rich.table.Table(*names, box=None)
+            for i in range(len(values)):
+                table.add_row(*[f"{v:g}" for v in values[i]])
             rich.print(table)
 
 
 if __name__ == "__main__":
+    transform_volume_data_command(help_option_names=["-h", "--help"])
     transform_volume_data_command(help_option_names=["-h", "--help"])
