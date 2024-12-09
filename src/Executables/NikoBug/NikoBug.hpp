@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <pup.h>
 #include "Executables/NikoBug/NikoBug.decl.h"
-#include "Parallel/Reduction.hpp"
 
 /// \cond
 class CkArgMsg;
@@ -17,6 +16,7 @@ class CkCallback;
 class Sender;
 class Receiver;
 class CProxy_Receiver;
+class CProxy_Sender;
 /// \endcond
 
 class NikoBug : public CBase_NikoBug {
@@ -30,13 +30,16 @@ class Sender : public CBase_Sender {
 
   void send_messages_to_receiver();
 
+  void pup(PUP::er& p) override;
+
  private:
   CProxy_Receiver receiver_proxy_;
+  uint64_t messages_sent_{0};
 };
 
 class Receiver : public CBase_Receiver {
  public:
-  Receiver();
+  Receiver(CProxy_Sender sender_proxy);
 
   void receive_messages_from_sender();
   [[noreturn]] void print_results() const;
@@ -44,6 +47,7 @@ class Receiver : public CBase_Receiver {
   void pup(PUP::er& p) override;
 
  private:
-  uint64_t messages_received{0};
+  CProxy_Sender sender_proxy_;
+  uint64_t messages_received_{0};
 };
 /// \endcond

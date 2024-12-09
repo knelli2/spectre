@@ -18,7 +18,7 @@ add_spectre_executable(
 
 add_dependencies(
   ${EXECUTABLE}
-  module_GlobalCache
+  # module_GlobalCache
   module_NikoBug
   )
 
@@ -26,9 +26,5 @@ target_link_libraries(
   ${EXECUTABLE}
   PRIVATE
   Charmxx::main
-  ErrorHandling
-  Informer
-  Printf
-  SystemUtilities
   )
 
