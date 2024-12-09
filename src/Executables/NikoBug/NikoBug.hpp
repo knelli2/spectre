@@ -44,6 +44,6 @@ class Receiver : public CBase_Receiver {
   void pup(PUP::er& p) override;
 
  private:
-  uint64_t messages_received;
+  uint64_t messages_received{0};
 };
 /// \endcond

@@ -18,21 +18,38 @@ constexpr uint64_t expected_number_of_messages = 4294967296;  // 2^32
 }  // namespace
 
 NikoBug::NikoBug(CkArgMsg* /*msg*/) {
-  const int num_procs = sys::number_of_procs();
-  printf("Running on %u cores\n", num_procs);  // NOLINT
+  const int global_num_procs = sys::number_of_procs();
+  const int num_nodes = sys::number_of_nodes();
+  // NOLINTNEXTLINE
+  printf("Running on %u nodes and %u cores\n", num_nodes, global_num_procs);
   CProxy_Receiver receiver_proxy = CProxy_Receiver::ckNew();
-  receiver_proxy[0].insert(0_st);
+  const int receiver_core = 0;
+  printf("Allocating Receiver on global proc %u\n", receiver_core);  // NOLINT
+  receiver_proxy[0].insert(receiver_core);
   receiver_proxy.doneInserting();
 
   CProxy_Sender sender_proxy = CProxy_Sender::ckNew();
-  sender_proxy[0].insert(receiver_proxy, num_procs > 1 ? 1_st : 0_st);
+  int sender_core = 0;
+  if (num_nodes > 1) {
+    sender_core = sys::first_proc_on_node(1);
+  } else if (global_num_procs > 1) {
+    sender_core = 1;
+  }
+  printf("Allocating Sender on global proc %u\n", sender_core);  // NOLINT
+  sender_proxy[0].insert(receiver_proxy, sender_core);
   sender_proxy.doneInserting();
 
   sender_proxy[0].send_messages_to_receiver();
+
+  CkStartQD(CkCallback(CkIndex_Receiver::print_results(), receiver_proxy));
 }
 
 Sender::Sender(CProxy_Receiver receiver_proxy)
-    : receiver_proxy_(std::move(receiver_proxy)) {}
+    : receiver_proxy_(std::move(receiver_proxy)) {
+  // NOLINTNEXTLINE
+  printf("Sender: My node = %u, my core = %u\n", sys::my_node(),
+         sys::my_proc());
+}
 
 void Sender::send_messages_to_receiver() {
   for (uint64_t i = 0; i < expected_number_of_messages; i++) {
@@ -41,11 +58,13 @@ void Sender::send_messages_to_receiver() {
       printf("Sent %lu messages already\n", i);  // NOLINT
     }
   }
-
-  CkStartQD(CkCallback(CkIndex_Receiver::print_results(), receiver_proxy_));
 }
 
-Receiver::Receiver() : messages_received(0) {}
+Receiver::Receiver() {
+  // NOLINTNEXTLINE
+  printf("Receiver: My node = %u, my core = %u\n", sys::my_node(),
+         sys::my_proc());
+}
 
 void Receiver::receive_messages_from_sender() { ++messages_received; }
 
