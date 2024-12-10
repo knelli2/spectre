@@ -1,0 +1,21 @@
+// Distributed under the MIT License.
+// See LICENSE.txt for details.
+
+mainmodule NikoBug {
+
+  include "string";
+  include "Declare.hpp";
+
+  mainchare NikoBug {
+    entry NikoBug(CkArgMsg * msg);
+  };
+  array [1D] Receiver {
+    entry Receiver(CProxy_Sender sender_proxy);
+    entry void receive_messages_from_sender();
+    entry void print_results();
+  };
+  array [1D] Sender {
+    entry Sender(CProxy_Receiver receiver_proxy);
+    entry void send_messages_to_receiver();
+  };
+};
