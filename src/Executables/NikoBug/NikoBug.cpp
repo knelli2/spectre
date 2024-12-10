@@ -10,12 +10,42 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <iomanip>
 #include <pup.h>
+#include <sstream>
 #include <string>
 
 namespace {
 constexpr uint64_t expected_number_of_messages = 4294967296;  // 2^32
 constexpr uint64_t batch_size = 100000000;
+
+std::string pretty_wall_time() {
+  // Subseconds don't really matter so just ignore them. This gives nice round
+  // numbers.
+  int total = static_cast<int>(CkWallTimer());
+  const int day = total / (24 * 3600);
+
+  total %= (24 * 3600);
+  const int hour = total / 3600;
+
+  total %= 3600;
+  const int minutes = total / 60;
+
+  total %= 60;
+  const int seconds = total;
+
+  std::stringstream ss{};
+  ss << std::setfill('0');
+  if (day > 0) {
+    ss << std::setw(2) << day << "-";
+  }
+
+  // std::setw() isn't sticky so it has to be used for every insertion
+  ss << std::setw(2) << hour << ":";
+  ss << std::setw(2) << minutes << ":";
+  ss << std::setw(2) << seconds;
+  return ss.str();
+}
 }  // namespace
 
 NikoBug::NikoBug(CkArgMsg* /*msg*/) {
@@ -62,7 +92,9 @@ void Sender::send_messages_to_receiver() {
     ++messages_sent_;
   }
 
-  printf("Sent %lu messages already\n", messages_sent_);  // NOLINT
+  // NOLINTNEXTLINE
+  printf("Sent %lu messages at %s\n", messages_sent_,
+         pretty_wall_time().c_str());
 }
 
 void Sender::pup(PUP::er& p) { p | messages_sent_; }
@@ -76,7 +108,9 @@ Receiver::Receiver(CProxy_Sender sender_proxy)
 void Receiver::receive_messages_from_sender() {
   ++messages_received_;
   if (messages_received_ % batch_size == 0) {
-    printf("Received %lu messages already\n", messages_received_);  // NOLINT
+    // NOLINTNEXTLINE
+    printf("Received %lu messages at %s\n", messages_received_,
+           pretty_wall_time().c_str());
     sender_proxy_.send_messages_to_receiver();
   }
 }
@@ -84,9 +118,11 @@ void Receiver::receive_messages_from_sender() {
 void Receiver::print_results() const {
   // NOLINTNEXTLINE
   printf(
-      "Expected number of messages: %lu\n"
-      "Received number of messages: %lu\n",
-      expected_number_of_messages, messages_received_);
+      "At: %s\n"
+      " Expected number of messages: %lu\n"
+      " Received number of messages: %lu\n",
+      pretty_wall_time().c_str(), expected_number_of_messages,
+      messages_received_);
 
   CkExit(0);
   // the following call is never reached, but suppresses the warning that
