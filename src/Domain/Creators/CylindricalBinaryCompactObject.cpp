@@ -1119,6 +1119,8 @@ CylindricalBinaryCompactObject::functions_of_time(
     const {
   return time_dependent_options_.has_value()
              ? time_dependent_options_->create_functions_of_time(
+                   std::array{rotate_from_z_to_x_axis(center_A_),
+                              rotate_from_z_to_x_axis(center_B_)},
                    initial_expiration_times)
              : std::unordered_map<
                    std::string,

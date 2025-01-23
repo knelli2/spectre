@@ -38,6 +38,7 @@
 #include "Domain/DomainHelpers.hpp"
 #include "Domain/ExcisionSphere.hpp"
 #include "Domain/FunctionsOfTime/FixedSpeedCubic.hpp"
+#include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
 #include "Domain/Structure/BlockNeighbor.hpp"
@@ -856,6 +857,10 @@ BinaryCompactObject<UseWorldtube>::functions_of_time(
     const {
   return time_dependent_options_.has_value()
              ? time_dependent_options_->create_functions_of_time<UseWorldtube>(
+                   std::array{std::array{x_coord_a_, center_of_mass_offset_[0],
+                                         center_of_mass_offset_[1]},
+                              std::array{x_coord_b_, center_of_mass_offset_[0],
+                                         center_of_mass_offset_[1]}},
                    initial_expiration_times)
              : std::unordered_map<
                    std::string,

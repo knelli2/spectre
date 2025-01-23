@@ -169,6 +169,7 @@ template <bool UseWorldtube>
 std::unordered_map<std::string,
                    std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 TimeDependentMapOptions<IsCylindrical>::create_functions_of_time(
+    const std::array<std::array<double, 3>, 2>& object_centers,
     const std::unordered_map<std::string, double>& initial_expiration_times)
     const {
   if constexpr (UseWorldtube) {
@@ -256,6 +257,23 @@ TimeDependentMapOptions<IsCylindrical>::create_functions_of_time(
         *deformed_radii_[1]);
 
     result.merge(shape_and_size);
+  }
+
+  {
+    DataVector centers{6, 0.0};
+
+    for (size_t i = 0; i < 2; i++) {
+      for (size_t j = 0; j < 3; j++) {
+        centers[i * 3 + j] = gsl::at(gsl::at(object_centers, i), j);
+      }
+    }
+
+    result[inertial_centers_name] =
+        std::make_unique<domain::FunctionsOfTime::PiecewisePolynomial<2>>(
+            initial_time_,
+            std::array{std::move(centers), DataVector{6, 0.0},
+                       DataVector{6, 0.0}},
+            expiration_times.at(inertial_centers_name));
   }
 
   return result;
@@ -635,13 +653,16 @@ GENERATE_INSTANTIATIONS(INSTANTIATE, (true, false),
 template std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 TimeDependentMapOptions<false>::create_functions_of_time<true>(
+    const std::array<std::array<double, 3>, 2>& object_centers,
     const std::unordered_map<std::string, double>&) const;
 template std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 TimeDependentMapOptions<false>::create_functions_of_time<false>(
+    const std::array<std::array<double, 3>, 2>& object_centers,
     const std::unordered_map<std::string, double>&) const;
 template std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
 TimeDependentMapOptions<true>::create_functions_of_time<false>(
+    const std::array<std::array<double, 3>, 2>& object_centers,
     const std::unordered_map<std::string, double>&) const;
 }  // namespace domain::creators::bco

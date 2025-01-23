@@ -203,6 +203,7 @@ struct TimeDependentMapOptions {
    * - Translation: `PiecewisePolynomial<3>`
    * - SizeA/B: `PiecewisePolynomial<3>`
    * - ShapeA/B: `PiecewisePolynomial<2>`
+   * - InertialCenters: `PiecewisePolynomial<2>`
    *
    *  When `UseWorldtube` is set to true, they are
    *
@@ -216,8 +217,10 @@ struct TimeDependentMapOptions {
   template <bool UseWorldtube = false>
   std::unordered_map<std::string,
                      std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>
-  create_functions_of_time(const std::unordered_map<std::string, double>&
-                               initial_expiration_times) const;
+  create_functions_of_time(
+      const std::array<std::array<double, 3>, 2>& object_centers,
+      const std::unordered_map<std::string, double>& initial_expiration_times)
+      const;
 
   /*!
    * \brief Construct the actual maps that will be used.
@@ -328,6 +331,7 @@ struct TimeDependentMapOptions {
   inline static const std::array<std::string, 2> size_names{{"SizeA", "SizeB"}};
   inline static const std::array<std::string, 2> shape_names{
       {"ShapeA", "ShapeB"}};
+  inline static const std::string inertial_centers_name{"InertialCenters"};
 
  private:
   static size_t get_index(domain::ObjectLabel object);
