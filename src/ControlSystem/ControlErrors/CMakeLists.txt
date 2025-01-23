@@ -14,6 +14,7 @@ spectre_target_headers(
   INCLUDE_DIRECTORY ${CMAKE_SOURCE_DIR}/src
   HEADERS
   Expansion.hpp
+  InertialCenters.hpp
   Rotation.hpp
   Shape.hpp
   Size.hpp
