@@ -111,16 +111,16 @@ struct InertialCenters : tt::ConformsTo<protocols::ControlError> {
     const Domain<3>& domain = Parallel::get<domain::Tags::Domain<3>>(cache);
 
     // Get logical coords of measured centers
-    const auto measured_logical_coords =
-        block_logical_coordinates(domain, measured_grid_positions_tnsr);
+    const auto measured_logical_coords = block_logical_coordinates(
+        domain, measured_grid_positions_tnsr, time, functions_of_time);
     ASSERT(alg::all_of(measured_logical_coords,
                        [](const auto& coord) { return coord.has_value(); }),
            "Measured centers are no longer in the domain. "
                << measured_grid_positions_tnsr);
 
     // Get logical coords of FoT centers
-    const auto fot_logical_coords =
-        block_logical_coordinates(domain, fot_inertial_positions_tnsr);
+    const auto fot_logical_coords = block_logical_coordinates(
+        domain, fot_inertial_positions_tnsr, time, functions_of_time);
     ASSERT(alg::all_of(fot_logical_coords,
                        [](const auto& coord) { return coord.has_value(); }),
            "FoT centers are no longer in the domain. "
