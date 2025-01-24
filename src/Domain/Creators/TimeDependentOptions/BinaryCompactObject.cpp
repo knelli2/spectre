@@ -193,6 +193,7 @@ TimeDependentMapOptions<IsCylindrical>::create_functions_of_time(
       {expansion_name, std::numeric_limits<double>::infinity()},
       {rotation_name, std::numeric_limits<double>::infinity()},
       {translation_name, std::numeric_limits<double>::infinity()},
+      {inertial_centers_name, std::numeric_limits<double>::infinity()},
       {gsl::at(size_names, 0), std::numeric_limits<double>::infinity()},
       {gsl::at(size_names, 1), std::numeric_limits<double>::infinity()},
       {gsl::at(shape_names, 0), std::numeric_limits<double>::infinity()},
