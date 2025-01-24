@@ -101,7 +101,7 @@ struct InertialCenters : tt::ConformsTo<protocols::ControlError> {
 
       for (size_t j = 0; j < 3; j++) {
         control_error[i * 3 + j] =
-            inertial_position[0] - fot_inertial_positions[i * 3 + j];
+            inertial_position.get(j) - fot_inertial_positions[i * 3 + j];
       }
     }
 
