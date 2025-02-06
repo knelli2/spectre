@@ -98,10 +98,15 @@ namespace domain::CoordinateMaps::TimeDependent {
  *
  * \endparblock
  *
- * An additional dimensionless domain-dependent transition function
- * \f$f(r, \theta, \phi)\f$ ensures that the distortion falls off correctly to
- * zero at a certain boundary (must be a block boundary). The function \f$f(r,
- * \theta, \phi)\f$ is restricted such that
+ * An additional domain-dependent transition function
+ *
+ * \begin{equation}
+ *     G(r,\theta,\phi) = \frac{f(r,\theta,\phi)}{r}
+ * \end{equation}
+ *
+ * ensures that the distortion falls off correctly to zero at a certain boundary
+ * (must be a block boundary). The dimensionless function \f$f(r, \theta,
+ * \phi)\f$ is restricted such that
  *
  * \f{equation}{
  * 0 \leq f(r, \theta, \phi) \leq 1
@@ -123,14 +128,14 @@ namespace domain::CoordinateMaps::TimeDependent {
  * coordinates \f$\xi^i\f$ to coordinates \f$x^i\f$:
  *
  * \f{equation}{\label{eq:map_form_1}
- * x^i = \xi^i - (\xi^i - x_c^i) \frac{f(r, \theta, \phi)}{r} \sum_{lm}
+ * x^i = \xi^i - (\xi^i - x_c^i) G(r,\theta,\phi) \sum_{lm}
  * \lambda_{lm}(t)Y_{lm}(\theta, \phi).
  * \f}
  *
  * Or written another way
  *
  * \f{equation}{\label{eq:map_form_2}
- * x^i = x_c^i + (\xi^i - x_c^i) \left(1 - \frac{f(r, \theta, \phi)}{r}
+ * x^i = x_c^i + (\xi^i - x_c^i) \left(1 - G(r,\theta,\phi)
  * \sum_{lm} \lambda_{lm}(t)Y_{lm}(\theta, \phi)\right).
  * \f}
  *
@@ -154,7 +159,7 @@ namespace domain::CoordinateMaps::TimeDependent {
  *
  * \f{equation}{
  * \frac{r}{\tilde{r}} =
- * \frac{1}{1-f(r,\theta,\phi)\sum\lambda_{lm}(t)Y_{lm}(\theta,\phi) / r}
+ * \frac{1}{1-G(r,\theta,\phi)\sum\lambda_{lm}(t)Y_{lm}(\theta,\phi)}
  * \f}
  *
  * For more details, see
@@ -165,7 +170,7 @@ namespace domain::CoordinateMaps::TimeDependent {
  *
  * The frame velocity \f$v^i\ = dx^i / dt\f$ is calculated trivially:
  * \f{equation}{
- * v^i = - (\xi^i - x_c^i) \frac{f(r, \theta, \phi)}{r} \sum_{lm}
+ * v^i = - (\xi^i - x_c^i) G(r, \theta, \phi) \sum_{lm}
  * \dot{\lambda}_{lm}(t)Y_{lm}(\theta, \phi).
  * \f}
  *
@@ -173,13 +178,11 @@ namespace domain::CoordinateMaps::TimeDependent {
  *
  * The Jacobian is given by:
  * \f{align}{
- * \frac{\partial x^i}{\partial \xi^j} = \delta_j^i &\left( 1 - \frac{f(r,
- * \theta, \phi)}{r} \sum_{lm} \lambda_{lm}(t)Y_{lm}(\theta, \phi)\right)
- * \nonumber \\
+ * \frac{\partial x^i}{\partial \xi^j} = \delta_j^i &\left( 1 - G(r,\theta,\phi)
+ * \sum_{lm} \lambda_{lm}(t)Y_{lm}(\theta, \phi)\right) \nonumber \\
  * &- (\xi^i - x_c^i)
- * \left[\left(\frac{1}{r}\frac{\partial}{\partial \xi^j} f(r, \theta, \phi) -
- * \frac{\xi_j}{r^3} f(r, \theta, \phi)\right) \sum_{lm}
- * \lambda_{lm}(t)Y_{lm}(\theta, \phi) + \frac{f(r, \theta, \phi)}{r}
+ * \left[\frac{\partial G(r,\theta,\phi)}{\partial\xi^j} \sum_{lm}
+ * \lambda_{lm}(t)Y_{lm}(\theta, \phi) + G(r, \theta, \phi)
  * \sum_{lm} \lambda_{lm}(t) \frac{\partial}{\partial \xi^j} Y_{lm}(\theta,
  * \phi) \right].
  * \f}
@@ -297,8 +300,7 @@ class Shape {
       gsl::not_null<tnsr::Ij<T, 3, Frame::NoFrame>*> result,
       const ylm::Spherepack::InterpolationInfo<T>& interpolation_info,
       const DataVector& extended_coefs, const std::array<T, 3>& centered_coords,
-      const T& radial_distortion, const T& one_over_radius,
-      const T& transition_func_over_radius) const;
+      const T& radial_distortion, const T& transition_func_over_radius) const;
 
   void check_size(const gsl::not_null<DataVector*>& coefs,
                   const FunctionsOfTimeMap& functions_of_time, double time,
@@ -307,10 +309,6 @@ class Shape {
   // Checks that the vector of coefficients has the right size and that the
   // monopole and dipole coefficients are zero.
   void check_coefficients(const DataVector& coefs) const;
-
-  template <typename T>
-  T check_and_compute_one_over_radius(
-      const std::array<T, 3>& centered_coords) const;
 
   friend bool operator==(const Shape& lhs, const Shape& rhs);
 };

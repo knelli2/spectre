@@ -3,22 +3,27 @@
 
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/SphereTransition.hpp"
 
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <pup.h>
 
+#include "DataStructures/Blaze/IntegerPow.hpp"
 #include "Domain/CoordinateMaps/TimeDependent/ShapeMapTransitionFunctions/ShapeMapTransitionFunction.hpp"
 #include "Utilities/ConstantExpressions.hpp"
 #include "Utilities/ContainerHelpers.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/ErrorHandling/Error.hpp"
+#include "Utilities/Gsl.hpp"
 #include "Utilities/MakeString.hpp"
+#include "Utilities/Math.hpp"
+#include "Utilities/StdHelpers.hpp"
 
 namespace domain::CoordinateMaps::ShapeMapTransitionFunctions {
 
 SphereTransition::SphereTransition(const double r_min, const double r_max,
-                                   const bool reverse)
-    : r_min_(r_min), r_max_(r_max) {
+                                   const bool reverse, const bool interior)
+    : r_min_(r_min), r_max_(r_max), interior_(interior) {
   if (r_min <= 0.) {
     ERROR("The minimum radius must be greater than 0 but is " << r_min);
   }
@@ -27,6 +32,9 @@ SphereTransition::SphereTransition(const double r_min, const double r_max,
         "The maximum radius must be greater than the minimum radius but "
         "r_max =  "
         << r_max << ", and r_min = " << r_min);
+  }
+  if (interior and reverse) {
+    ERROR("Cannot be reverse while also in the interior.");
   }
   a_ = -1.0 / (r_max - r_min);
   b_ = -a_ * r_max;
@@ -37,68 +45,155 @@ SphereTransition::SphereTransition(const double r_min, const double r_max,
 }
 
 double SphereTransition::operator()(
-    const std::array<double, 3>& source_coords) const {
-  return call_impl<double>(source_coords);
+    const std::array<double, 3>& source_coords,
+    const std::optional<size_t>& one_over_radius_power) const {
+  const double mag = magnitude(source_coords);
+
+  if (UNLIKELY(one_over_radius_power.has_value() and
+               equal_within_roundoff(mag, 0.0))) {
+    ERROR("Trying to divide by a point "
+          << source_coords
+          << " with radius zero in SphereTransition operator.");
+  }
+
+  if (interior_) {
+    return 1.0 / (r_min_ *
+                  integer_pow(mag, static_cast<int>(
+                                       one_over_radius_power.value_or(0_st))));
+  }
+
+  if (UNLIKELY(mag < r_min_ - eps_)) {
+    ERROR("SphereTransition coord " << source_coords << " with radius " << mag
+                                    << " is within r_min of " << r_min_
+                                    << ", but the class was not constructed "
+                                       "for the interior of the sphere.");
+  } else if (UNLIKELY(mag > r_max_ + eps_)) {
+    ERROR("SphereTransition coord " << source_coords << " with radius " << mag
+                                    << "is beyond r_max of " << r_max_ << ".");
+  }
+
+  double result = (a_ * mag + b_);
+  // Avoid roundoff
+  result = std::clamp(result, 0.0, 1.0);
+
+  return result /
+         integer_pow(
+             mag, static_cast<int>(1 + one_over_radius_power.value_or(0_st)));
 }
+
 DataVector SphereTransition::operator()(
-    const std::array<DataVector, 3>& source_coords) const {
-  return call_impl<DataVector>(source_coords);
+    const std::array<DataVector, 3>& source_coords,
+    const std::optional<size_t>& one_over_radius_power) const {
+  DataVector result = source_coords[0];
+  // Go point by point
+  for (size_t i = 0; i < source_coords[0].size(); i++) {
+    result[i] = (*this)(std::array{source_coords[0][i], source_coords[1][i],
+                                   source_coords[2][i]},
+                        one_over_radius_power);
+  }
+  return result;
 }
 
 std::optional<double> SphereTransition::original_radius_over_radius(
     const std::array<double, 3>& target_coords,
     double radial_distortion) const {
   const double mag = magnitude(target_coords);
+  // If we are at the center, the radius is the same
+  if (UNLIKELY(equal_within_roundoff(mag, 0.0))) {
+    return interior_ ? std::optional{1.0} : std::nullopt;
+  }
+
+  // a_ being positive is a sentinel for reversed.
+  // If we aren't reversed, check near or within r_min_.
+  if (a_ < 0.0) {
+    if (mag + radial_distortion < r_min_ - eps_) {
+      return interior_ ? std::optional{r_min_ / (r_min_ - radial_distortion)}
+                       : std::nullopt;
+    } else if (equal_within_roundoff(mag, r_min_)) {
+      return std::optional{r_min_ / (r_min_ - radial_distortion)};
+    }
+  }
+
+  // Beyond the range of validity for both reversed and not reversed
+  if ((a_ < 0.0 and mag > r_max_ + eps_) or
+      (a_ > 0.0 and mag < r_min_ - eps_)) {
+    return std::nullopt;
+  }
+
+  // No distortion means our point is the same
+  if (equal_within_roundoff(radial_distortion, 0.0)) {
+    return std::optional{1.0};
+  }
+
+  // At the f=0 boundary.
+  if ((a_ < 0.0 and equal_within_roundoff(mag, r_max_)) or
+      (a_ > 0.0 and equal_within_roundoff(mag, r_min_))) {
+    return std::optional{1.0};
+  }
+
   const double denom = 1. - radial_distortion * a_;
   // prevent zero division
-  if (equal_within_roundoff(mag, 0.) or equal_within_roundoff(denom, 0.)) {
+  if (UNLIKELY(equal_within_roundoff(denom, 0.))) {
     return std::nullopt;
   }
+
   const double original_radius = (mag + radial_distortion * b_) / denom;
 
-  // If we are within r_min and r_max, doesn't matter if we are reverse, we just
-  // return the value we calculated. If we are reverse and the point is outside
-  // r_max or we aren't reversed and the point is inside r_min, then we return a
-  // simplified formula since the transition function is 1 in this region. If
-  // the above conditions aren't true, then we are in the region where the
-  // transition function is 0, so we return 1.0. Otherwise we return nullopt.
-  if ((original_radius + eps_) >= r_min_ and
-      (original_radius - eps_) <= r_max_) {
-    return std::optional<double>{original_radius / mag};
-  } else if ((a_ > 0.0 and mag > r_max_) or (a_ < 0.0 and mag < r_min_)) {
-    // a_ being positive is a sentinel for reverse (see constructor)
-    return {1.0 + radial_distortion / mag};
-  } else if ((a_ < 0.0 and mag > r_max_) or (a_ > 0.0 and mag < r_min_)) {
-    return {1.0};
-  } else {
-    return std::nullopt;
+  // Check at or beyond f=1 boundary for reversed
+  if (a_ > 0.0) {
+    if (equal_within_roundoff(original_radius, r_max_)) {
+      return std::optional{1.0 + radial_distortion / mag};
+    } else if (original_radius > r_max_ + eps_) {
+      return std::nullopt;
+    }
   }
+
+  // We are within r_min and r_max and not at a boundary
+  return std::optional{original_radius / mag};
 }
 
 std::array<double, 3> SphereTransition::gradient(
     const std::array<double, 3>& source_coords) const {
-  return gradient_impl<double>(source_coords);
+  const double mag = magnitude(source_coords);
+
+  // Short circuit for the interior
+  if (interior_) {
+    return std::array{0.0, 0.0, 0.0};
+  }
+
+  if (UNLIKELY(equal_within_roundoff(mag, 0.0))) {
+    ERROR("Trying to divide by a point "
+          << source_coords
+          << " with radius zero in SphereTransition gradient.");
+  }
+
+  if (UNLIKELY(mag < r_min_ - eps_)) {
+    ERROR("SphereTransition gradient coord "
+          << source_coords << " with radius " << mag << " is within r_min of "
+          << r_min_
+          << ", but the class was not constructed for the interior of the "
+             "sphere.");
+  } else if (UNLIKELY(mag > r_max_ + eps_)) {
+    ERROR("SphereTransition gradient coord " << source_coords << " with radius "
+                                             << mag << "is beyond r_max of "
+                                             << r_max_ << ".");
+  }
+
+  // We can call the operator() and be sure it won't error because we did the
+  // checks here as well.
+  return source_coords * (a_ / square(mag) - (*this)(source_coords, {2}));
 }
 std::array<DataVector, 3> SphereTransition::gradient(
     const std::array<DataVector, 3>& source_coords) const {
-  return gradient_impl<DataVector>(source_coords);
-}
-
-template <typename T>
-T SphereTransition::call_impl(const std::array<T, 3>& source_coords) const {
-  const T mag = magnitude(source_coords);
-  check_magnitudes(mag, false);
-  // See https://github.com/sxs-collaboration/spectre/issues/6376 for why the
-  // T{} is necessary inside the clamp.
-  return blaze::clamp(T{a_ * mag + b_}, 0.0, 1.0);
-}
-
-template <typename T>
-std::array<T, 3> SphereTransition::gradient_impl(
-    const std::array<T, 3>& source_coords) const {
-  const T mag = magnitude(source_coords);
-  check_magnitudes(mag, true);
-  return a_ * source_coords / mag;
+  auto result = source_coords;
+  for (size_t i = 0; i < source_coords[0].size(); i++) {
+    auto double_result = gradient(std::array{
+        source_coords[0][i], source_coords[1][i], source_coords[2][i]});
+    for (size_t j = 0; j < 3; j++) {
+      gsl::at(result, j)[i] = gsl::at(double_result, j);
+    }
+  }
+  return result;
 }
 
 bool SphereTransition::operator==(
@@ -107,9 +202,10 @@ bool SphereTransition::operator==(
     return false;
   }
   const auto& derived = dynamic_cast<const SphereTransition&>(other);
-  // no need to check `a_` and `b_` as they are uniquely determined by
-  // `r_min_` and `r_max_`.
-  return this->r_min_ == derived.r_min_ and this->r_max_ == derived.r_max_;
+  // no need to check `a_` or `b_` as they are uniquely determined by `r_min_`
+  // and `r_max_`.
+  return this->r_min_ == derived.r_min_ and this->r_max_ == derived.r_max_ and
+         this->interior_ == derived.interior_;
 }
 
 bool SphereTransition::operator!=(
@@ -117,37 +213,9 @@ bool SphereTransition::operator!=(
   return not(*this == other);
 }
 
-// if we need the point to be between the r_min and r_max, check that,
-// otherwise just check that the radius is positive
-template <typename T>
-void SphereTransition::check_magnitudes(
-    [[maybe_unused]] const T& mag,
-    [[maybe_unused]] const bool check_bounds) const {
-#ifdef SPECTRE_DEBUG
-  for (size_t i = 0; i < get_size(mag); ++i) {
-    const bool point_is_bad = check_bounds
-                                  ? (get_element(mag, i) + eps_ < r_min_ or
-                                     get_element(mag, i) - eps_ > r_max_)
-                                  : get_element(mag, i) <= 0.0;
-    if (point_is_bad) {
-      ERROR(
-          "The sphere transition map was called with bad coordinates. The "
-          "requested point has magnitude "
-          << get_element(mag, i)
-          << (check_bounds
-                  ? (MakeString{} << " which is outside the set minimum and "
-                                     "maxiumum radius. The minimum radius is "
-                                  << r_min_ << ", the maximum radius is "
-                                  << r_max_ << ".")
-                  : (MakeString{} << " <= 0.0")));
-    }
-  }
-#endif  // SPECTRE_DEBUG
-}
-
 void SphereTransition::pup(PUP::er& p) {
   ShapeMapTransitionFunction::pup(p);
-  size_t version = 0;
+  size_t version = 1;
   p | version;
   // Remember to increment the version number when making changes to this
   // function. Retain support for unpacking data written by previous versions
@@ -157,12 +225,19 @@ void SphereTransition::pup(PUP::er& p) {
     p | r_max_;
     p | a_;
     p | b_;
+    if (version >= 1) {
+      p | interior_;
+    } else {
+      interior_ = false;
+    }
+  } else if (p.isUnpacking()) {
+    interior_ = false;
   }
 }
 
 SphereTransition::SphereTransition(CkMigrateMessage* const msg)
     : ShapeMapTransitionFunction(msg) {}
 
-PUP::able::PUP_ID SphereTransition::my_PUP_ID = 0;
+PUP::able::PUP_ID SphereTransition::my_PUP_ID = 0;  // NOLINT
 
 }  // namespace domain::CoordinateMaps::ShapeMapTransitionFunctions
