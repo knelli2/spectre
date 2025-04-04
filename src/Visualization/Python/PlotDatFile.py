@@ -9,6 +9,7 @@ import click
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import rich
 
 from spectre.support.CliExceptions import RequiredChoiceError
@@ -16,7 +17,7 @@ from spectre.Visualization.Plot import (
     apply_stylesheet_command,
     show_or_save_plot_command,
 )
-from spectre.Visualization.ReadH5 import available_subfiles
+from spectre.Visualization.ReadH5 import available_subfiles, to_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,16 @@ def parse_functions(ctx, param, all_values):
 
 @click.command(name="dat")
 @click.argument(
-    "h5_file",
+    "h5_files",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+    nargs=-1,
+    required=True,
 )
 @click.option(
     "--subfile-name",
     "-d",
-    help="The dat subfile to read.  [required]",
+    help="The dat subfile to read.",
+    required=True,
 )
 @click.option(
     "--legend-only",
@@ -116,7 +120,7 @@ def parse_functions(ctx, param, all_values):
 @apply_stylesheet_command()
 @show_or_save_plot_command()
 def plot_dat_command(
-    h5_file,
+    h5_files,
     subfile_name,
     legend_only,
     functions,
@@ -129,21 +133,11 @@ def plot_dat_command(
     y_bounds,
     title,
 ):
-    """Plot columns in '.dat' datasets in H5 files"""
-    with h5py.File(h5_file, "r") as h5file:
-        # Print available subfiles and exit
-        if not subfile_name:
-            raise RequiredChoiceError(
-                (
-                    "Specify '--subfile-name' / '-d' to select a"
-                    " subfile containing data to plot."
-                ),
-                choices=available_subfiles(h5file, extension=".dat"),
-            )
-
+    """Plot columns in '.dat' datasets in H5 files. All H5 files must have the
+    same subfiles and columns."""
+    # Some checks for x-axis and legend
+    with h5py.File(h5_files[0], "r") as h5file:
         # Open subfile
-        if not subfile_name.endswith(".dat"):
-            subfile_name += ".dat"
         dat_file = h5file.get(subfile_name)
         if dat_file is None:
             raise RequiredChoiceError(
@@ -190,26 +184,43 @@ def plot_dat_command(
             rich.print(table)
             return
 
-        # Select plotting parameters. Any further customization of the plotting
-        # style can be done with a stylesheet.
-        plot_kwargs = dict(
-            color="black" if len(functions) == 1 else None,
-            marker="." if len(dat_file) < 20 else None,
-        )
-
-        # Plot the selected quantities
-        for function, label in functions.items():
-            if function not in legend:
+    def check_diagnostics_file(h5_filename):
+        with h5py.File(h5_filename, "r") as h5file:
+            diagnostics_data = h5file.get(subfile_name)
+            if diagnostics_data is None:
                 raise RequiredChoiceError(
-                    f"Unknown function '{function}'.", choices=legend
+                    (
+                        "Unable to open subfile"
+                        f" '{subfile_name}' from h5 file"
+                        f" {h5_filename}."
+                    ),
+                    choices=available_subfiles(h5file, extension=".dat"),
                 )
 
-            plt.plot(
-                dat_file[:, legend.index(x_axis)],
-                dat_file[:, legend.index(function)],
-                label=label,
-                **plot_kwargs,
+            return to_dataframe(diagnostics_data)
+
+    data = pd.concat(check_diagnostics_file(h5_file) for h5_file in h5_files)
+
+    # Select plotting parameters. Any further customization of the plotting
+    # style can be done with a stylesheet.
+    plot_kwargs = dict(
+        color="black" if len(functions) == 1 else None,
+        marker="." if len(data[x_axis]) < 20 else None,
+    )
+
+    # Plot the selected quantities
+    for function, label in functions.items():
+        if function not in legend:
+            raise RequiredChoiceError(
+                f"Unknown function '{function}'.", choices=legend
             )
+
+        plt.plot(
+            data[x_axis],
+            data[function],
+            label=label,
+            **plot_kwargs,
+        )
 
     # Configure the axes
     if y_logscale:

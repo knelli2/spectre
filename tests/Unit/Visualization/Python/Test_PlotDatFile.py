@@ -18,7 +18,10 @@ class TestPlotDatFile(unittest.TestCase):
         self.data_dir = os.path.join(
             spectre_informer.unit_test_src_path(), "Visualization/Python"
         )
-        self.filename = os.path.join(self.data_dir, "DatTestData.h5")
+        # FIXME: Write test dat h5 file
+        self.filenames = [
+            os.path.join(self.data_dir, f"DatTestData{i}.h5") for i in [0, 1]
+        ]
         self.stylesheet_filename = os.path.join(
             self.data_dir, "teststyle.mplstyle"
         )
@@ -30,7 +33,7 @@ class TestPlotDatFile(unittest.TestCase):
 
     def test_list_subfiles(self):
         result = self.runner.invoke(
-            plot_dat_command, [self.filename], catch_exceptions=False
+            plot_dat_command, self.filenames, catch_exceptions=False
         )
         self.assertEqual(result.exit_code, 2)
         self.assertIn("TimeSteps2.dat", result.output)
@@ -38,7 +41,7 @@ class TestPlotDatFile(unittest.TestCase):
     def test_nonexistent_subfile(self):
         result = self.runner.invoke(
             plot_dat_command,
-            [self.filename, "-d", "TimeSteps"],
+            [self.filenames[0], "-d", "TimeSteps"],
             catch_exceptions=False,
         )
         self.assertNotEqual(result.exit_code, 0)
