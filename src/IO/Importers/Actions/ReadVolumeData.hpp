@@ -174,8 +174,11 @@ void verify_inertial_coordinates(
       element_map(logical_coords, time, functions_of_time);
   if (not equal_within_roundoff(mapped_inertial_coords, inertial_coords)) {
     ERROR_NO_TRACE("The source and target domain don't match on grid "
-                   << element_id
-                   << ". Set 'ElementsAreIdentical: False' to enable "
+                   << element_id << ". Inertial coords from volume file:\n"
+                   << mapped_inertial_coords
+                   << "\nInertial coords from input file domain creator:\n"
+                   << inertial_coords
+                   << "\n\nSet 'ElementsAreIdentical: False' to enable "
                       "interpolation between the grids.");
   }
 }
@@ -729,7 +732,7 @@ struct ReadAllVolumeDataAndDistribute {
             completed_target_elements.insert(target_element_id);
           }
         }  // loop over overlapping source elements
-      }  // loop over registered elements
+      }    // loop over registered elements
       for (const auto& completed_element_id : completed_target_elements) {
         target_element_ids.erase(completed_element_id);
       }
