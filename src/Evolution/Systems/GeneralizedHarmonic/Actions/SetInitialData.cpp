@@ -55,11 +55,12 @@ NumericInitialData::NumericInitialData(
     std::string file_glob, std::string subfile_name,
     std::variant<double, importers::ObservationSelector> observation_value,
     std::optional<double> observation_value_epsilon,
-    const bool enable_interpolation,
+    const bool enable_interpolation, const std::optional<double> tolerance,
     std::variant<AdmVars, GhVars> selected_variables)
-    : importer_options_(
-          std::move(file_glob), std::move(subfile_name), observation_value,
-          observation_value_epsilon.value_or(1.0e-12), enable_interpolation),
+    : importer_options_(std::move(file_glob), std::move(subfile_name),
+                        observation_value,
+                        observation_value_epsilon.value_or(1.0e-12),
+                        enable_interpolation, tolerance.value_or(1.0e-14)),
       selected_variables_(std::move(selected_variables)) {}
 
 NumericInitialData::NumericInitialData(CkMigrateMessage* msg)

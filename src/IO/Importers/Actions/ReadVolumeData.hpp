@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -166,15 +167,20 @@ void verify_inertial_coordinates(
     const Domain<Dim>& domain, const double time,
     const domain::FunctionsOfTimeMap& functions_of_time,
     const ElementId<Dim>& element_id, const Mesh<Dim>& mesh,
-    const tnsr::I<DataVector, Dim, Frame::Inertial>& inertial_coords) {
+    const tnsr::I<DataVector, Dim, Frame::Inertial>& inertial_coords,
+    const std::optional<double>& tolerance) {
   const auto logical_coords = logical_coordinates(mesh);
   ElementMap<Dim, Frame::Inertial> element_map{
       element_id, domain.blocks()[element_id.block_id()]};
   const auto mapped_inertial_coords =
       element_map(logical_coords, time, functions_of_time);
-  if (not equal_within_roundoff(mapped_inertial_coords, inertial_coords)) {
+  const double tol =
+      tolerance.value_or(std::numeric_limits<double>::epsilon() * 100.0);
+  if (not equal_within_roundoff(mapped_inertial_coords, inertial_coords, tol,
+                                max(get(magnitude(inertial_coords))))) {
     ERROR_NO_TRACE("The source and target domain don't match on grid "
-                   << element_id << ". Inertial coords from volume file:\n"
+                   << element_id << " with relative tolerance " << tol
+                   << ". Inertial coords from volume file:\n"
                    << mapped_inertial_coords
                    << "\nInertial coords from input file domain creator:\n"
                    << inertial_coords
@@ -708,7 +714,8 @@ struct ReadAllVolumeDataAndDistribute {
               detail::verify_inertial_coordinates(
                   *source_domain, observation_value,
                   source_domain_functions_of_time, target_element_id,
-                  target_mesh, target_points);
+                  target_mesh, target_points,
+                  get<OptionTags::RelativeTolerance>(options));
             }
             tuples::tagged_tuple_from_typelist<FieldTagsList>
                 target_element_data{};

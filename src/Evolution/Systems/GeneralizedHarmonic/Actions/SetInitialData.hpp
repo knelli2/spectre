@@ -160,7 +160,7 @@ class NumericInitialData : public evolution::initial_data::InitialData {
       std::string file_glob, std::string subfile_name,
       std::variant<double, importers::ObservationSelector> observation_value,
       std::optional<double> observation_value_epsilon,
-      bool enable_interpolation,
+      bool enable_interpolation, std::optional<double> tolerance,
       std::variant<AdmVars, GhVars> selected_variables);
 
   const importers::ImporterOptions& importer_options() const {

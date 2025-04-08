@@ -85,15 +85,22 @@ struct ElementsAreIdentical {
       "'InertialCoordinates(_x,_y,_z)' must exist in the files. They are used "
       "to verify that the target points indeed match the source data.";
 };
+
+struct RelativeTolerance {
+  using type = Options::Auto<double>;
+  static constexpr Options::String help =
+      "Relative tolerance to use when comparing domains if "
+      "`ElementsAreIdentical`. Auto value is 1e-14.";
+};
 }  // namespace OptionTags
 
 /// Options that specify the volume data to load. See the option tags for
 /// details.
 struct ImporterOptions
-    : tuples::TaggedTuple<OptionTags::FileGlob, OptionTags::Subgroup,
-                          OptionTags::ObservationValue,
-                          OptionTags::ObservationValueEpsilon,
-                          OptionTags::ElementsAreIdentical> {
+    : tuples::TaggedTuple<
+          OptionTags::FileGlob, OptionTags::Subgroup,
+          OptionTags::ObservationValue, OptionTags::ObservationValueEpsilon,
+          OptionTags::ElementsAreIdentical, OptionTags::RelativeTolerance> {
   using options = tags_list;
   static constexpr Options::String help = "The volume data to load.";
   using TaggedTuple::TaggedTuple;
