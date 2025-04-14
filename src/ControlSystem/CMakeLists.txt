@@ -10,6 +10,7 @@ spectre_target_sources(
   PRIVATE
   Averager.cpp
   CalculateMeasurementTimescales.cpp
+  Checkpoint.cpp
   Controller.cpp
   ExpirationTimes.cpp
   FutureMeasurements.cpp
@@ -23,6 +24,7 @@ spectre_target_headers(
   HEADERS
   Averager.hpp
   CalculateMeasurementTimescales.hpp
+  Checkpoint.hpp
   CombinedName.hpp
   Component.hpp
   Controller.hpp
