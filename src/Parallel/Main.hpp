@@ -107,13 +107,20 @@ class Main : public CBase_Main<Metavariables> {
   /// used as the callback after a quiescence detection.
   void start_load_balance();
 
-  /// Place the Charm++ call that starts writing a checkpoint
   /// Reset the checkpoint counter to zero if the checkpoints directory does not
   /// exist (this happens when the simulation continues in a new segment).
   ///
   /// \details This call is wrapped within an entry method so that it may be
-  /// used as the callback after a quiescence detection.
+  /// used as the callback after a quiescence detection. This does not actually
+  /// write any checkpoint. See `write_charm_checkpoint` for that.
   void start_write_checkpoint();
+
+  /// Loop over all parallel components and call `execute_next_phase` with the
+  /// `Parallel::Phase::WriteCheckpoint` phase.
+  void start_checkpoint_phase_on_components();
+
+  /// Writes the charm checkpoint and restarts the algorithm.
+  void write_charm_checkpoint();
 
   /// Reduction target for data used in phase change decisions.
   ///
@@ -811,24 +818,30 @@ void Main<Metavariables>::execute_next_phase() {
 #endif  // SPECTRE_KOKKOS
     return;
   }
-  tmpl::for_each<component_list>([this](auto parallel_component) {
-    tmpl::type_from<decltype(parallel_component)>::execute_next_phase(
-        current_phase_, global_cache_proxy_);
-  });
 
-  // Here we handle phases with direct Charm++ calls. By handling these phases
-  // after calling each component's execute_next_phase entry method, we ensure
-  // that each component knows what phase it is in. This is useful for pup
-  // functions that need special handling that depends on the phase.
+  const auto start_components = [this]() {
+    tmpl::for_each<component_list>([this](auto parallel_component) {
+      tmpl::type_from<decltype(parallel_component)>::execute_next_phase(
+          current_phase_, global_cache_proxy_);
+    });
+  };
+
+  // Here we handle phases with direct Charm++ calls. The LB phase must be
+  // handled after calling each component's execute_next_phase entry method, so
+  // we ensure that each component knows what phase it is in. This is useful for
+  // pup functions that need special handling that depends on the phase. For the
+  // WriteCheckpoint phase, we handle calling execute_next_phase in the chain of
+  // Charm++ calls.
   //
   // Note that in future versions of Charm++ it may become possible for pup
   // functions to have knowledge of the migration type. At that point, it
   // should no longer be necessary to wait until after
-  // component::execute_next_phase to make the direct charm calls. Instead, the
-  // load balance or checkpoint work could be initiated *before* the call to
+  // component::execute_next_phase to make the direct charm calls for LB.
+  // Instead, the LB work could be initiated *before* the call to
   // component::execute_next_phase and *without* the need for a quiescence
   // detection. This may be a slight optimization.
   if (current_phase_ == Parallel::Phase::LoadBalancing) {
+    start_components();
     CkStartQD(CkCallback(CkIndex_Main<Metavariables>::start_load_balance(),
                          this->thisProxy));
     return;
@@ -838,6 +851,8 @@ void Main<Metavariables>::execute_next_phase() {
                          this->thisProxy));
     return;
   }
+
+  start_components();
 
   // We skip the reparsing and overlaying if there are no eligible tags
   if constexpr (tmpl::size<overlayable_option_list>::value > 0) {
@@ -876,9 +891,39 @@ void Main<Metavariables>::start_write_checkpoint() {
   const std::string dir = next_checkpoint_dir();
   checkpoint_dir_counter_++;
   file_system::create_directory(dir);
+
+  global_cache_proxy_.set_current_checkpoint_directory(dir);
+
+  // Must wait until the current checkpoint is set on all nodes to avoid issues
+  // with async messages, therefore start quiescence detection before we run the
+  // WriteCheckpoint phase
+  CkStartQD(CkCallback(
+      CkIndex_Main<Metavariables>::start_checkpoint_phase_on_components(),
+      this->thisProxy));
+}
+
+template <typename Metavariables>
+void Main<Metavariables>::start_checkpoint_phase_on_components() {
+  auto* cache = Parallel::local_branch(global_cache_proxy_);
+  tmpl::for_each<component_list>([this](auto parallel_component) {
+    tmpl::type_from<decltype(parallel_component)>::execute_next_phase(
+        Parallel::Phase::WriteCheckpoint, global_cache_proxy_);
+  });
+
+  // Must wait until all components finish before writing the charm checkpoint
+  // so that the next phase is started properly.
+  CkStartQD(CkCallback(CkIndex_Main<Metavariables>::write_charm_checkpoint(),
+                       this->thisProxy));
+}
+
+template <typename Metavariables>
+void Main<Metavariables>::write_charm_checkpoint() {
+  // Write the charm checkpoint and then start the next phase once finished
+  auto* global_cache = Parallel::local_branch(global_cache_proxy_);
   CkStartCheckpoint(
-      dir.c_str(), CkCallback(CkIndex_Main<Metavariables>::execute_next_phase(),
-                              this->thisProxy));
+      global_cache->get_current_checkpoint_directory().c_str(),
+      CkCallback(CkIndex_Main<Metavariables>::execute_next_phase(),
+                 this->thisProxy));
 }
 
 template <typename Metavariables>
