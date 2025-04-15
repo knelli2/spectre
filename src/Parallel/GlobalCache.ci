@@ -31,6 +31,8 @@ module GlobalCache {
     entry void compute_size_for_memory_monitor(double time);
     entry void set_resource_info(
         const Parallel::ResourceInfo<Metavariables>& resource_info);
+    entry void set_current_checkpoint_directory(
+        const std::string& new_current_checkpoint_directory);
     entry void overlay_cache_data(
         tuples::tagged_tuple_from_typelist<
             Parallel::get_overlayable_option_list<Metavariables>>&);

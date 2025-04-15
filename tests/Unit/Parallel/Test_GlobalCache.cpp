@@ -506,6 +506,23 @@ void Test_GlobalCache<Metavariables>::run_single_core_test() {
   SPECTRE_PARALLEL_REQUIRE(6 ==
                            Parallel::get<animal_base>(cache).number_of_legs());
 
+  try {
+    [[maybe_unused]] const std::string& checkpoint_dir =
+        cache.get_current_checkpoint_directory();
+  } catch (const std::exception& e) {
+    const std::string message{e.what()};
+    SPECTRE_PARALLEL_REQUIRE(
+        message.find("Cannot get the current spectre checkpoint directory") !=
+        std::string::npos);
+  }
+
+  const std::string expected_checkpoint_dir{"CheckpointDir"};
+  cache.set_current_checkpoint_directory(expected_checkpoint_dir);
+  SPECTRE_PARALLEL_REQUIRE(cache.get_current_checkpoint_directory() ==
+                           expected_checkpoint_dir);
+  SPECTRE_PARALLEL_REQUIRE(cache.get_current_checkpoint_file() ==
+                           expected_checkpoint_dir + "/SpectreCheckpoint.h5");
+
   // Check that we can modify the non-const items.
   Parallel::mutate<weight, modify_value<double>>(cache, 150.0);
   Parallel::mutate<email, modify_value<std::string>>(

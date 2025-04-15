@@ -344,6 +344,12 @@ class GlobalCache
   void set_resource_info(
       const Parallel::ResourceInfo<Metavariables>& resource_info);
 
+  /// Set the current checkpoint directory to the passed in string.
+  ///
+  /// This should only be called from Main in between phases.
+  void set_current_checkpoint_directory(
+      const std::string& new_current_checkpoint_directory);
+
   /// Entry method to print the mutable global cache callbacks upon a deadlock
   /// to a file.
   ///
@@ -359,6 +365,16 @@ class GlobalCache
   const Parallel::ResourceInfo<Metavariables>& get_resource_info() const {
     return resource_info_;
   }
+
+  /// @{
+  /// Retrieve the current checkpoint file or directory.
+  ///
+  /// An ERROR will occur if `set_current_checkpoint_file` isn't called
+  /// first.
+  const std::string& get_current_checkpoint_file() const;
+
+  const std::string& get_current_checkpoint_directory() const;
+  /// @}
 
   /// Overlay new data onto a subset of the GlobalCache's tags.
   ///
@@ -437,6 +453,8 @@ class GlobalCache
   Parallel::ResourceInfo<Metavariables> resource_info_{};
   bool parallel_components_have_been_set_{false};
   bool resource_info_has_been_set_{false};
+  std::string current_checkpoint_file_;
+  std::string current_checkpoint_directory_;
   std::optional<main_proxy_type> main_proxy_;
   // Defaults for testing framework
   int my_proc_{0};
@@ -652,6 +670,30 @@ void GlobalCache<Metavariables>::mutate(const std::tuple<Args...>& args) {
 }
 
 template <typename Metavariables>
+const std::string& GlobalCache<Metavariables>::get_current_checkpoint_file()
+    const {
+  if (current_checkpoint_file_ == "") {
+    ERROR(
+        "Cannot get the current spectre checkpoint file. It has not been set "
+        "yet.");
+  }
+
+  return current_checkpoint_file_;
+}
+
+template <typename Metavariables>
+const std::string&
+GlobalCache<Metavariables>::get_current_checkpoint_directory() const {
+  if (current_checkpoint_directory_ == "") {
+    ERROR(
+        "Cannot get the current spectre checkpoint directory. It has not been "
+        "set yet.");
+  }
+
+  return current_checkpoint_directory_;
+}
+
+template <typename Metavariables>
 void GlobalCache<Metavariables>::overlay_cache_data(
     const tuples::tagged_tuple_from_typelist<
         Parallel::get_overlayable_option_list<Metavariables>>&
@@ -708,6 +750,14 @@ void GlobalCache<Metavariables>::set_resource_info(
          "Can only set the resource info once");
   resource_info_ = resource_info;
   resource_info_has_been_set_ = true;
+}
+
+template <typename Metavariables>
+void GlobalCache<Metavariables>::set_current_checkpoint_directory(
+    const std::string& new_current_checkpoint_directory) {
+  current_checkpoint_directory_ = new_current_checkpoint_directory;
+  current_checkpoint_file_ =
+      current_checkpoint_directory_ + "/SpectreCheckpoint.h5";
 }
 
 template <typename Metavariables>
@@ -850,6 +900,8 @@ void GlobalCache<Metavariables>::pup(PUP::er& p) {
   p | main_proxy_;
   p | parallel_components_have_been_set_;
   p | resource_info_has_been_set_;
+  p | current_checkpoint_file_;
+  p | current_checkpoint_directory_;
   p | my_proc_;
   p | my_node_;
   p | my_local_rank_;
