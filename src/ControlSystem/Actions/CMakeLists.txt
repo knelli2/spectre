@@ -9,4 +9,5 @@ spectre_target_headers(
   InitializeMeasurements.hpp
   LimitTimeStep.hpp
   PrintCurrentMeasurement.hpp
+  WriteCheckpoint.hpp
   )

@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "ControlSystem/Actions/Initialization.hpp"
+#include "ControlSystem/Actions/WriteCheckpoint.hpp"
 #include "ControlSystem/Protocols/ControlSystem.hpp"
 #include "DataStructures/DataBox/DataBox.hpp"
 #include "Parallel/Algorithms/AlgorithmSingleton.hpp"
@@ -13,6 +14,7 @@
 #include "Parallel/Local.hpp"
 #include "Parallel/ParallelComponentHelpers.hpp"
 #include "Parallel/Phase.hpp"
+#include "Parallel/PhaseDependentActionList.hpp"
 #include "ParallelAlgorithms/Actions/InitializeItems.hpp"
 #include "ParallelAlgorithms/Actions/TerminatePhase.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
@@ -38,12 +40,17 @@ struct ControlComponent {
 
   using metavariables = Metavariables;
 
-  using phase_dependent_action_list = tmpl::list<Parallel::PhaseActions<
-      Parallel::Phase::Initialization,
-      tmpl::list<Initialization::Actions::InitializeItems<
-                     ::control_system::Actions::Initialize<Metavariables,
-                                                           ControlSystem>>,
-                 Parallel::Actions::TerminatePhase>>>;
+  using phase_dependent_action_list = tmpl::list<
+      Parallel::PhaseActions<
+          Parallel::Phase::Initialization,
+          tmpl::list<Initialization::Actions::InitializeItems<
+                         ::control_system::Actions::Initialize<Metavariables,
+                                                               ControlSystem>>,
+                     Parallel::Actions::TerminatePhase>>,
+      Parallel::PhaseActions<
+          Parallel::Phase::WriteCheckpoint,
+          tmpl::list<::control_system::Actions::WriteCheckpoint<ControlSystem>,
+                     Parallel::Actions::TerminatePhase>>>;
 
   using simple_tags_from_options = Parallel::get_simple_tags_from_options<
       Parallel::get_initialization_actions_list<phase_dependent_action_list>>;
