@@ -60,7 +60,8 @@ struct SendPointsToInterpolator {
                     Parallel::GlobalCache<Metavariables>& cache,
                     const ArrayIndex& array_index,
                     const TemporalId& temporal_id,
-                    const size_t iteration = 0_st) {
+                    const size_t iteration = 0_st,
+                    const bool retry_interpolation_same_iteration = false) {
     auto coords = InterpolationTarget_detail::block_logical_coords<
         InterpolationTargetTag>(box, cache, temporal_id);
     InterpolationTarget_detail::set_up_interpolation<InterpolationTargetTag>(
@@ -86,7 +87,8 @@ struct SendPointsToInterpolator {
     auto& receiver_proxy =
         Parallel::get_parallel_component<Interpolator<Metavariables>>(cache);
     Parallel::simple_action<Actions::ReceivePoints<InterpolationTargetTag>>(
-        receiver_proxy, temporal_id, std::move(coords), iteration);
+        receiver_proxy, temporal_id, std::move(coords), iteration,
+        retry_interpolation_same_iteration);
     if (Parallel::get<intrp::Tags::Verbosity>(cache) >= ::Verbosity::Debug) {
       Parallel::printf(
           "%s, Sending points to interpolator.\n",

@@ -90,7 +90,8 @@ struct MockReceivePoints {
       const ArrayIndex& /*array_index*/,
       const typename InterpolationTargetTag::temporal_id::type& temporal_id,
       std::vector<BlockLogicalCoords<VolumeDim>>&& block_coord_holders,
-      const size_t iteration = 0_st) {
+      const size_t iteration = 0_st,
+      const bool /*retry_interpolation_same_iteration*/ = false) {
     db::mutate<intrp::Tags::InterpolatedVarsHolders<Metavariables>>(
         [&temporal_id, &block_coord_holders, &iteration](
             const gsl::not_null<typename intrp::Tags::InterpolatedVarsHolders<
