@@ -261,11 +261,10 @@ struct FindApparentHorizon
     // outside of the Domain.
     const auto& indices_of_invalid_pts =
         db::get<Tags::IndicesOfInvalidInterpPoints<TemporalId>>(*box);
+    size_t& failed_interpolation_iterations =
+        db::get_mutable_reference<ah::Tags::FailedInterpolationIterations>(box);
     if (indices_of_invalid_pts.count(temporal_id) > 0 and
         not indices_of_invalid_pts.at(temporal_id).empty()) {
-      size_t& failed_interpolation_iterations =
-          db::get_mutable_reference<ah::Tags::FailedInterpolationIterations>(
-              box);
       ++failed_interpolation_iterations;
 
       // Can't recover from the first iteration or if we've exceeded our number
@@ -303,6 +302,10 @@ struct FindApparentHorizon
         horizon_finder_failed = true;
       }
     }
+
+    // Reset now that we were able to interpolate (or if we are abandoning this
+    // horizon find)
+    failed_interpolation_iterations = 0;
 
     if (not horizon_finder_failed) {
       const auto& verbosity =
