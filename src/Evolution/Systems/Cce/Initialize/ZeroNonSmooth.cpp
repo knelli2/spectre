@@ -37,10 +37,7 @@ void ZeroNonSmooth::operator()(
         tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
         angular_cauchy_coordinates,
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
-    const Scalar<SpinWeighted<ComplexDataVector, 2>>& /* boundary_dr_j*/,
-    const Scalar<SpinWeighted<ComplexDataVector, 0>>& /*r*/,
-    const Scalar<SpinWeighted<ComplexDataVector, 0>>& /*beta*/,
-    const size_t l_max, const size_t /*number_of_radial_points*/,
+    const size_t l_max,
     const gsl::not_null<Parallel::NodeLock*> /*hdf5_lock*/) const {
   const size_t number_of_angular_points =
       Spectral::Swsh::number_of_swsh_collocation_points(l_max);

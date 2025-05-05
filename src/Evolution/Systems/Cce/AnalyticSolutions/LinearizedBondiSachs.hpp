@@ -48,18 +48,20 @@ struct LinearizedBondiSachs : ::Cce::InitializeJ::InitializeJ<false> {
 
   std::unique_ptr<InitializeJ> get_clone() const override;
 
+  using return_tags = tmpl::list<Tags::BondiJ, Tags::CauchyCartesianCoords,
+                                 Tags::CauchyAngularCoords>;
+  using argument_tags =
+      tmpl::list<Tags::BoundaryValue<Tags::BondiR>, Tags::LMax>;
+
   void operator()(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> j,
       gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_cauchy_coordinates,
       gsl::not_null<
           tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
           angular_cauchy_coordinates,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_dr_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& beta, size_t l_max,
+      const Scalar<SpinWeighted<ComplexDataVector, 0>>& r, size_t l_max,
       size_t number_of_radial_points,
-      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const override;
+      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const;
 
   void pup(PUP::er& /*p*/) override;
 
@@ -132,7 +134,7 @@ struct LinearizedBondiSachs : public SphericalMetricData {
   };
 
   static constexpr Options::String help{
-    "A linearized Bondi-Sachs analytic solution"};
+      "A linearized Bondi-Sachs analytic solution"};
 
   using options = tmpl::list<InitialModes, ExtractionRadius, Frequency>;
 

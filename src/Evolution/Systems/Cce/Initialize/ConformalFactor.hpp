@@ -10,6 +10,7 @@
 #include "DataStructures/SpinWeighted.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Evolution/Systems/Cce/Initialize/InitializeJ.hpp"
+#include "Evolution/Systems/Cce/Tags.hpp"
 #include "Options/Options.hpp"
 #include "Options/String.hpp"
 #include "Utilities/Gsl.hpp"
@@ -20,8 +21,7 @@
 class ComplexDataVector;
 /// \endcond
 
-namespace Cce {
-namespace InitializeJ {
+namespace Cce::InitializeJ {
 
 /// Possible iteration heuristics to use for optimizing the value of the
 /// conformal factor \f$\omega\f$ to fix the initial data.
@@ -172,6 +172,14 @@ struct ConformalFactor : InitializeJ<false> {
 
   std::unique_ptr<InitializeJ> get_clone() const override;
 
+  using return_tags = tmpl::list<Tags::BondiJ, Tags::CauchyCartesianCoords,
+                                 Tags::CauchyAngularCoords>;
+  using argument_tags = tmpl::list<Tags::BoundaryValue<Tags::BondiJ>,
+                                   Tags::BoundaryValue<Tags::Dr<Tags::BondiJ>>,
+                                   Tags::BoundaryValue<Tags::BondiR>,
+                                   Tags::BoundaryValue<Tags::BondiBeta>,
+                                   Tags::LMax, Tags::NumberOfRadialPoints>;
+
   void operator()(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> j,
       gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_cauchy_coordinates,
@@ -183,7 +191,7 @@ struct ConformalFactor : InitializeJ<false> {
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& beta, size_t l_max,
       size_t number_of_radial_points,
-      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const override;
+      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const;
 
   void pup(PUP::er& p) override;
 
@@ -205,8 +213,7 @@ std::ostream& operator<<(
     std::ostream& os,
     const Cce::InitializeJ::ConformalFactorIterationHeuristic& heuristic_type);
 
-}  // namespace InitializeJ
-}  // namespace Cce
+}  // namespace Cce::InitializeJ
 
 template <>
 struct Options::create_from_yaml<

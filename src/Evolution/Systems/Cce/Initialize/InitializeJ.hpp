@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "DataStructures/DataBox/DataBox.hpp"
 #include "DataStructures/SpinWeighted.hpp"
 #include "DataStructures/Tags.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
@@ -18,6 +19,7 @@
 #include "Options/String.hpp"
 #include "Parallel/NodeLock.hpp"
 #include "Parallel/Printf/Printf.hpp"
+#include "Utilities/CallWithDynamicType.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
@@ -47,8 +49,7 @@ struct NoOpFinalize {
       const Scalar<SpinWeighted<ComplexDataVector, 0>>& /*gauge_d*/,
       const tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>&
       /*angular_cauchy_coordinates*/,
-      const Spectral::Swsh::SwshInterpolator& /*interpolator*/) const {
-  }
+      const Spectral::Swsh::SwshInterpolator& /*interpolator*/) const {}
 };
 
 // perform an iterative solve for the set of angular coordinates. The iteration
@@ -369,22 +370,14 @@ struct InitializeJ<true> : public PUP::able {
 
   virtual std::unique_ptr<InitializeJ<true>> get_clone() const = 0;
 
-  virtual void operator()(
-      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> j,
-      gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_cauchy_coordinates,
-      gsl::not_null<
-          tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
-          angular_cauchy_coordinates,
-      gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_inertial_coordinates,
-      gsl::not_null<
-          tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
-          angular_inertial_coordinates,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_dr_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& beta, size_t l_max,
-      size_t number_of_radial_points,
-      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const = 0;
+  template <typename DbTags>
+  void operator()(const gsl::not_null<db::DataBox<DbTags>*> box,
+                  const gsl::not_null<Parallel::NodeLock*> hdf5_lock) const {
+    call_with_dynamic_type<void, creatable_classes>(
+        this, [&](auto* const derived) {
+          db::mutate_apply(*derived, box, hdf5_lock);
+        });
+  }
 };
 
 /*!
@@ -425,18 +418,14 @@ struct InitializeJ<false> : public PUP::able {
 
   virtual std::unique_ptr<InitializeJ<false>> get_clone() const = 0;
 
-  virtual void operator()(
-      gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> j,
-      gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_cauchy_coordinates,
-      gsl::not_null<
-          tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
-          angular_cauchy_coordinates,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_dr_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& beta, size_t l_max,
-      size_t number_of_radial_points,
-      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const = 0;
+  template <typename DbTags>
+  void operator()(const gsl::not_null<db::DataBox<DbTags>*> box,
+                  const gsl::not_null<Parallel::NodeLock*> hdf5_lock) const {
+    call_with_dynamic_type<void, creatable_classes>(
+        this, [&](auto* const derived) {
+          db::mutate_apply(*derived, box, hdf5_lock);
+        });
+  }
 };
 }  // namespace InitializeJ
 }  // namespace Cce

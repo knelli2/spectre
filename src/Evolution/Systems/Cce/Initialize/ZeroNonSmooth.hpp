@@ -10,6 +10,7 @@
 #include "DataStructures/SpinWeighted.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
 #include "Evolution/Systems/Cce/Initialize/InitializeJ.hpp"
+#include "Evolution/Systems/Cce/Tags.hpp"
 #include "Utilities/Gsl.hpp"
 #include "Utilities/Serialization/CharmPupable.hpp"
 #include "Utilities/TMPL.hpp"
@@ -18,8 +19,7 @@
 class ComplexDataVector;
 /// \endcond
 
-namespace Cce {
-namespace InitializeJ {
+namespace Cce::InitializeJ {
 
 /*!
  * \brief Initialize \f$J\f$ on the first hypersurface to be vanishing, finding
@@ -77,6 +77,11 @@ struct ZeroNonSmooth : InitializeJ<false> {
 
   std::unique_ptr<InitializeJ> get_clone() const override;
 
+  using return_tags = tmpl::list<Tags::BondiJ, Tags::CauchyCartesianCoords,
+                                 Tags::CauchyAngularCoords>;
+  using argument_tags =
+      tmpl::list<Tags::BoundaryValue<Tags::BondiJ>, Tags::LMax>;
+
   void operator()(
       gsl::not_null<Scalar<SpinWeighted<ComplexDataVector, 2>>*> j,
       gsl::not_null<tnsr::i<DataVector, 3>*> cartesian_cauchy_coordinates,
@@ -84,11 +89,7 @@ struct ZeroNonSmooth : InitializeJ<false> {
           tnsr::i<DataVector, 2, ::Frame::Spherical<::Frame::Inertial>>*>
           angular_cauchy_coordinates,
       const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_dr_j,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
-      const Scalar<SpinWeighted<ComplexDataVector, 0>>& beta, size_t l_max,
-      size_t number_of_radial_points,
-      gsl::not_null<Parallel::NodeLock*> hdf5_lock) const override;
+      size_t l_max, gsl::not_null<Parallel::NodeLock*> hdf5_lock) const;
 
   void pup(PUP::er& p) override;
 
@@ -97,5 +98,4 @@ struct ZeroNonSmooth : InitializeJ<false> {
   size_t max_iterations_ = 300;
   bool require_convergence_ = false;
 };
-}  // namespace InitializeJ
-}  // namespace Cce
+}  // namespace Cce::InitializeJ

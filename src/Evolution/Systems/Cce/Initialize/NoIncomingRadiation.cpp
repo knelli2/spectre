@@ -75,10 +75,10 @@ void radial_evolve_psi0_condition(
   const auto& y_collocation =
       Spectral::collocation_points<Spectral::Basis::Legendre,
                                    Spectral::Quadrature::GaussLobatto>(
-                                       number_of_radial_points);
+          number_of_radial_points);
   for (size_t y_collocation_point = 0;
        y_collocation_point < number_of_radial_points; ++y_collocation_point) {
-    while(step_range.second < y_collocation[y_collocation_point]) {
+    while (step_range.second < y_collocation[y_collocation_point]) {
       step_range = dense_stepper.do_step(psi_0_condition_system);
     }
     if (step_range.second < y_collocation[y_collocation_point] or
@@ -117,9 +117,8 @@ void NoIncomingRadiation::operator()(
         angular_cauchy_coordinates,
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_j,
     const Scalar<SpinWeighted<ComplexDataVector, 2>>& boundary_dr_j,
-    const Scalar<SpinWeighted<ComplexDataVector, 0>>& r,
-    const Scalar<SpinWeighted<ComplexDataVector, 0>>& /*beta*/,
-    const size_t l_max, const size_t number_of_radial_points,
+    const Scalar<SpinWeighted<ComplexDataVector, 0>>& r, const size_t l_max,
+    const size_t number_of_radial_points,
     const gsl::not_null<Parallel::NodeLock*> /*hdf5_lock*/) const {
   const size_t number_of_angular_points =
       Spectral::Swsh::number_of_swsh_collocation_points(l_max);
