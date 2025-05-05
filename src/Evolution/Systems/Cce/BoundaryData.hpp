@@ -578,7 +578,8 @@ using characteristic_worldtube_boundary_tags = db::wrap_tags_in<
     tmpl::list<Tags::BondiBeta, Tags::BondiU, Tags::Dr<Tags::BondiU>,
                Tags::BondiQ, Tags::BondiW, Tags::BondiJ, Tags::Dr<Tags::BondiJ>,
                Tags::BondiH, Tags::Du<Tags::BondiJ>, Tags::BondiR,
-               Tags::Du<Tags::BondiR>, Tags::DuRDividedByR>>;
+               Tags::Du<Tags::BondiR>, Tags::DuRDividedByR,
+               Tags::Du<Tags::Dr<Tags::BondiJ>>>>;
 
 /*!
  * \brief The collection of tags for worldtube quantities that need to be
@@ -593,7 +594,8 @@ using worldtube_boundary_tags_for_writing = db::wrap_tags_in<
     tmpl::list<Cce::Tags::BondiBeta, Cce::Tags::Dr<Cce::Tags::BondiJ>,
                Cce::Tags::Du<Cce::Tags::BondiR>, Cce::Tags::BondiJ,
                Cce::Tags::Du<Cce::Tags::BondiJ>, Cce::Tags::BondiQ,
-               Cce::Tags::BondiR, Cce::Tags::BondiU, Cce::Tags::BondiW>>;
+               Cce::Tags::BondiR, Cce::Tags::BondiU, Cce::Tags::BondiW,
+               Tags::Du<Tags::Dr<Tags::BondiJ>>>>;
 
 using klein_gordon_worldtube_boundary_tags =
     tmpl::list<Tags::BoundaryValue<Tags::KleinGordonPsi>,

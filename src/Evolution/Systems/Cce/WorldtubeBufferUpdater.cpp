@@ -891,6 +891,8 @@ BondiWorldtubeH5BufferUpdater<T>::BondiWorldtubeH5BufferUpdater(
   get<name_tag_t<T, Tags::Du<Tags::BondiJ>>>(dataset_names_) = "H";
   get<name_tag_t<T, Tags::BondiR>>(dataset_names_) = "R";
   get<name_tag_t<T, Tags::Du<Tags::BondiR>>>(dataset_names_) = "DuR";
+  get<name_tag_t<T, Tags::Du<Tags::Dr<Tags::BondiJ>>>>(dataset_names_) =
+      "DuDrJ";
 
   // the extraction radius is typically not used in the Bondi system, so we
   // don't error if it isn't parsed from the filename. Instead, we'll just error
