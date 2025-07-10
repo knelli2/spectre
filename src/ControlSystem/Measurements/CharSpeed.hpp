@@ -70,11 +70,17 @@ struct CharSpeed : tt::ConformsTo<protocols::Measurement> {
     template <typename ControlSystems>
     struct InterpolationTarget
         : tt::ConformsTo<intrp::protocols::InterpolationTargetTag> {
+     private:
+      static constexpr size_t index =
+          Object == ::domain::ObjectLabel::A ? 1_st : 2_st;
+
+     public:
       static std::string name() {
         return "ControlSystemCharSpeedExcision" + ::domain::name(Object);
       }
 
-      using temporal_id = ::Tags::TimeAndPrevious<1>;
+      // Separate temporal IDs for each object
+      using temporal_id = ::Tags::TimeAndPrevious<index>;
 
       using vars_to_interpolate_to_target = tmpl::list<
           gr::Tags::Lapse<DataVector>,
@@ -91,7 +97,7 @@ struct CharSpeed : tt::ConformsTo<protocols::Measurement> {
       using compute_vars_to_interpolate =
           ah::ComputeExcisionBoundaryVolumeQuantities;
       using compute_items_on_source =
-          tmpl::list<::Tags::TimeAndPreviousCompute<1>>;
+          tmpl::list<::Tags::TimeAndPreviousCompute<index>>;
       using compute_items_on_target =
           tmpl::list<gr::Tags::DetAndInverseSpatialMetricCompute<
               DataVector, 3, Frame::Distorted>>;
