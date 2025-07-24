@@ -36,6 +36,9 @@ void max_over_components(
       continue;
     }
     const auto& modes = gsl::at(*power_monitors_buffer, d);
+    if (min(modes) == 0.0 and max(modes) == 0.0) {
+      continue;
+    }
     // Increase p refinement if the truncation error exceeds the target
     const double truncation_error =
         umax * PowerMonitors::relative_truncation_error(modes, modes.size());
