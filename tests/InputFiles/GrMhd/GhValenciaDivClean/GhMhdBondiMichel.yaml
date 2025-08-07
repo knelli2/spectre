@@ -258,8 +258,8 @@ ApparentHorizons:
       DivergenceIter: 5
       MaxIts: 100
     Verbosity: Verbose
-    MaxInterpolationRetries: 3
-    BlocksForInterpolation: All
+    MaxComputeCoordsRetries: 3
+    BlocksForHorizonFind: All
 
 InterpolationTargets:
   BondiSachsInterpolation:
@@ -276,7 +276,6 @@ Observers:
   ReductionFileName: "GhMhdBondiMichelReductions"
 
 Interpolator:
-  DumpVolumeDataOnFailure: false
   Verbosity: Silent
 
 EventsAndDenseTriggers:
