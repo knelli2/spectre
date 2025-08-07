@@ -307,6 +307,7 @@ ApparentHorizons:
       DivergenceIter: 5
       MaxIts: 100
     Verbosity: Quiet
+    Adaptivity: None
     MaxComputeCoordsRetries: 3
     BlocksForHorizonFind: ["Shell0"]
   ControlSystemSingleAh: *Ah

@@ -197,7 +197,7 @@ void test_apparent_horizon(
                             {{0.0, 0.0, 0.0}}},
       FastFlow{FastFlow::FlowType::Fast, 1.0, 0.5, 1.e-12, 1.e-2, 1.2, 5,
                max_its},
-      Verbosity::Silent, 3_st, std::nullopt);
+      Verbosity::Silent, 3_st, std::nullopt, std::nullopt);
 
   std::unordered_map<std::string, std::unordered_set<std::string>>
       blocks_for_interpolation{};

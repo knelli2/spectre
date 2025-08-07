@@ -471,6 +471,7 @@ ApparentHorizons:
       DivergenceIter: 5
       MaxIts: 100
     Verbosity: Quiet
+    Adaptivity: None
     MaxComputeCoordsRetries: 3
     BlocksForHorizonFind: ["ObjectAShell", "ObjectACube"]
   ObservationAhB: &AhB
@@ -481,6 +482,7 @@ ApparentHorizons:
     FastFlow: *DefaultFastFlow
     Verbosity: Quiet
     MaxComputeCoordsRetries: 3
+    Adaptivity: None
     BlocksForHorizonFind: ["ObjectBShell", "ObjectBCube"]
   ObservationAhC:
     InitialGuess:
@@ -490,6 +492,7 @@ ApparentHorizons:
     FastFlow: *DefaultFastFlow
     Verbosity: Quiet
     MaxComputeCoordsRetries: 3
+    Adaptivity: None
     BlocksForHorizonFind:
       - "ObjectAShell"
       - "ObjectACube"

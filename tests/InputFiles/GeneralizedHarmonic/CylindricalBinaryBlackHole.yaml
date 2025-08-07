@@ -286,6 +286,7 @@ ApparentHorizons:
       DivergenceIter: 5
       MaxIts: 100
     Verbosity: Verbose
+    Adaptivity: None
     MaxComputeCoordsRetries: 3
     BlocksForHorizonFind: All
   ObservationAhB: &AhB
@@ -295,6 +296,7 @@ ApparentHorizons:
       Center: [*XCoordB, 0.0, 0.0]
     FastFlow: *DefaultFastFlow
     Verbosity: Verbose
+    Adaptivity: None
     MaxComputeCoordsRetries: 3
     BlocksForHorizonFind: All
   ObservationAhC:
@@ -304,6 +306,7 @@ ApparentHorizons:
       Center: [0.0, 0.0, 0.0]
     FastFlow: *DefaultFastFlow
     Verbosity: Verbose
+    Adaptivity: None
     MaxComputeCoordsRetries: 3
     BlocksForHorizonFind: All
   ControlSystemAhA: *AhA

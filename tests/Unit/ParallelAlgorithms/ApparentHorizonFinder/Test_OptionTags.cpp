@@ -17,6 +17,7 @@
 #include "Domain/Creators/Sphere.hpp"
 #include "Domain/Domain.hpp"
 #include "Framework/TestCreation.hpp"
+#include "Framework/TestHelpers.hpp"
 #include "IO/Logging/Verbosity.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "ParallelAlgorithms/ApparentHorizonFinder/Component.hpp"
@@ -52,12 +53,29 @@ struct MockMetavariables {
   using component_list =
       tmpl::list<ah::Component<MockMetavariables, MockHorizonMetavars>>;
 };
+
+void test_adaptivity_options() {
+  const auto created_opts =
+      TestHelpers::test_creation<ah::AdaptivityOptions>("LBounds: [8, 16]");
+  CHECK(created_opts.l_bounds == std::array{8_st, 16_st});
+
+  test_serialization(created_opts);
+
+  CHECK_THROWS_WITH((ah::AdaptivityOptions{{4, 4}}),
+                    Catch::Matchers::ContainsSubstring(
+                        "Maximum L and minium L are the same"));
+  CHECK_THROWS_WITH((ah::AdaptivityOptions{{5, 4}}),
+                    Catch::Matchers::ContainsSubstring(
+                        "Maximum L must be greater than the minimum L"));
+}
 }  // namespace
 
 SPECTRE_TEST_CASE("Unit.ApparentHorizonFinder.OptionTags",
                   "[ApparentHorizonFinder][Unit]") {
   (void)MockHorizonMetavars::destination;
   domain::creators::register_derived_with_charm();
+
+  test_adaptivity_options();
 
   // Constants used in this test.
   const size_t l_max = 12;
@@ -67,7 +85,7 @@ SPECTRE_TEST_CASE("Unit.ApparentHorizonFinder.OptionTags",
   // Options for ApparentHorizon
   ah::HorizonOptions<::Frame::Grid> apparent_horizon_opts(
       ylm::Strahlkorper<Frame::Grid>{l_max, radius, center}, FastFlow{},
-      Verbosity::Verbose, 3_st, std::nullopt);
+      Verbosity::Verbose, 3_st, std::nullopt, std::nullopt);
 
   // Test creation of options
   const auto created_opts =
@@ -86,6 +104,7 @@ SPECTRE_TEST_CASE("Unit.ApparentHorizonFinder.OptionTags",
           "  Center: [0.05, 0.06, 0.07]\n"
           "  Radius: 2.0\n"
           "  LMax: 12\n"
+          "Adaptivity: None\n"
           "MaxComputeCoordsRetries: 3\n"
           "BlocksForHorizonFind: All");
   CHECK(created_opts == apparent_horizon_opts);
@@ -123,6 +142,7 @@ SPECTRE_TEST_CASE("Unit.ApparentHorizonFinder.OptionTags",
             "  Center: [0.05, 0.06, 0.07]\n"
             "  Radius: 2.0\n"
             "  LMax: 12\n"
+            "Adaptivity: None\n"
             "MaxComputeCoordsRetries: 3\n"
             "BlocksForHorizonFind: [Shell0]");
     const auto blocks_for_horizon_find =

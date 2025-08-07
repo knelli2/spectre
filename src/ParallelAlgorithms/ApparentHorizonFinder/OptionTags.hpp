@@ -18,6 +18,36 @@
 #include "Utilities/TMPL.hpp"
 
 namespace ah {
+/// Options for the adaptive horizon finder
+struct AdaptivityOptions {
+  static constexpr Options::String help = {
+      "Options for an adaptive horizon finder."};
+  using type = Options::Auto<AdaptivityOptions, Options::AutoLabel::None>;
+  static std::string name() { return "Adaptivity"; }
+
+  struct LBounds {
+    static constexpr Options::String help = {
+        "The minimum and maximum L used for the adaptive horizon finder. The "
+        "max L must match the function of time L."};
+    using type = std::array<size_t, 2>;
+  };
+
+  using options = tmpl::list<LBounds>;
+
+  AdaptivityOptions() = default;
+
+  AdaptivityOptions(std::array<size_t, 2> l_bounds_in,
+                    const Options::Context& context = {});
+
+  // NOLINTNEXTLINE(google-runtime-references)
+  void pup(PUP::er& p);
+
+  std::array<size_t, 2> l_bounds{};
+};
+
+bool operator==(const AdaptivityOptions& lhs, const AdaptivityOptions& rhs);
+bool operator!=(const AdaptivityOptions& lhs, const AdaptivityOptions& rhs);
+
 /// Options for finding an apparent horizon.
 template <typename Fr>
 struct HorizonOptions {
@@ -53,8 +83,9 @@ struct HorizonOptions {
         "names. Set to 'All' to send volume data from the entire domain."};
     using type = Options::Auto<std::vector<std::string>, All>;
   };
-  using options = tmpl::list<InitialGuess, FastFlow, Verbosity,
-                             MaxComputeCoordsRetries, BlocksForHorizonFind>;
+  using options =
+      tmpl::list<InitialGuess, FastFlow, Verbosity, MaxComputeCoordsRetries,
+                 BlocksForHorizonFind, AdaptivityOptions>;
   static constexpr Options::String help = {
       "Provide an initial guess for the apparent horizon surface\n"
       "(Strahlkorper) and apparent-horizon-finding-algorithm (FastFlow)\n"
@@ -63,7 +94,9 @@ struct HorizonOptions {
   HorizonOptions(
       ylm::Strahlkorper<Fr> initial_guess_in, ::FastFlow fast_flow_in,
       ::Verbosity verbosity_in, size_t max_compute_coords_retries_in,
-      std::optional<std::vector<std::string>> blocks_for_horizon_find_in);
+      std::optional<std::vector<std::string>> blocks_for_horizon_find_in,
+      std::optional<AdaptivityOptions> adaptivity_in,
+      const Options::Context& context = {});
 
   HorizonOptions() = default;
   HorizonOptions(const HorizonOptions& /*rhs*/) = default;
@@ -80,6 +113,7 @@ struct HorizonOptions {
   ::Verbosity verbosity{::Verbosity::Quiet};
   size_t max_compute_coords_retries{};
   std::optional<std::vector<std::string>> blocks_for_horizon_find;
+  std::optional<AdaptivityOptions> adaptivity;
 };
 
 template <typename Fr>
