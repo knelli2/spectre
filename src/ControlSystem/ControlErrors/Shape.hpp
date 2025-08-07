@@ -13,12 +13,14 @@
 #include "ControlSystem/Tags/SystemTags.hpp"
 #include "DataStructures/DataVector.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/SpherepackIterator.hpp"
 #include "Options/String.hpp"
 #include "Parallel/GlobalCache.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/ErrorHandling/Assert.hpp"
 #include "Utilities/ForceInline.hpp"
+#include "Utilities/Gsl.hpp"
 #include "Utilities/ProtocolHelpers.hpp"
 #include "Utilities/TMPL.hpp"
 #include "Utilities/TaggedTuple.hpp"
@@ -83,6 +85,12 @@ std::string size_name() {
  * \f$ are). That way, we ensure the numerator and denominator are represented
  * in the same way before we take their ratio.
  *
+ * This control error can handle an adaptive horizon finder that changes the
+ * $L_\mathrm{max}$ of the apparent horizon between horizon finds. We require
+ * that $L_\mathrm{max}^S <= L_\mathrm{max}^\lambda$, and only control
+ * $\lambda_{lm}$ for $l<=L_\mathrm{max}^S$. The other components of the control
+ * error for $L_\mathrm{max}^S<l<=L_\mathrm{max}^\lambda$ are set to zero.
+ *
  * Requirements:
  * - This control error requires that there be at least one excision surface in
  *   the simulation
@@ -98,6 +106,8 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
   static constexpr Options::String help{
       "Computes the control error for shape control. This should not take any "
       "options."};
+
+  Shape() = default;
 
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   std::optional<double> get_suggested_timescale() const { return std::nullopt; }
@@ -123,13 +133,27 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
         get<control_system::QueueTags::Horizon<Frame::Distorted, Object>>(
             measurements);
     const auto& ah_coefs = ah.coefficients();
+    const ylm::Spherepack& horizon_ylm = ah.ylm_spherepack();
 
-    ASSERT(lambda_lm_coefs.size() == ah_coefs.size(),
+    ASSERT(lambda_lm_coefs.size() >= ah_coefs.size(),
            "Number of coefficients for shape map '"
                << function_of_time_name << "' (" << lambda_lm_coefs.size()
-               << ") does not match the number of coefficients in the AH "
+               << ") must be greater than or equal to the number of "
+                  "coefficients in the AH "
                   "Strahlkorper ("
                << ah_coefs.size() << ").");
+
+    // num_components = 2 * (l_max + 1)**2 if l_max == m_max which it is for
+    // the shape map. This is why we can divide by 2 and take the sqrt without
+    // worrying about odd numbers or non-perfect squares
+    const size_t l_max =
+        -1_st + static_cast<size_t>(sqrt(lambda_lm_coefs.size() / 2));
+    if (UNLIKELY(not shape_map_ylm_.has_value())) {
+      shape_map_ylm_ = ylm::Spherepack{l_max, l_max};
+    }
+
+    DataVector prolonged_ah_coefs =
+        horizon_ylm.prolong_or_restrict(ah_coefs, shape_map_ylm_.value());
 
     const auto& excision_spheres = domain.excision_spheres();
 
@@ -143,28 +167,34 @@ struct Shape : tt::ConformsTo<protocols::ControlError> {
         excision_spheres.at(detail::excision_sphere_name<Object>()).radius();
 
     const double Y00 = sqrt(0.25 / M_PI);
-    ylm::SpherepackIterator iter{ah.l_max(), ah.m_max()};
     // See above docs for why we have the sqrt(pi/2) in the denominator
     const double relative_size_factor =
         (radius_excision_sphere_grid_frame / Y00 - lambda_00_coef) /
-        (sqrt(0.5 * M_PI) * ah_coefs[iter.set(0, 0)()]);
+        (sqrt(0.5 * M_PI) * prolonged_ah_coefs[0]);
+
+    ylm::SpherepackIterator iter{l_max, l_max};
+    DataVector Q{lambda_lm_coefs.size(), 0.0};
+    // Shape control is only for l > 1 so we enforce that Q=0 for l=0,l=1 via
+    // the mask. These components of the control error won't be 0 automatically
+    // because the AH can freely have nonzero l=0 and l=1 coefficients so we
+    // have to set the control error components to be 0 manually.
+    for (size_t l = 2; l <= ah.l_max(); l++) {
+      for (int m = -static_cast<int>(l); m <= static_cast<int>(l); m++) {
+        Q[iter.set(l, m)()] = 1.0;
+      }
+    }
 
     // The map parameters are in terms of SPHEREPACK coefficients (just like
     // strahlkorper coefficients), *not* spherical harmonic coefficients, thus
     // the control error for each l,m is in terms of SPHEREPACK coefficients
     // and no extra factors of sqrt(2/pi) are needed
-    DataVector Q = -relative_size_factor * ah_coefs - lambda_lm_coefs;
-
-    // Shape control is only for l > 1 so enforce that Q=0 for l=0,l=1. These
-    // components of the control error won't be 0 automatically because the AH
-    // can freely have nonzero l=0 and l=1 coefficients so we have to set the
-    // control error components to be 0 manually.
-    Q[iter.set(0, 0)()] = 0.0;
-    Q[iter.set(1, -1)()] = 0.0;
-    Q[iter.set(1, 0)()] = 0.0;
-    Q[iter.set(1, 1)()] = 0.0;
+    Q *= (-relative_size_factor * prolonged_ah_coefs - lambda_lm_coefs);
 
     return Q;
   }
+
+ private:
+  // Not serialized because spherepack can't be pupped.
+  std::optional<ylm::Spherepack> shape_map_ylm_;
 };
 }  // namespace control_system::ControlErrors

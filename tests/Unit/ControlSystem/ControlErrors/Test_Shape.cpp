@@ -36,6 +36,7 @@
 #include "Framework/ActionTesting.hpp"
 #include "Helpers/ControlSystem/SystemHelpers.hpp"
 #include "Helpers/DataStructures/MakeWithRandomValues.hpp"
+#include "NumericalAlgorithms/SphericalHarmonics/Spherepack.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/SpherepackIterator.hpp"
 #include "NumericalAlgorithms/SphericalHarmonics/Strahlkorper.hpp"
 #include "Parallel/Phase.hpp"
@@ -56,7 +57,8 @@ using FoTMap = std::unordered_map<
     std::string, std::unique_ptr<domain::FunctionsOfTime::FunctionOfTime>>;
 using Strahlkorper = ylm::Strahlkorper<Frame::Distorted>;
 
-void test_shape_control_error() {
+void test_shape_control_error(const size_t shape_l_max,
+                              const size_t horizon_l_max) {
   constexpr size_t deriv_order = 2;
   using metavars =
       TestHelpers::control_system::MockMetavars<0, 0, 0, deriv_order>;
@@ -70,25 +72,26 @@ void test_shape_control_error() {
   const tnsr::I<double, 3, Frame::Grid> origin{0.0};
   const double ah_radius = 1.5;
   const double initial_time = 0.0;
-  Strahlkorper fake_ah{10, 10, make_array<double, 3>(origin)};
+  Strahlkorper fake_ah{horizon_l_max, ah_radius, make_array<double, 3>(origin)};
   auto& fake_ah_coefs = fake_ah.coefficients();
 
   // Setup initial shape map coefficients. In the map the coefficients are
   // stored as the negative of the actual spherical harmonic coefficients
   // because that's just how the map is defined. But since these are random
   // numbers it doesn't matter for initial data
-  auto initial_shape_func = make_array<deriv_order + 1, DataVector>(
-      DataVector{fake_ah_coefs.size(), 0.0});
-  ylm::SpherepackIterator iter{fake_ah.l_max(), fake_ah.m_max()};
+  auto initial_shape_func = make_array<deriv_order + 1, DataVector>(DataVector{
+      ylm::Spherepack::spectral_size(shape_l_max, shape_l_max), 0.0});
+  ylm::SpherepackIterator shape_iter{shape_l_max, shape_l_max};
   std::uniform_real_distribution<double> coef_dist{-1.0, 1.0};
   for (size_t i = 0; i < initial_shape_func.size(); i++) {
-    for (iter.reset(); iter; ++iter) {
+    for (shape_iter.reset(); shape_iter; ++shape_iter) {
       // Enforce l=0,l=1 components to be 0 always
-      if (iter.l() == 0 or iter.l() == 1) {
+      if (shape_iter.l() == 0 or shape_iter.l() == 1) {
         continue;
       }
-      gsl::at(initial_shape_func, i)[iter()] = make_with_random_values<double>(
-          make_not_null(&generator), coef_dist, 1);
+      gsl::at(initial_shape_func, i)[shape_iter()] =
+          make_with_random_values<double>(make_not_null(&generator), coef_dist,
+                                          1);
     }
   }
 
@@ -186,24 +189,32 @@ void test_shape_control_error() {
   const auto lambda_lm_coefs =
       functions_of_time.at(shape_name)->func(check_time)[0];
 
+  ylm::SpherepackIterator horizon_iter{horizon_l_max, horizon_l_max};
+  const DataVector prolonged_measurement_coefs =
+      fake_ah.ylm_spherepack().prolong_or_restrict(
+          measurement_coefs, ylm::Spherepack{shape_l_max, shape_l_max});
   DataVector expected_control_error =
       -(excision_radius / Y00 - lambda_00_coef) /
-          (sqrt(0.5 * M_PI) * measurement_coefs[iter.set(0, 0)()]) *
-          measurement_coefs -
+          (sqrt(0.5 * M_PI) * measurement_coefs[horizon_iter.set(0, 0)()]) *
+          prolonged_measurement_coefs -
       lambda_lm_coefs;
-  // We don't control l=0 or l=1 modes
-  for (iter.reset(); iter; ++iter) {
-    if (iter.l() == 0 or iter.l() == 1) {
-      expected_control_error[iter()] = 0.0;
+  // We don't control l=0 or l=1 modes. Only check the actual l,m pairs because
+  // the other values in the array aren't used.
+  for (shape_iter.reset(); shape_iter; ++shape_iter) {
+    if (shape_iter.l() == 0 or shape_iter.l() == 1 or
+        shape_iter.l() > horizon_iter.l_max()) {
+      expected_control_error[shape_iter()] = 0.0;
     }
-  }
 
-  CHECK_ITERABLE_APPROX(control_error, expected_control_error);
+    CHECK(expected_control_error[shape_iter()] ==
+          approx(control_error[shape_iter()]));
+  }
 }
 
 SPECTRE_TEST_CASE("Unit.ControlSystem.ControlErrors.Shape",
                   "[ControlSystem][Unit]") {
-  test_shape_control_error();
+  test_shape_control_error(10, 10);
+  test_shape_control_error(10, 8);
 }
 }  // namespace
 }  // namespace control_system
