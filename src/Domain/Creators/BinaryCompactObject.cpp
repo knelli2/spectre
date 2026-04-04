@@ -27,9 +27,11 @@
 #include "Domain/CoordinateMaps/Distribution.hpp"
 #include "Domain/CoordinateMaps/Equiangular.hpp"
 #include "Domain/CoordinateMaps/Frustum.hpp"
+#include "Domain/CoordinateMaps/Identity.hpp"
 #include "Domain/CoordinateMaps/Interval.hpp"
 #include "Domain/CoordinateMaps/ProductMaps.hpp"
 #include "Domain/CoordinateMaps/ProductMaps.tpp"
+#include "Domain/CoordinateMaps/SphericalToCartesianPfaffian.hpp"
 #include "Domain/CoordinateMaps/Wedge.hpp"
 #include "Domain/Creators/DomainCreator.hpp"
 #include "Domain/Creators/ExpandOverBlocks.hpp"
@@ -42,7 +44,12 @@
 #include "Domain/FunctionsOfTime/FunctionOfTime.hpp"
 #include "Domain/FunctionsOfTime/PiecewisePolynomial.hpp"
 #include "Domain/FunctionsOfTime/QuaternionFunctionOfTime.hpp"
+#include "Domain/Structure/BlockNeighbors.hpp"
+#include "Domain/Structure/Direction.hpp"
+#include "Domain/Structure/DirectionMap.hpp"
 #include "Domain/Structure/ObjectLabel.hpp"
+#include "Domain/Structure/OrientationMap.hpp"
+#include "Domain/Structure/Topology.hpp"
 #include "Options/ParseError.hpp"
 #include "Utilities/EqualWithinRoundoff.hpp"
 #include "Utilities/Gsl.hpp"
@@ -147,9 +154,11 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
                          outer_radius_, "envelope", "outer", context);
 
   // Calculate number of blocks
-  // Object cubes and shells have 6 blocks each, for a total for 24 blocks.
-  // The envelope and each outer shell have another 10 blocks each.
-  number_of_blocks_ = 34 + 10 * number_of_outer_shells_;
+  // Object A's shell has 6 wedge blocks and cube has 6 wedge blocks (12 total).
+  // Object B's shell is now a single spherical shell block and cube has 6 wedge
+  // blocks (7 total). The envelope and each outer shell have another 10 blocks.
+  // Total base: 12 + 7 + 10 = 29.
+  number_of_blocks_ = 29 + 10 * number_of_outer_shells_;
   // For each object whose interior is not excised, add 1 block
   if ((not use_single_block_a_) and (not is_excised_a_)) {
     number_of_blocks_++;
@@ -158,12 +167,14 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
     number_of_blocks_++;
   }
 
-  // For each of the object replaced by a single block, remove (12-1)=11
+  // For object A replaced by a single block, remove (12-1)=11
   if (use_single_block_a_) {
     number_of_blocks_ -= 11;
   }
+  // For object B replaced by a single block, remove (7-1)=6 since B's shell is
+  // now 1 spherical shell block and its cube is 6 wedge blocks (7 total).
   if (use_single_block_b_) {
-    number_of_blocks_ -= 11;
+    number_of_blocks_ -= 6;
   }
 
   if (x_coord_a_ <= 0.0) {
@@ -348,9 +359,10 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
     block_names_.emplace_back("ObjectB");
     first_outer_shell_block_ += 1;
   } else {
-    add_object_region("ObjectB", "Shell");  // 6 blocks
-    add_object_region("ObjectB", "Cube");   // 6 blocks
-    first_outer_shell_block_ += 12;
+    // Object B shell is now a single spherical shell block (replaces 6 wedges)
+    block_names_.emplace_back("ObjectBShell");
+    add_object_region("ObjectB", "Cube");  // 6 blocks
+    first_outer_shell_block_ += 7;
   }
   add_outer_region("Envelope");  // 10 blocks
   first_outer_shell_block_ += 10;
@@ -384,6 +396,17 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
         std::visit(expand_over_blocks, initial_number_of_grid_points);
   } catch (const std::exception& error) {
     PARSE_ERROR(context, "Invalid 'InitialGridPoints': " << error.what());
+  }
+
+  // For the single spherical shell block replacing the B object shell, the
+  // angular dimensions (colatitude = dim 1, longitude = dim 2) use
+  // S2Colatitude and S2Longitude topology, which have no boundaries. These
+  // dimensions must have refinement level 0; the angular resolution is
+  // determined solely by the number of grid points.
+  if (not use_single_block_b_) {
+    const size_t b_shell_idx = use_single_block_a_ ? 1_st : 12_st;
+    initial_refinement_[b_shell_idx][1] = 0;
+    initial_refinement_[b_shell_idx][2] = 0;
   }
 
   // Build time-dependent maps
@@ -430,7 +453,7 @@ BinaryCompactObject<UseWorldtube>::BinaryCompactObject(
 template <bool UseWorldtube>
 Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
   const double inner_sphericity_A = is_excised_a_ ? 1.0 : 0.0;
-  const double inner_sphericity_B = is_excised_b_ ? 1.0 : 0.0;
+  // const double inner_sphericity_B = is_excised_b_ ? 1.0 : 0.0;
 
   using Maps = std::vector<std::unique_ptr<
       CoordinateMapBase<Frame::BlockLogical, Frame::Inertial, 3>>>;
@@ -524,10 +547,11 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
                    -0.5 * length_inner_cube_ + center_of_mass_offset_[1],
                    0.5 * length_inner_cube_ + center_of_mass_offset_[1])}));
   } else {
-    // --- Blocks enclosing each object (12 blocks per object) ---
+    // --- Blocks enclosing object B (1 spherical shell + 6 cube wedges) ---
     //
-    // Each object is surrounded by 6 inner wedges that make a sphere, and
-    // another 6 outer wedges that transition to a cube.
+    // Object B's shell is a single spherical shell block using the
+    // SphericalToCartesianPfaffian map (instead of 6 wedge blocks). The cube
+    // is still 6 wedge blocks transitioning from sphere to cube.
     const auto& object_b = std::get<Object>(object_B_);
     const auto& offset_b_optional =
         offset_x_coord_b_ == 0
@@ -535,14 +559,30 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
             : std::make_optional(std::make_pair(
                   length_inner_cube_ * 0.5,
                   std::array<double, 3>{{offset_x_coord_b_, 0.0, 0.0}}));
-    Maps maps_center_B =
-        domain::make_vector_coordinate_map_base<Frame::BlockLogical,
-                                                Frame::Inertial, 3>(
-            sph_wedge_coordinate_maps(
-                object_b.inner_radius, object_b.outer_radius,
-                inner_sphericity_B, 1.0, use_equiangular_map_,
-                offset_b_optional, false, {}, object_B_radial_distribution),
-            translation_B);
+
+    // Single spherical shell block for object B shell. Centered directly at
+    // the object B position (not offset by cube_scale).
+    const Affine3D translation_B_shell{
+        Affine{-1.0, 1.0, -1.0 + x_coord_b_, 1.0 + x_coord_b_},
+        Affine{-1.0, 1.0, -1.0 + center_of_mass_offset_[0],
+               1.0 + center_of_mass_offset_[0]},
+        Affine{-1.0, 1.0, -1.0 + center_of_mass_offset_[1],
+               1.0 + center_of_mass_offset_[1]}};
+    const CoordinateMaps::Interval radial_map_B{-1.0,
+                                                1.0,
+                                                object_b.inner_radius,
+                                                object_b.outer_radius,
+                                                object_B_radial_distribution[0],
+                                                0.0};
+    maps.emplace_back(
+        make_coordinate_map_base<Frame::BlockLogical, Frame::Inertial>(
+            CoordinateMaps::ProductOf2Maps<CoordinateMaps::Interval,
+                                           CoordinateMaps::Identity<2>>{
+                radial_map_B, CoordinateMaps::Identity<2>{}},
+            CoordinateMaps::SphericalToCartesianPfaffian{},
+            translation_B_shell));
+
+    // 6 cube wedge blocks for object B (sphere-to-cube transition)
     Maps maps_cube_B =
         domain::make_vector_coordinate_map_base<Frame::BlockLogical,
                                                 Frame::Inertial, 3>(
@@ -550,8 +590,6 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
                 object_b.outer_radius, sqrt(3.0) * 0.5 * length_inner_cube_,
                 1.0, 0.0, use_equiangular_map_, offset_b_optional),
             translation_B);
-    std::move(maps_center_B.begin(), maps_center_B.end(),
-              std::back_inserter(maps));
     std::move(maps_cube_B.begin(), maps_cube_B.end(), std::back_inserter(maps));
   }
 
@@ -665,28 +703,106 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
             translation_B));
       }
     }
-    // Excision spheres
-    // - Block 0 through 5 enclose object A, and 12 through 17 enclose object B.
-    // - The 3D wedge map is oriented such that the lower-zeta logical direction
-    //   points radially inward.
+    // Excision sphere B
+    // - Block 0 through 5 enclose object A (wedge lower-zeta points inward).
+    // - Object B shell is now a single spherical shell block. The lower-xi
+    //   direction of the spherical shell map points radially inward.
     else {
+      const size_t first_block_b = use_single_block_a_ ? 1 : 12;
       excision_spheres.emplace(
           "ExcisionSphereB",
           ExcisionSphere<3>{std::get<Object>(object_B_).inner_radius,
                             tnsr::I<double, 3, Frame::Grid>{
                                 {x_coord_b_, center_of_mass_offset_[0],
                                  center_of_mass_offset_[1]}},
-                            {{12, Direction<3>::lower_zeta()},
-                             {13, Direction<3>::lower_zeta()},
-                             {14, Direction<3>::lower_zeta()},
-                             {15, Direction<3>::lower_zeta()},
-                             {16, Direction<3>::lower_zeta()},
-                             {17, Direction<3>::lower_zeta()}}});
+                            {{first_block_b, Direction<3>::lower_xi()}}});
     }
   }
 
-  // Have corners determined automatically
-  Domain<3> domain{std::move(maps), std::move(excision_spheres), block_names_,
+  // Build block neighbors from the coordinate maps automatically for all
+  // conforming (hypercube-topology) interfaces, then manually add the
+  // nonconforming interface between the single object B spherical shell block
+  // and the 6 object B cube wedge blocks (mirroring
+  // NonconformingSphericalShells).
+  std::vector<DirectionMap<3, BlockNeighbors<3>>> neighbors_of_all_blocks;
+  set_internal_boundaries<3>(make_not_null(&neighbors_of_all_blocks), maps);
+
+  if (not use_single_block_b_) {
+    // set_internal_boundaries evaluates all block maps at their logical corners
+    // to find conforming neighbors. For the spherical B shell block the map
+    // (ProductOf2Maps<Interval,Identity<2>> + SphericalToCartesianPfaffian +
+    // translation) can accidentally produce corner positions that coincide with
+    // corners of other blocks, causing set_internal_boundaries to add spurious
+    // neighbors in directions (e.g. upper_eta) where the spherical_shell
+    // topology has no boundary, which would trigger an assert in
+    // Element::Element. To prevent this, clear any entries that were set for
+    // the B shell block and remove back-pointers from other blocks.
+    const size_t b_shell_id = use_single_block_a_ ? 1 : 12;
+
+    // Remove back-pointers from any block that was spuriously connected to the
+    // B shell by set_internal_boundaries.
+    for (size_t i = 0; i < neighbors_of_all_blocks.size(); ++i) {
+      if (i == b_shell_id) {
+        continue;
+      }
+      std::vector<Direction<3>> dirs_to_erase{};
+      for (const auto& [dir, nbr] : neighbors_of_all_blocks[i]) {
+        if (nbr.ids().contains(b_shell_id)) {
+          dirs_to_erase.push_back(dir);
+        }
+      }
+      for (const auto& dir : dirs_to_erase) {
+        neighbors_of_all_blocks[i].erase(dir);
+      }
+    }
+    // Clear all spurious neighbors on the B shell itself.
+    neighbors_of_all_blocks[b_shell_id].clear();
+
+    // Now set the correct nonconforming neighbors.
+    // The B shell's upper_xi face (outer sphere at object_b.outer_radius)
+    // is the nonconforming interface with all 6 B cube wedge blocks' lower_zeta
+    // faces (inner sphere at the same radius). The orientation map follows
+    // NonconformingSphericalShells: the shell's xi (radial) direction maps to
+    // the wedge's zeta (radial) direction, with angular dims nonconforming.
+    const OrientationMap<3> shell_to_cube{
+        {{Direction<3>::upper_zeta(), Direction<3>::self(),
+          Direction<3>::self()}}};
+
+    std::unordered_set<size_t> cube_ids{};
+    std::unordered_map<size_t, OrientationMap<3>> cube_orientations{};
+    for (size_t i = 1; i <= 6; ++i) {
+      cube_ids.insert(b_shell_id + i);
+      cube_orientations.emplace(b_shell_id + i, shell_to_cube);
+    }
+    // B shell upper_xi → all 6 cube blocks (nonconforming multi-block)
+    neighbors_of_all_blocks[b_shell_id].emplace(
+        Direction<3>::upper_xi(),
+        BlockNeighbors<3>{cube_ids, cube_orientations, false});
+    // Each B cube block lower_zeta → B shell block (nonconforming single)
+    const OrientationMap<3> cube_to_shell = shell_to_cube.inverse_map();
+    for (size_t i = 1; i <= 6; ++i) {
+      neighbors_of_all_blocks[b_shell_id + i].emplace(
+          Direction<3>::lower_zeta(),
+          BlockNeighbors<3>{
+              {b_shell_id}, {{b_shell_id, cube_to_shell}}, false});
+    }
+  }
+
+  // Build explicit Block objects. The B shell block uses spherical_shell
+  // topology so that its angular dimensions (colatitude, longitude) are
+  // treated as periodic. All other blocks use the default hypercube topology.
+  const size_t b_shell_block_id = use_single_block_a_ ? 1 : 12;
+  std::vector<Block<3>> blocks;
+  blocks.reserve(number_of_blocks_);
+  for (size_t i = 0; i < number_of_blocks_; ++i) {
+    const bool is_b_shell =
+        (not use_single_block_b_) and (i == b_shell_block_id);
+    blocks.emplace_back(std::move(maps[i]), i,
+                        std::move(neighbors_of_all_blocks[i]), block_names_[i],
+                        is_b_shell ? domain::topologies::spherical_shell
+                                   : domain::topologies::hypercube<3>);
+  }
+  Domain<3> domain{std::move(blocks), std::move(excision_spheres),
                    block_groups_};
 
   // Inject the hard-coded time-dependence
@@ -764,14 +880,22 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
 
     // We loop over all blocks. If we are using a single block for either A or
     // B, then we only need a grid to inertial map; there is no distorted frame.
-    // If we don't have a single block around A or B, then for 12 blocks around
-    // each object we determine if there is a central cube. If there is, then
+    // If we don't have a single block around A, then for 12 blocks around
+    // object A we determine if there is a central cube. If there is, then
     // there is no distorted frame (this is signaled by
     // block_for_distorted_frame being a nullopt). If the region is excised,
     // then it is up to the time dependent options to know if a distorted frame
     // exists in that block. Therefore we just pass the relative block number to
     // the time_dependent_options_ functions. The remaining blocks only get the
     // grid to inertial map.
+    //
+    // Object B shell is now a single spherical shell block (block index 0
+    // relative to B), followed by 6 cube wedge blocks (relative indices 1-6).
+    // The time-dependent options expect relative block indices 0-5 for shell
+    // blocks (with shape map) and 6-11 for cube blocks (no shape map). We map:
+    //   - Spherical shell (relative 0) -> index 0 (gets shape map since < 6)
+    //   - Cube blocks (relative 1-6)   -> indices 6-11 (no shape map since >=
+    //   6)
     for (size_t block = 0; block < number_of_blocks_ - 1; ++block) {
       if ((not use_single_block_a_) and block < first_block_object_B) {
         const size_t block_for_distorted_frame = block;
@@ -788,8 +912,12 @@ Domain<3> BinaryCompactObject<UseWorldtube>::create_domain() const {
                 ->distorted_to_inertial_map<domain::ObjectLabel::A>(
                     block_for_distorted_frame, true);
       } else if ((not use_single_block_b_) and block >= first_block_object_B and
-                 block < first_block_object_B + 12) {
-        const size_t block_for_distorted_frame = block - first_block_object_B;
+                 block < first_block_object_B + 7) {
+        // Spherical shell block (relative 0) gets index 0.
+        // Cube blocks (relative 1-6) get indices 6-11 to avoid shape map.
+        const size_t block_relative = block - first_block_object_B;
+        const size_t block_for_distorted_frame =
+            block_relative == 0 ? 0 : block_relative + 5;
         grid_to_inertial_block_maps[block] =
             time_dependent_options_
                 ->grid_to_inertial_map<domain::ObjectLabel::B>(
@@ -854,27 +982,33 @@ BinaryCompactObject<UseWorldtube>::external_boundary_conditions() const {
       3, std::unique_ptr<domain::BoundaryConditions::BoundaryCondition>>>
       boundary_conditions{number_of_blocks_};
   // Excision surfaces
-  for (size_t i = 0; i < 6; ++i) {
-    // Block 0 - 5 wrap excision surface A
-    if (is_excised_a_) {
+  // Blocks 0-5 are object A's 6 shell wedges; lower-zeta points radially
+  // inward toward the excision.
+  if (is_excised_a_) {
+    for (size_t i = 0; i < 6; ++i) {
       boundary_conditions[i][Direction<3>::lower_zeta()] =
           (*(std::get<Object>(object_A_).inner_boundary_condition))
               ->get_clone();
     }
-    // Blocks 12 - 17 or 1 - 6 wrap excision surface B
-    const size_t first_block_object_B = use_single_block_a_ ? 1 : 12;
-    if (is_excised_b_) {
-      boundary_conditions[i +
-                          first_block_object_B][Direction<3>::lower_zeta()] =
-          (*(std::get<Object>(object_B_).inner_boundary_condition))
-              ->get_clone();
-    }
+  }
+  // Object B's shell is now a single spherical shell block; lower-xi points
+  // radially inward toward the excision.
+  const size_t first_block_object_B = use_single_block_a_ ? 1 : 12;
+  if (is_excised_b_) {
+    boundary_conditions[first_block_object_B][Direction<3>::lower_xi()] =
+        (*(std::get<Object>(object_B_).inner_boundary_condition))->get_clone();
   }
   // Outer boundary
+  // Block layout (without single-block replacements):
+  //   0-11 : Object A shell+cube (12 blocks)
+  //   12   : Object B spherical shell (1 block)
+  //   13-18: Object B cube (6 blocks)
+  //   19-28: Envelope (10 blocks)
+  //   29+  : Outer shells
   const size_t offset_outer_blocks =
-      ((use_single_block_a_ and use_single_block_b_)
+      (use_single_block_a_ and use_single_block_b_
            ? 12
-           : ((use_single_block_a_ or use_single_block_b_) ? 23 : 34)) +
+           : (use_single_block_a_ ? 18 : (use_single_block_b_ ? 23 : 29))) +
       10 * (number_of_outer_shells_ - 1);
   for (size_t i = 0; i < 10; ++i) {
     boundary_conditions[i + offset_outer_blocks][Direction<3>::upper_zeta()] =

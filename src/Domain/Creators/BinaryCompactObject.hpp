@@ -46,6 +46,8 @@ class Wedge;
 template <size_t VolumeDim>
 class DiscreteRotation;
 class Frustum;
+class Interval;
+class SphericalToCartesianPfaffian;
 }  // namespace CoordinateMaps
 
 template <typename SourceFrame, typename TargetFrame, typename... Maps>
@@ -194,6 +196,11 @@ class BinaryCompactObject : public DomainCreator<3> {
                             Affine3D>,
       domain::CoordinateMap<Frame::BlockLogical, Frame::Inertial,
                             CoordinateMaps::Wedge<3>, Affine3D>,
+      domain::CoordinateMap<
+          Frame::BlockLogical, Frame::Inertial,
+          CoordinateMaps::ProductOf2Maps<CoordinateMaps::Interval,
+                                         CoordinateMaps::Identity<2>>,
+          CoordinateMaps::SphericalToCartesianPfaffian, Affine3D>,
       bco::TimeDependentMapOptions<false>::maps_list>>;
 
   /// Options for an excision region in the domain
